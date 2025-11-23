@@ -85,12 +85,11 @@ public class SecurityConfig {
                 .filter(origin -> !origin.isEmpty())
                 .toList());
         } else {
-            // Default: localhost for development + common deployment platforms
+            // Default: localhost for development + production frontend URL
             configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:5173", // Vite default port
-                "https://aifitness-app.netlify.app",
-                "https://aifitness-app.vercel.app"
+                "https://ai-fitness-app-one.vercel.app"
             ));
         }
         
