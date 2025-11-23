@@ -1,0 +1,334 @@
+/* ===================================
+   AUTHENTICATION - FUTURISTIC AI THEME
+   ===================================
+   AI Access Control Portal Design
+   =================================== */
+
+.auth-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
+}
+
+.auth-card {
+  /* Glassmorphism AI Portal */
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  border: 1px solid var(--glass-border-neon);
+  border-radius: var(--radius-lg);
+  padding: 48px 40px;
+  box-shadow: var(--shadow-glass-elevated),
+              var(--glow-neon-blue);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated neon border effect */
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: var(--radius-lg);
+  padding: 2px;
+  background: linear-gradient(
+    135deg,
+    rgba(96, 175, 255, 0.5) 0%,
+    rgba(110, 231, 255, 0.5) 50%,
+    rgba(96, 175, 255, 0.5) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: pulse-neon 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 36px;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-header h1 {
+  color: var(--text-primary);
+  font-size: 42px;
+  font-weight: 900;
+  margin-bottom: 16px;
+  /* Neon gradient text */
+  background: linear-gradient(135deg, #C0C0C0 0%, #60AFFF 50%, #6EE7FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 40px rgba(96, 175, 255, 0.5);
+  letter-spacing: -1px;
+  position: relative;
+}
+
+.auth-header h1::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--color-neon-ice-blue), transparent);
+  box-shadow: 0 0 10px var(--color-neon-ice-blue);
+  animation: pulse-neon 2s ease-in-out infinite;
+}
+
+.auth-header p {
+  color: var(--text-tertiary);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-top: 12px;
+}
+
+.auth-form {
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.form-group {
+  margin-bottom: 28px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  position: relative;
+  padding-left: 12px;
+}
+
+.form-group label::before {
+  content: '▶';
+  position: absolute;
+  left: 0;
+  color: var(--color-neon-ice-blue);
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 16px 20px;
+  /* Neumorphic input with glassmorphism */
+  background: var(--color-space-gray);
+  backdrop-filter: blur(var(--blur-md));
+  border: 1px solid var(--glass-border-medium);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  color: var(--text-primary);
+  transition: all var(--transition-normal);
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  box-shadow: var(--shadow-neumorphic-inner);
+}
+
+.form-group input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+  font-weight: 300;
+}
+
+.form-group input:hover {
+  border-color: var(--glass-border-neon);
+  background: var(--color-space-gray-light);
+  box-shadow: var(--shadow-neumorphic-soft),
+              inset 0 0 20px rgba(96, 175, 255, 0.05);
+}
+
+.form-group input:focus {
+  border: var(--border-glow-neon);
+  background: var(--color-space-gray-light);
+  box-shadow: var(--shadow-neumorphic-soft),
+              var(--glow-neon-blue),
+              inset 0 0 30px rgba(96, 175, 255, 0.1);
+  transform: translateY(-2px);
+  animation: pulse-neon 2s ease-in-out infinite;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 18px;
+  /* Neumorphic button with neon glow */
+  background: var(--color-space-gray);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border-medium);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  margin-top: 12px;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: var(--shadow-neumorphic-outer);
+}
+
+/* Animated shine effect */
+.submit-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(96, 175, 255, 0.3) 50%,
+    transparent 70%
+  );
+  transform: rotate(45deg);
+  transition: left 0.6s ease;
+}
+
+.submit-button:hover::before {
+  left: 100%;
+}
+
+.submit-button:hover:not(:disabled) {
+  border: var(--border-glow-neon);
+  box-shadow: var(--shadow-neumorphic-inner),
+              var(--glow-neon-blue-strong);
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(96, 175, 255, 0.1) 0%, rgba(110, 231, 255, 0.1) 100%);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-neumorphic-inner);
+}
+
+.submit-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-deep-space);
+  box-shadow: none;
+}
+
+.auth-footer {
+  text-align: center;
+  padding-top: 28px;
+  border-top: 1px solid var(--glass-border-dark);
+  position: relative;
+  z-index: 1;
+}
+
+.auth-footer p {
+  color: var(--text-tertiary);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.link {
+  color: var(--color-neon-ice-blue);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all var(--transition-normal);
+  position: relative;
+  text-shadow: 0 0 10px rgba(96, 175, 255, 0.5);
+}
+
+.link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-neon-ice-blue), var(--color-electric-aqua));
+  box-shadow: 0 0 8px var(--color-neon-ice-blue);
+  transition: width var(--transition-normal);
+}
+
+.link:hover {
+  color: var(--color-electric-aqua);
+  text-shadow: 0 0 15px rgba(110, 231, 255, 0.8);
+}
+
+.link:hover::after {
+  width: 100%;
+}
+
+.error-message {
+  background: rgba(255, 51, 102, 0.1);
+  backdrop-filter: blur(var(--blur-sm));
+  border: 1px solid rgba(255, 51, 102, 0.4);
+  color: var(--error-neon);
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  margin-bottom: 28px;
+  font-size: 14px;
+  box-shadow: 0 0 20px rgba(255, 51, 102, 0.3),
+              inset 0 0 20px rgba(255, 51, 102, 0.05);
+  position: relative;
+  z-index: 1;
+  animation: pulse-neon 2s ease-in-out infinite;
+}
+
+.select-input {
+  width: 100%;
+  padding: 16px 20px;
+  /* Neumorphic select */
+  background: var(--color-space-gray);
+  backdrop-filter: blur(var(--blur-md));
+  border: 1px solid var(--glass-border-medium);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  color: var(--text-primary);
+  transition: all var(--transition-normal);
+  outline: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  box-shadow: var(--shadow-neumorphic-inner);
+}
+
+.select-input:hover {
+  border-color: var(--glass-border-neon);
+  background: var(--color-space-gray-light);
+  box-shadow: var(--shadow-neumorphic-soft),
+              inset 0 0 20px rgba(96, 175, 255, 0.05);
+}
+
+.select-input:focus {
+  border: var(--border-glow-neon);
+  background: var(--color-space-gray-light);
+  box-shadow: var(--shadow-neumorphic-soft),
+              var(--glow-neon-blue);
+  transform: translateY(-2px);
+}
+
+.select-input option {
+  background: var(--color-deep-space);
+  color: var(--text-primary);
+  padding: 12px;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 36px 28px;
+    margin: 20px;
+  }
+
+  .auth-header h1 {
+    font-size: 34px;
+  }
+}
