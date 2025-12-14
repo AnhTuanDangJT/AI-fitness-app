@@ -1,0 +1,303 @@
+{
+  "success": true,
+  "message": "Meal plan retrieved successfully",
+  "data": {
+    "id": 1,
+    "userId": 1,
+    "weekStartDate": "2024-01-15",
+    "createdAt": "2024-01-15T10:30:00",
+    "dailyTargets": {
+      "calories": 2000,
+      "protein": 150,
+      "carbs": 200,
+      "fats": 60
+    },
+    "entries": [
+      {
+        "id": 1,
+        "date": "2024-01-15",
+        "mealType": "BREAKFAST",
+        "name": "Scrambled eggs with whole wheat toast",
+        "calories": 350,
+        "protein": 20,
+        "carbs": 35,
+        "fats": 12
+      },
+      {
+        "id": 2,
+        "date": "2024-01-15",
+        "mealType": "LUNCH",
+        "name": "Grilled chicken breast with quinoa and vegetables",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 45,
+        "fats": 12
+      },
+      {
+        "id": 3,
+        "date": "2024-01-15",
+        "mealType": "DINNER",
+        "name": "Baked salmon with sweet potato and broccoli",
+        "calories": 550,
+        "protein": 45,
+        "carbs": 50,
+        "fats": 20
+      },
+      {
+        "id": 4,
+        "date": "2024-01-15",
+        "mealType": "SNACK",
+        "name": "Apple with almond butter",
+        "calories": 200,
+        "protein": 6,
+        "carbs": 25,
+        "fats": 10
+      },
+      {
+        "id": 5,
+        "date": "2024-01-16",
+        "mealType": "BREAKFAST",
+        "name": "Greek yogurt with berries and granola",
+        "calories": 320,
+        "protein": 18,
+        "carbs": 45,
+        "fats": 8
+      },
+      {
+        "id": 6,
+        "date": "2024-01-16",
+        "mealType": "LUNCH",
+        "name": "Salmon salad with mixed greens",
+        "calories": 420,
+        "protein": 35,
+        "carbs": 25,
+        "fats": 20
+      },
+      {
+        "id": 7,
+        "date": "2024-01-16",
+        "mealType": "DINNER",
+        "name": "Grilled steak with roasted vegetables",
+        "calories": 580,
+        "protein": 50,
+        "carbs": 35,
+        "fats": 25
+      },
+      {
+        "id": 8,
+        "date": "2024-01-16",
+        "mealType": "SNACK",
+        "name": "Protein shake",
+        "calories": 180,
+        "protein": 25,
+        "carbs": 15,
+        "fats": 3
+      },
+      {
+        "id": 9,
+        "date": "2024-01-17",
+        "mealType": "BREAKFAST",
+        "name": "Oatmeal with banana and almonds",
+        "calories": 380,
+        "protein": 12,
+        "carbs": 55,
+        "fats": 10
+      },
+      {
+        "id": 10,
+        "date": "2024-01-17",
+        "mealType": "LUNCH",
+        "name": "Turkey and avocado wrap",
+        "calories": 480,
+        "protein": 35,
+        "carbs": 50,
+        "fats": 18
+      },
+      {
+        "id": 11,
+        "date": "2024-01-17",
+        "mealType": "DINNER",
+        "name": "Chicken pasta with marinara sauce",
+        "calories": 520,
+        "protein": 38,
+        "carbs": 60,
+        "fats": 15
+      },
+      {
+        "id": 12,
+        "date": "2024-01-17",
+        "mealType": "SNACK",
+        "name": "Mixed nuts",
+        "calories": 220,
+        "protein": 8,
+        "carbs": 10,
+        "fats": 18
+      },
+      {
+        "id": 13,
+        "date": "2024-01-18",
+        "mealType": "BREAKFAST",
+        "name": "Avocado toast with poached eggs",
+        "calories": 420,
+        "protein": 18,
+        "carbs": 40,
+        "fats": 20
+      },
+      {
+        "id": 14,
+        "date": "2024-01-18",
+        "mealType": "LUNCH",
+        "name": "Beef stir-fry with brown rice",
+        "calories": 520,
+        "protein": 38,
+        "carbs": 55,
+        "fats": 15
+      },
+      {
+        "id": 15,
+        "date": "2024-01-18",
+        "mealType": "DINNER",
+        "name": "Pork tenderloin with quinoa and green beans",
+        "calories": 540,
+        "protein": 42,
+        "carbs": 45,
+        "fats": 18
+      },
+      {
+        "id": 16,
+        "date": "2024-01-18",
+        "mealType": "SNACK",
+        "name": "Greek yogurt",
+        "calories": 150,
+        "protein": 15,
+        "carbs": 10,
+        "fats": 5
+      },
+      {
+        "id": 17,
+        "date": "2024-01-19",
+        "mealType": "BREAKFAST",
+        "name": "Protein pancakes with maple syrup",
+        "calories": 400,
+        "protein": 25,
+        "carbs": 50,
+        "fats": 12
+      },
+      {
+        "id": 18,
+        "date": "2024-01-19",
+        "mealType": "LUNCH",
+        "name": "Chicken Caesar salad",
+        "calories": 460,
+        "protein": 42,
+        "carbs": 30,
+        "fats": 22
+      },
+      {
+        "id": 19,
+        "date": "2024-01-19",
+        "mealType": "DINNER",
+        "name": "Beef and vegetable stew",
+        "calories": 500,
+        "protein": 40,
+        "carbs": 40,
+        "fats": 20
+      },
+      {
+        "id": 20,
+        "date": "2024-01-19",
+        "mealType": "SNACK",
+        "name": "Apple with almond butter",
+        "calories": 200,
+        "protein": 6,
+        "carbs": 25,
+        "fats": 10
+      },
+      {
+        "id": 21,
+        "date": "2024-01-20",
+        "mealType": "BREAKFAST",
+        "name": "Scrambled eggs with whole wheat toast",
+        "calories": 350,
+        "protein": 20,
+        "carbs": 35,
+        "fats": 12
+      },
+      {
+        "id": 22,
+        "date": "2024-01-20",
+        "mealType": "LUNCH",
+        "name": "Grilled chicken breast with quinoa and vegetables",
+        "calories": 450,
+        "protein": 40,
+        "carbs": 45,
+        "fats": 12
+      },
+      {
+        "id": 23,
+        "date": "2024-01-20",
+        "mealType": "DINNER",
+        "name": "Baked salmon with sweet potato and broccoli",
+        "calories": 550,
+        "protein": 45,
+        "carbs": 50,
+        "fats": 20
+      },
+      {
+        "id": 24,
+        "date": "2024-01-20",
+        "mealType": "SNACK",
+        "name": "Protein shake",
+        "calories": 180,
+        "protein": 25,
+        "carbs": 15,
+        "fats": 3
+      },
+      {
+        "id": 25,
+        "date": "2024-01-21",
+        "mealType": "BREAKFAST",
+        "name": "Greek yogurt with berries and granola",
+        "calories": 320,
+        "protein": 18,
+        "carbs": 45,
+        "fats": 8
+      },
+      {
+        "id": 26,
+        "date": "2024-01-21",
+        "mealType": "LUNCH",
+        "name": "Salmon salad with mixed greens",
+        "calories": 420,
+        "protein": 35,
+        "carbs": 25,
+        "fats": 20
+      },
+      {
+        "id": 27,
+        "date": "2024-01-21",
+        "mealType": "DINNER",
+        "name": "Grilled steak with roasted vegetables",
+        "calories": 580,
+        "protein": 50,
+        "carbs": 35,
+        "fats": 25
+      },
+      {
+        "id": 28,
+        "date": "2024-01-21",
+        "mealType": "SNACK",
+        "name": "Mixed nuts",
+        "calories": 220,
+        "protein": 8,
+        "carbs": 10,
+        "fats": 18
+      }
+    ]
+  },
+  "timestamp": "2024-01-15T10:30:00"
+}
+
+
+
+

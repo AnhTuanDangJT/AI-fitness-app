@@ -1,0 +1,71 @@
+.meal-plan-panel {
+  width: 100%;
+}
+
+.meal-plan-placeholder {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.meal-plan-loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.meal-plan-error {
+  padding: 32px;
+  text-align: center;
+  color: var(--error-color, #ff6b6b);
+  font-size: 15px;
+}
+
+.meal-plan-preview {
+  padding: 24px;
+  text-align: center;
+}
+
+.meal-plan-week {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.meal-plan-meals {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.generate-plan-button-small,
+.view-plan-button,
+.retry-button-small {
+  padding: 8px 16px;
+  background: var(--accent-color, #55C0FF);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.generate-plan-button-small:hover,
+.view-plan-button:hover,
+.retry-button-small:hover {
+  background: var(--accent-color-hover, #44a8d8);
+}
+
+.generate-plan-button-small:disabled,
+.retry-button-small:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+

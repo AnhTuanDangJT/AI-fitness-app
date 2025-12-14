@@ -1,0 +1,28 @@
+-- Database Schema for AI Fitness Application
+-- SQLite Database Schema Definition
+
+-- Users Table
+-- Stores basic user account information
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    
+    -- Constraints
+    CONSTRAINT chk_username_length CHECK (LENGTH(username) >= 3),
+    CONSTRAINT chk_email_format CHECK (email LIKE '%@%')
+);
+
+-- Create indexes for faster lookups
+CREATE INDEX IF NOT EXISTS idx_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_email ON users(email);
+
+-- Note: Additional tables will be added in future migrations:
+-- - Profile data (weight, height, measurements)
+-- - Body metrics (BMI, WHR, WHtR, Body Fat)
+-- - Nutrition data (calories, macros, micros)
+-- These will be added when migrating the full profile data from Infoclient.java
+

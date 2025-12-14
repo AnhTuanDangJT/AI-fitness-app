@@ -1,0 +1,12 @@
+.app {
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure content is above particle background */
+.app > *:not(canvas) {
+  position: relative;
+  z-index: 1;
+}
+
