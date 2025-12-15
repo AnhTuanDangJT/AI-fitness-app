@@ -177,11 +177,30 @@ public class EmailService {
         } catch (Exception e) {
             String errorCode = e.getClass().getSimpleName();
             String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            
+            // Enhanced error logging with more context
             logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
                 providerName, errorCode, errorMessage, toEmail);
             logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
                 e.getClass().getSimpleName(),
                 e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
+            
+            // Check for common authentication errors and provide helpful context
+            String lowerMessage = errorMessage.toLowerCase();
+            if (lowerMessage.contains("authentication") || lowerMessage.contains("535") || 
+                lowerMessage.contains("invalid credentials") || lowerMessage.contains("login")) {
+                logger.error("EMAIL_SEND_FAILED_AUTH_ERROR: Authentication failed. " +
+                    "For Gmail, ensure you're using an App-Specific Password if 2FA is enabled. " +
+                    "Check MAIL_USERNAME and MAIL_PASSWORD environment variables.");
+            } else if (lowerMessage.contains("connection") || lowerMessage.contains("timeout")) {
+                logger.error("EMAIL_SEND_FAILED_CONNECTION_ERROR: Connection issue detected. " +
+                    "Check MAIL_HOST and MAIL_PORT environment variables. " +
+                    "Verify network connectivity and firewall settings.");
+            } else if (lowerMessage.contains("tls") || lowerMessage.contains("ssl")) {
+                logger.error("EMAIL_SEND_FAILED_TLS_ERROR: TLS/SSL configuration issue. " +
+                    "Verify MAIL_PORT (587 for STARTTLS, 465 for SSL) and TLS settings.");
+            }
+            
             // Log full stack trace for debugging
             logger.error("EMAIL_SEND_FAILED_STACKTRACE", e);
             throw new EmailServiceException(
@@ -254,6 +273,25 @@ public class EmailService {
             logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
                 e.getClass().getSimpleName(),
                 e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
+            
+            // Check for common authentication errors and provide helpful context
+            String lowerMessage = errorMessage.toLowerCase();
+            if (lowerMessage.contains("authentication") || lowerMessage.contains("535") || 
+                lowerMessage.contains("invalid credentials") || lowerMessage.contains("login")) {
+                logger.error("EMAIL_SEND_FAILED_AUTH_ERROR: Authentication failed. " +
+                    "For Gmail, ensure you're using an App-Specific Password if 2FA is enabled. " +
+                    "Check MAIL_USERNAME and MAIL_PASSWORD environment variables.");
+            } else if (lowerMessage.contains("connection") || lowerMessage.contains("timeout")) {
+                logger.error("EMAIL_SEND_FAILED_CONNECTION_ERROR: Connection issue detected. " +
+                    "Check MAIL_HOST and MAIL_PORT environment variables. " +
+                    "Verify network connectivity and firewall settings.");
+            } else if (lowerMessage.contains("tls") || lowerMessage.contains("ssl")) {
+                logger.error("EMAIL_SEND_FAILED_TLS_ERROR: TLS/SSL configuration issue. " +
+                    "Verify MAIL_PORT (587 for STARTTLS, 465 for SSL) and TLS settings.");
+            }
+            
+            // Log full stack trace for debugging
+            logger.error("EMAIL_SEND_FAILED_STACKTRACE", e);
             throw new EmailServiceException("Unable to send feedback email. Please try again later.", e);
         }
     }
