@@ -57,28 +57,12 @@ public class HealthController {
      * @return Email configuration status wrapped in ApiResponse
      */
     @GetMapping("/health/email")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> checkEmailHealth() {
-        boolean emailConfigured = emailService.isEmailConfigured();
-        
-        // Create response data with email configuration status
-        Map<String, Object> emailStatus = new HashMap<>();
-        emailStatus.put("emailConfigured", emailConfigured);
-        
-        // Include detailed status if available
-        EmailService.EmailConfigStatus configStatus = emailService.getEmailConfigStatus();
-        emailStatus.put("provider", configStatus.isEmailConfigured() ? configStatus.getProvider() : "none");
-        emailStatus.put("hostSet", configStatus.isHostSet());
-        emailStatus.put("userSet", configStatus.isUserSet());
-        emailStatus.put("passSet", configStatus.isPassSet());
-        emailStatus.put("fromSet", configStatus.isFromSet());
-        
-        // Create ApiResponse with success status and data
-        ApiResponse<Map<String, Object>> response = ApiResponse.success(
-            emailConfigured ? "Email service is configured" : "Email service is not configured",
-            emailStatus
-        );
-        
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApiResponse<Boolean>> checkEmailHealth() {
+        boolean emailConfigured = emailService.isEmailConfigured();  // Check if email service is configured
+        ApiResponse<Boolean> response = new ApiResponse<>(emailConfigured, 
+            emailConfigured ? "Email service is configured" : "Email service is not configured", 
+            emailConfigured);
+        return ResponseEntity.ok(response);  // Return success response
     }
 }
 
