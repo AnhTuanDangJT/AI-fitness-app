@@ -11,6 +11,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.mail.MessagingException;
+import jakarta.mail.SendFailedException;
+import jakarta.mail.AuthenticationFailedException;
 
 /**
  * Email Service
@@ -41,7 +44,11 @@ public class EmailService {
     @Value("${spring.mail.host:}")
     private String mailHost;
     
+    @Value("${spring.mail.port:587}")
+    private String mailPort;
+    
     private boolean isEmailConfigured = false;
+    private String providerName = "unknown";
     
     @Autowired
     public EmailService(JavaMailSender mailSender, Environment environment) {
@@ -69,10 +76,28 @@ public class EmailService {
             environment.getProperty("spring.profiles.active", "development")
         );
         
+        // Detect provider from host
+        String effectiveHost = mailHost != null && !mailHost.trim().isEmpty() 
+            ? mailHost 
+            : "smtp.gmail.com";
+        
+        if (effectiveHost.contains("gmail")) {
+            providerName = "gmail-smtp";
+        } else if (effectiveHost.contains("sendgrid")) {
+            providerName = "sendgrid-smtp";
+        } else if (effectiveHost.contains("mailgun")) {
+            providerName = "mailgun-smtp";
+        } else if (effectiveHost.contains("resend")) {
+            providerName = "resend-smtp";
+        } else {
+            providerName = "smtp-" + effectiveHost;
+        }
+        
         // Validate all required fields are present and non-empty
         boolean hasUsername = mailUsername != null && !mailUsername.trim().isEmpty();
         boolean hasPassword = mailPassword != null && !mailPassword.trim().isEmpty();
         boolean hasFrom = fromEmail != null && !fromEmail.trim().isEmpty();
+        boolean hasHost = effectiveHost != null && !effectiveHost.trim().isEmpty();
         
         // Also check if fromEmail falls back to mailUsername (as per application-production.properties)
         if (!hasFrom && hasUsername) {
@@ -81,35 +106,43 @@ public class EmailService {
             hasFrom = true;
         }
         
-        isEmailConfigured = hasUsername && hasPassword && hasFrom;
+        isEmailConfigured = hasUsername && hasPassword && hasFrom && hasHost;
+        
+        // Log structured configuration status (NEVER log actual values)
+        logger.info("EMAIL_CONFIG_CHECK provider={} host_set={} user_set={} pass_set={} from_set={} port={}",
+            providerName,
+            hasHost,
+            hasUsername,
+            hasPassword,
+            hasFrom,
+            mailPort != null ? mailPort : "587"
+        );
         
         if (isEmailConfigured) {
-            logger.info("Email service is configured - Host: {}, From: {}", 
-                mailHost != null && !mailHost.trim().isEmpty() ? mailHost : "smtp.gmail.com", 
-                fromEmail);
+            logger.info("EMAIL_CONFIG_OK=true provider={} host={} from={} port={}", 
+                providerName,
+                effectiveHost,
+                fromEmail != null ? "***" : "missing",
+                mailPort != null ? mailPort : "587"
+            );
         } else {
             // Log detailed error about what's missing
             StringBuilder missing = new StringBuilder();
+            if (!hasHost) missing.append("MAIL_HOST ");
             if (!hasUsername) missing.append("MAIL_USERNAME ");
             if (!hasPassword) missing.append("MAIL_PASSWORD ");
             if (!hasFrom) missing.append("APP_EMAIL_FROM ");
             
-            String errorMsg = String.format(
-                "Email service is NOT configured - Missing required environment variables: %s. " +
-                "Set these variables in your production environment.",
-                missing.toString().trim()
-            );
-            
-            logger.error(errorMsg);
-            logger.error("Current values - username present: {}, password present: {}, from present: {}", 
-                hasUsername, hasPassword, hasFrom);
+            logger.error("EMAIL_CONFIG_OK=false Missing required environment variables: {}", missing.toString().trim());
+            logger.error("EMAIL_CONFIG_DETAILS host_set={} user_set={} pass_set={} from_set={}", 
+                hasHost, hasUsername, hasPassword, hasFrom);
             
             // In production, FAIL FAST - do not allow partial initialization
             if (isProduction) {
                 logger.error("PRODUCTION MODE: Email service is REQUIRED. Application startup will fail.");
                 throw new IllegalStateException(
                     "Email service configuration is required in production. " +
-                    "Please set MAIL_USERNAME, MAIL_PASSWORD, and APP_EMAIL_FROM environment variables."
+                    "Please set MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, and APP_EMAIL_FROM environment variables."
                 );
             } else {
                 logger.warn("DEVELOPMENT MODE: Email service is not configured. Email sending will fail.");
@@ -125,8 +158,10 @@ public class EmailService {
      * @throws EmailServiceException if email service is not configured or sending fails
      */
     public void sendVerificationEmail(String toEmail, String verificationCode) {
+        logger.info("EMAIL_SEND_ATTEMPT provider={} to={}", providerName, toEmail);
+        
         if (!isEmailConfigured) {
-            logger.error("Email service not configured - Cannot send verification email to: {}", toEmail);
+            logger.error("EMAIL_SEND_FAILED reason=NOT_CONFIGURED provider={} to={}", providerName, toEmail);
             throw new EmailServiceException("Unable to send verification email. Please try again later.");
         }
         
@@ -141,11 +176,44 @@ public class EmailService {
             mailSender.send(message);
             
             // Log that email was sent, but do NOT log the verification code
-            logger.info("Verification email sent successfully to: {}", toEmail);
+            logger.info("EMAIL_SEND_SUCCESS provider={} to={}", providerName, toEmail);
+        } catch (AuthenticationFailedException e) {
+            String errorCode = "AUTH_FAILED";
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Authentication failed";
+            logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
+                providerName, errorCode, errorMessage, toEmail);
+            logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
+                e.getClass().getSimpleName(),
+                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
+            throw new EmailServiceException("Unable to send verification email. Please try again later.", e);
+        } catch (SendFailedException e) {
+            String errorCode = "SEND_FAILED";
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Send failed";
+            logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
+                providerName, errorCode, errorMessage, toEmail);
+            logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
+                e.getClass().getSimpleName(),
+                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
+            throw new EmailServiceException("Unable to send verification email. Please try again later.", e);
+        } catch (MessagingException e) {
+            String errorCode = "MESSAGING_ERROR";
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Messaging error";
+            logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
+                providerName, errorCode, errorMessage, toEmail);
+            logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
+                e.getClass().getSimpleName(),
+                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
+            throw new EmailServiceException("Unable to send verification email. Please try again later.", e);
         } catch (Exception e) {
-            logger.error("Failed to send verification email to: {}", toEmail, e);
-            logger.error("Email sending exception cause: {}", e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
-            // Return generic error message to user (never expose internal details)
+            String errorCode = "UNKNOWN_ERROR";
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
+                providerName, errorCode, errorMessage, toEmail);
+            logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
+                e.getClass().getSimpleName(),
+                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
+            // Log full stack trace for debugging
+            logger.error("EMAIL_SEND_FAILED_STACKTRACE", e);
             throw new EmailServiceException("Unable to send verification email. Please try again later.", e);
         }
     }
@@ -179,8 +247,10 @@ public class EmailService {
      * @throws EmailServiceException if email service is not configured or sending fails
      */
     public void sendFeedbackEmail(String toEmail, String userEmail, String subject, String message) {
+        logger.info("EMAIL_SEND_ATTEMPT provider={} to={} type=feedback", providerName, toEmail);
+        
         if (!isEmailConfigured) {
-            logger.error("Email service not configured - Cannot send feedback email to: {}", toEmail);
+            logger.error("EMAIL_SEND_FAILED reason=NOT_CONFIGURED provider={} to={} type=feedback", providerName, toEmail);
             throw new EmailServiceException("Unable to send feedback email. Please try again later.");
         }
         
@@ -201,12 +271,78 @@ public class EmailService {
             
             mailSender.send(mailMessage);
             
-            logger.info("Feedback email sent successfully from user: {} to: {}", userEmail, toEmail);
+            logger.info("EMAIL_SEND_SUCCESS provider={} to={} type=feedback", providerName, toEmail);
         } catch (Exception e) {
-            logger.error("Failed to send feedback email from: {} to: {}", userEmail, toEmail, e);
-            logger.error("Email sending exception cause: {}", e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
-            // Return generic error message to user (never expose internal details)
+            String errorCode = e.getClass().getSimpleName();
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={} type=feedback", 
+                providerName, errorCode, errorMessage, toEmail);
+            logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
+                e.getClass().getSimpleName(),
+                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
             throw new EmailServiceException("Unable to send feedback email. Please try again later.", e);
+        }
+    }
+    
+    /**
+     * Gets the email configuration status for health checks.
+     * 
+     * @return Email configuration status
+     */
+    public EmailConfigStatus getEmailConfigStatus() {
+        return new EmailConfigStatus(
+            isEmailConfigured,
+            providerName,
+            mailHost != null && !mailHost.trim().isEmpty(),
+            mailUsername != null && !mailUsername.trim().isEmpty(),
+            mailPassword != null && !mailPassword.trim().isEmpty(),
+            fromEmail != null && !fromEmail.trim().isEmpty()
+        );
+    }
+    
+    /**
+     * Email configuration status for health checks.
+     */
+    public static class EmailConfigStatus {
+        private final boolean emailConfigured;
+        private final String provider;
+        private final boolean hostSet;
+        private final boolean userSet;
+        private final boolean passSet;
+        private final boolean fromSet;
+        
+        public EmailConfigStatus(boolean emailConfigured, String provider, 
+                                boolean hostSet, boolean userSet, boolean passSet, boolean fromSet) {
+            this.emailConfigured = emailConfigured;
+            this.provider = provider;
+            this.hostSet = hostSet;
+            this.userSet = userSet;
+            this.passSet = passSet;
+            this.fromSet = fromSet;
+        }
+        
+        public boolean isEmailConfigured() {
+            return emailConfigured;
+        }
+        
+        public String getProvider() {
+            return provider;
+        }
+        
+        public boolean isHostSet() {
+            return hostSet;
+        }
+        
+        public boolean isUserSet() {
+            return userSet;
+        }
+        
+        public boolean isPassSet() {
+            return passSet;
+        }
+        
+        public boolean isFromSet() {
+            return fromSet;
         }
     }
     

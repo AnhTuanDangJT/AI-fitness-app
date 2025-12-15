@@ -106,9 +106,16 @@ public class AccountService {
         // Send verification email
         try {
             emailService.sendVerificationEmail(email, verificationCode);
+            logger.info("Verification email sent successfully during signup - Email: {}", email);
+        } catch (com.aifitness.exception.EmailServiceException e) {
+            logger.error("Failed to send verification email during signup - Email: {}", email, e);
+            // Re-throw to fail signup if email fails (user needs verification email)
+            throw e;
         } catch (Exception e) {
-            logger.error("Failed to send verification email during signup", e);
-            // Don't fail signup if email fails, but log the error
+            logger.error("Unexpected error sending verification email during signup - Email: {}", email, e);
+            // Wrap in EmailServiceException for consistent error handling
+            throw new com.aifitness.exception.EmailServiceException(
+                "Unable to send verification email. Please try again later.", e);
         }
         
         return user;

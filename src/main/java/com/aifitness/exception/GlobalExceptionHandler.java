@@ -208,12 +208,18 @@ public class GlobalExceptionHandler {
      * Handle email service exceptions (503 Service Unavailable).
      */
     @ExceptionHandler(EmailServiceException.class)
-    public ResponseEntity<ApiResponse<String>> handleEmailServiceException(
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleEmailServiceException(
             EmailServiceException ex) {
         
         logger.error("Email service error: {}", ex.getMessage(), ex);
         
-        ApiResponse<String> response = ApiResponse.error(ex.getMessage());
+        // Include error type in response for frontend handling
+        Map<String, String> errorData = new HashMap<>();
+        errorData.put("type", ex.getErrorType());
+        errorData.put("message", ex.getMessage());
+        
+        ApiResponse<Map<String, String>> response = ApiResponse.error(ex.getMessage());
+        response.setData(errorData);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
     
