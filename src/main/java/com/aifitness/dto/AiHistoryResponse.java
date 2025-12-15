@@ -31,3 +31,4 @@ public class AiHistoryResponse {
     public void setEntries(java.util.List<HistoryEntry> entries) { this.entries = entries; }
 }
 
+

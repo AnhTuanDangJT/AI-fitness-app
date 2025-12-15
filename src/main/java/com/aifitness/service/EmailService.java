@@ -275,6 +275,65 @@ public class EmailService {
     }
 
     /**
+     * Tests the email service by attempting to send a lightweight test email.
+     * <p>
+     * This method is intended for health checks. It will NEVER throw an exception
+     * to the caller; instead it returns {@code true} on success and {@code false}
+     * if anything goes wrong, while logging the underlying error details.
+     *
+     * @return {@code true} if the test email was sent successfully, {@code false} otherwise
+     */
+    public boolean testEmail() {
+        // If email is not configured, fail fast but gracefully
+        if (!isEmailConfigured) {
+            logger.warn("EMAIL_TEST_SKIPPED reason=NOT_CONFIGURED provider={}", providerName);
+            return false;
+        }
+
+        try {
+            sendTestEmail(); // Internal helper to perform the actual test send
+            logger.info("EMAIL_TEST_SUCCESS provider={}", providerName);
+            return true;
+        } catch (Exception e) {
+            String errorCode = e.getClass().getSimpleName();
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown error";
+
+            // Handle the exception gracefully and log it with enough detail for debugging
+            logger.error("EMAIL_TEST_FAILED provider={} code={} message={}",
+                providerName, errorCode, errorMessage);
+            logger.error("EMAIL_TEST_FAILED_DETAILS exception={} cause={}",
+                e.getClass().getSimpleName(),
+                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
+            logger.error("EMAIL_TEST_FAILED_STACKTRACE", e);
+
+            return false;
+        }
+    }
+
+    /**
+     * Internal helper used by {@link #testEmail()} to perform a real SMTP send.
+     * <p>
+     * Sends a simple test email to the configured {@code fromEmail} (or
+     * {@code mailUsername} as a fallback). Any exception thrown here will be
+     * caught and handled by {@link #testEmail()}.
+     */
+    private void sendTestEmail() {
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        // Use fromEmail as the recipient for the test, falling back to username if needed
+        String toAddress = (fromEmail != null && !fromEmail.trim().isEmpty())
+            ? fromEmail
+            : mailUsername;
+
+        message.setFrom(fromEmail);
+        message.setTo(toAddress);
+        message.setSubject("AI Fitness - Email Service Test");
+        message.setText("This is a test email sent by the AI Fitness application to verify SMTP configuration.");
+
+        mailSender.send(message);
+    }
+
+    /**
      * Lightweight check for callers that only care about whether email
      * is configured, without throwing exceptions.
      *

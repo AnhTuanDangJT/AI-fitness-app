@@ -6,3 +6,4 @@ ALTER TABLE users ADD COLUMN badges TEXT DEFAULT '[]';
 ALTER TABLE users ADD COLUMN last_activity_date DATE;
 
 
+

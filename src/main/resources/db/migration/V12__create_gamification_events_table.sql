@@ -15,3 +15,4 @@ CREATE INDEX IF NOT EXISTS idx_user_type_source ON gamification_events(user_id, 
 CREATE INDEX IF NOT EXISTS idx_user_created ON gamification_events(user_id, created_at);
 
 
+

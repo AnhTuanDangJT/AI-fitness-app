@@ -64,3 +64,4 @@ function StreakIndicator({ currentStreakDays = 0, longestStreakDays = 0 }) {
 export default StreakIndicator
 
 
+

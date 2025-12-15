@@ -26,3 +26,4 @@ CREATE INDEX IF NOT EXISTS idx_user_created ON daily_checkins(user_id, created_a
 
 
 
+

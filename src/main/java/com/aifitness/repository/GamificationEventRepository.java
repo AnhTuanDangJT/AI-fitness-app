@@ -27,3 +27,4 @@ public interface GamificationEventRepository extends JpaRepository<GamificationE
 }
 
 
+

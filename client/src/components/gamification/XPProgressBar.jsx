@@ -49,3 +49,4 @@ function XPProgressBar({ xp = 0 }) {
 export default XPProgressBar
 
 
+

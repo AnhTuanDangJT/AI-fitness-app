@@ -12,3 +12,4 @@ ALTER TABLE users ADD COLUMN max_cooking_time_per_meal INTEGER;
 
 
 
+

@@ -26,3 +26,4 @@ DELETE FROM users;
 -- Note: After this migration, the JWT secret should be rotated to invalidate all existing tokens
 -- Update the JWT_SECRET environment variable or application.properties to a new value
 
+
