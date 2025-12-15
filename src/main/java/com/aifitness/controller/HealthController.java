@@ -2,6 +2,8 @@ package com.aifitness.controller;
 
 import com.aifitness.dto.ApiResponse;
 import com.aifitness.service.EmailService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +29,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class HealthController {
+    
+    private static final Logger log = LoggerFactory.getLogger(HealthController.class);
     
     private final EmailService emailService;
     
@@ -82,6 +86,8 @@ public class HealthController {
             
             return ResponseEntity.ok(response);  // Return success response
         } catch (Exception e) {
+            log.error("Error occurred while checking email health: ", e);  // Log the detailed error
+            
             // Build error response data
             Map<String, Object> errorData = new HashMap<>();
             errorData.put("emailConfigured", false);
