@@ -137,13 +137,13 @@ public class EmailService {
             logger.error("EMAIL_CONFIG_DETAILS host_set={} user_set={} pass_set={} from_set={}", 
                 hasHost, hasUsername, hasPassword, hasFrom);
             
-            // In production, FAIL FAST - do not allow partial initialization
+            // In production, log warning but allow startup to proceed
+            // Email sending will fail gracefully with clear error messages
+            // This prevents deployment failures when env vars are being configured
             if (isProduction) {
-                logger.error("PRODUCTION MODE: Email service is REQUIRED. Application startup will fail.");
-                throw new IllegalStateException(
-                    "Email service configuration is required in production. " +
-                    "Please set MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, and APP_EMAIL_FROM environment variables."
-                );
+                logger.warn("PRODUCTION MODE: Email service is not configured. " +
+                    "Application will start, but email sending will fail until environment variables are set: " +
+                    "MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, APP_EMAIL_FROM");
             } else {
                 logger.warn("DEVELOPMENT MODE: Email service is not configured. Email sending will fail.");
             }
