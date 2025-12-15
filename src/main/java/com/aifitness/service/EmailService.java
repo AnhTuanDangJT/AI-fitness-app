@@ -11,9 +11,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.mail.MessagingException;
-import jakarta.mail.SendFailedException;
-import jakarta.mail.AuthenticationFailedException;
 
 /**
  * Email Service
@@ -177,35 +174,8 @@ public class EmailService {
             
             // Log that email was sent, but do NOT log the verification code
             logger.info("EMAIL_SEND_SUCCESS provider={} to={}", providerName, toEmail);
-        } catch (AuthenticationFailedException e) {
-            String errorCode = "AUTH_FAILED";
-            String errorMessage = e.getMessage() != null ? e.getMessage() : "Authentication failed";
-            logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
-                providerName, errorCode, errorMessage, toEmail);
-            logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
-                e.getClass().getSimpleName(),
-                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
-            throw new EmailServiceException("Unable to send verification email. Please try again later.", e);
-        } catch (SendFailedException e) {
-            String errorCode = "SEND_FAILED";
-            String errorMessage = e.getMessage() != null ? e.getMessage() : "Send failed";
-            logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
-                providerName, errorCode, errorMessage, toEmail);
-            logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
-                e.getClass().getSimpleName(),
-                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
-            throw new EmailServiceException("Unable to send verification email. Please try again later.", e);
-        } catch (MessagingException e) {
-            String errorCode = "MESSAGING_ERROR";
-            String errorMessage = e.getMessage() != null ? e.getMessage() : "Messaging error";
-            logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
-                providerName, errorCode, errorMessage, toEmail);
-            logger.error("EMAIL_SEND_FAILED_DETAILS exception={} cause={}", 
-                e.getClass().getSimpleName(),
-                e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
-            throw new EmailServiceException("Unable to send verification email. Please try again later.", e);
         } catch (Exception e) {
-            String errorCode = "UNKNOWN_ERROR";
+            String errorCode = e.getClass().getSimpleName();
             String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown error";
             logger.error("EMAIL_SEND_FAILED provider={} code={} message={} to={}", 
                 providerName, errorCode, errorMessage, toEmail);
@@ -214,7 +184,11 @@ public class EmailService {
                 e.getCause() != null ? e.getCause().getClass().getSimpleName() : "none");
             // Log full stack trace for debugging
             logger.error("EMAIL_SEND_FAILED_STACKTRACE", e);
-            throw new EmailServiceException("Unable to send verification email. Please try again later.", e);
+            throw new EmailServiceException(
+                "Unable to send verification email. Please try again later.",
+                "SEND_FAILED",
+                e
+            );
         }
     }
     
