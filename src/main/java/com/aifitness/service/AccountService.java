@@ -340,7 +340,7 @@ public class AccountService {
             logger.info("Verification email sent successfully to: {}", email);
         } catch (Exception e) {
             logger.error("Failed to send verification email during resend to: {}", email, e);
-            throw new com.aifitness.exception.EmailServiceException("Email service not configured", e);
+            throw new com.aifitness.exception.EmailServiceException("Unable to send verification email. Please try again later.", e);
         }
         
         return user;
