@@ -1,17 +1,15 @@
 package com.aifitness.controller;
 
-import com.aifitness.dto.ApiResponse;
-import com.aifitness.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
+import jakarta.mail.internet.MimeMessage;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,11 +30,11 @@ public class HealthController {
     
     private static final Logger log = LoggerFactory.getLogger(HealthController.class);
     
-    private final EmailService emailService;
+    private final JavaMailSender javaMailSender;
     
     @Autowired
-    public HealthController(EmailService emailService) {
-        this.emailService = emailService;
+    public HealthController(JavaMailSender javaMailSender) {
+        this.javaMailSender = javaMailSender;
     }
     
     /**
@@ -55,52 +53,22 @@ public class HealthController {
     }
     
     /**
-     * Email Configuration Health Check Endpoint
-     *
-     * Returns email service configuration status for debugging production email issues.
-     * Uses ApiResponse wrapper for consistent API response format.
-     *
-     * @return Email configuration status wrapped in ApiResponse
+     * Email Health Check Endpoint
+     * 
+     * Tests JavaMailSender by creating a MimeMessage.
+     * Returns "EMAIL_OK" if successful.
+     * 
+     * @return "EMAIL_OK" if email service is working
      */
     @GetMapping("/health/email")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> checkEmailHealth() {
+    public String checkEmailHealth() {
         try {
-            boolean emailConfigured = emailService.isEmailConfigured();  // Check if email service is configured
-            EmailService.EmailConfigStatus configStatus = emailService.getEmailConfigStatus();
-            
-            // Build response data with all email configuration details
-            Map<String, Object> responseData = new HashMap<>();
-            responseData.put("emailConfigured", emailConfigured);
-            responseData.put("provider", configStatus.getProvider());
-            responseData.put("hostSet", configStatus.isHostSet());
-            responseData.put("userSet", configStatus.isUserSet());
-            responseData.put("passSet", configStatus.isPassSet());
-            responseData.put("fromSet", configStatus.isFromSet());
-            responseData.put("timestamp", Instant.now().toString());
-            
-            ApiResponse<Map<String, Object>> response = new ApiResponse<>(
-                emailConfigured,
-                emailConfigured ? "Email service is configured" : "Email service is not configured",
-                responseData
-            );
-            
-            return ResponseEntity.ok(response);  // Return success response
+            // Test JavaMailSender by creating a MimeMessage
+            MimeMessage message = javaMailSender.createMimeMessage();
+            return "EMAIL_OK";
         } catch (Exception e) {
-            log.error("Error occurred while checking email health: ", e);  // Log the detailed error
-            
-            // Build error response data
-            Map<String, Object> errorData = new HashMap<>();
-            errorData.put("emailConfigured", false);
-            errorData.put("error", e.getMessage());
-            errorData.put("timestamp", Instant.now().toString());
-            
-            ApiResponse<Map<String, Object>> response = new ApiResponse<>(
-                false,
-                "Email service configuration check failed: " + e.getMessage(),
-                errorData
-            );
-            
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);  // Return error response
+            log.error("Error checking email health: ", e);
+            throw new RuntimeException("Email service check failed: " + e.getMessage(), e);
         }
     }
 }
