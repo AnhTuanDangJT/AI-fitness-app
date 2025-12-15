@@ -2,6 +2,7 @@ import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import ParticleBackground from './components/ParticleBackground'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import VerifyEmail from './pages/VerifyEmail'
@@ -21,6 +22,7 @@ function App() {
       <ParticleBackground />
       <Routes>
         {/* Public routes */}
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
@@ -106,9 +108,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>
   )

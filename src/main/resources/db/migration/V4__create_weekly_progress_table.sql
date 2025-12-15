@@ -26,3 +26,4 @@ CREATE INDEX IF NOT EXISTS idx_user_created ON weekly_progress(user_id, created_
 
 
 
+

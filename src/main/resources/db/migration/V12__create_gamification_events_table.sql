@@ -1,0 +1,17 @@
+-- Create gamification_events table
+CREATE TABLE IF NOT EXISTS gamification_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    event_date DATE NOT NULL,
+    source_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, type, source_id)
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_user_type_source ON gamification_events(user_id, type, source_id);
+CREATE INDEX IF NOT EXISTS idx_user_created ON gamification_events(user_id, created_at);
+
+

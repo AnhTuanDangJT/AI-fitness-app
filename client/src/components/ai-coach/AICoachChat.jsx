@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { aiCoachAPI } from '../../services/api'
+import { gamificationAPI } from '../../services/gamificationApi'
+import { calculateLevel, getTitle } from '../../utils/levels'
 import './AICoachChat.css'
 
 /**
@@ -8,24 +11,29 @@ import './AICoachChat.css'
  * Interactive chat interface for AI Coach feature.
  * Single intelligent general chat that infers intent from user messages.
  */
-// Welcome message - appears only once
-const WELCOME_MESSAGE = {
-  id: 'welcome',
-  role: 'assistant',
-  content: "Hi, I'm your AI Coach. Ask me anything about fitness, food, or the app.",
-  timestamp: new Date().toISOString()
-}
 
 function AICoachChat({ userId, onClearChat }) {
+  const { t, i18n } = useTranslation()
+  
+  // Welcome message - appears only once
+  const WELCOME_MESSAGE = {
+    id: 'welcome',
+    role: 'assistant',
+    content: t('aiCoach.welcome'),
+    timestamp: new Date().toISOString()
+  }
   const [messages, setMessages] = useState([])
   const [inputMessage, setInputMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [gamificationStatus, setGamificationStatus] = useState(null)
+  const [previousStreak, setPreviousStreak] = useState(null)
+  const [previousBadges, setPreviousBadges] = useState(null)
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
   const hasInitializedRef = useRef(false)
 
-  // Load chat history from localStorage on mount
+  // Load chat history and gamification status on mount
   useEffect(() => {
     // Only initialize once
     if (hasInitializedRef.current) return
@@ -57,8 +65,93 @@ function AICoachChat({ userId, onClearChat }) {
       setMessages([WELCOME_MESSAGE])
     }
     
+    // Fetch gamification status
+    fetchGamificationStatus()
+    
     hasInitializedRef.current = true
   }, [userId])
+
+  // Fetch gamification status
+  const fetchGamificationStatus = async () => {
+    try {
+      const result = await gamificationAPI.getGamificationStatus()
+      if (result.type === 'SUCCESS') {
+        const newStatus = result.data
+        
+        // Check for new achievements
+        checkForAchievements(newStatus)
+        
+        setGamificationStatus(newStatus)
+        setPreviousStreak(newStatus.currentStreakDays)
+        setPreviousBadges([...newStatus.badges])
+      }
+    } catch (err) {
+      console.error('Error fetching gamification status:', err)
+    }
+  }
+
+  // Check for new achievements and add system messages
+  const checkForAchievements = (newStatus) => {
+    if (!newStatus) return
+
+    const newMessages = []
+
+    // Check for streak milestones
+    if (previousStreak !== null) {
+      if (newStatus.currentStreakDays === 3 && previousStreak < 3) {
+        newMessages.push({
+          id: `system_${Date.now()}_streak3`,
+          role: 'system',
+          content: t('aiCoach.streak3'),
+          timestamp: new Date().toISOString()
+        })
+      }
+      if (newStatus.currentStreakDays === 7 && previousStreak < 7) {
+        newMessages.push({
+          id: `system_${Date.now()}_streak7`,
+          role: 'system',
+          content: t('aiCoach.streak7'),
+          timestamp: new Date().toISOString()
+        })
+      }
+      if (newStatus.currentStreakDays === 0 && previousStreak > 0) {
+        // Streak broken - supportive message
+        newMessages.push({
+          id: `system_${Date.now()}_streakbroken`,
+          role: 'system',
+          content: t('aiCoach.streakBroken'),
+          timestamp: new Date().toISOString()
+        })
+      }
+    }
+
+    // Check for new badges
+    if (previousBadges && newStatus.badges) {
+      const previousBadgesSet = new Set(previousBadges || [])
+      const newBadges = (newStatus.badges || []).filter(badge => !previousBadgesSet.has(badge))
+      newBadges.forEach(badgeId => {
+        const badgeNames = {
+          'FIRST_LOG': t('aiCoach.firstLog'),
+          'STREAK_3': t('aiCoach.streak3Badge'),
+          'STREAK_7': t('aiCoach.streak7Badge'),
+          'STREAK_30': t('aiCoach.streak30Badge'),
+          'XP_100': t('aiCoach.xp100'),
+          'XP_500': t('aiCoach.xp500'),
+        }
+        newMessages.push({
+          id: `system_${Date.now()}_badge_${badgeId}`,
+          role: 'system',
+          content: t('aiCoach.badgeUnlocked', { badge: badgeNames[badgeId] || badgeId }),
+          timestamp: new Date().toISOString()
+        })
+      })
+    }
+
+    // Add system messages if any
+    if (newMessages.length > 0) {
+      setMessages(prev => [...prev, ...newMessages])
+    }
+  }
 
   // Save chat history to localStorage whenever messages change
   useEffect(() => {
@@ -81,7 +174,7 @@ function AICoachChat({ userId, onClearChat }) {
     const welcomeMsg = {
       id: 'welcome',
       role: 'assistant',
-      content: "Hi, I'm your AI Coach. Ask me anything about fitness, food, or the app.",
+      content: t('aiCoach.welcome'),
       timestamp: new Date().toISOString()
     }
     setMessages([welcomeMsg])
@@ -95,7 +188,7 @@ function AICoachChat({ userId, onClearChat }) {
     setInputMessage('')
     // Reset initialization flag so welcome message appears
     hasInitializedRef.current = false
-  }, [userId])
+  }, [userId, t])
 
   useEffect(() => {
     if (onClearChat) {
@@ -123,6 +216,9 @@ function AICoachChat({ userId, onClearChat }) {
     setInputMessage('')
     setError(null)
 
+    // Refresh gamification status before sending message
+    await fetchGamificationStatus()
+
     // Add user message to chat
     const userMsg = {
       id: `user_${Date.now()}`,
@@ -145,12 +241,16 @@ function AICoachChat({ userId, onClearChat }) {
 
     try {
       // Call API with timeout (25 seconds)
+      // Note: Backend should fetch gamification status and inject into AI prompt
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout. Please try again.')), 25000)
+        setTimeout(() => reject(new Error(t('aiCoach.requestTimeout'))), 25000)
       })
       
+      // Get current UI language (en or vi)
+      const currentLanguage = i18n.language === 'vi' ? 'vi' : 'en'
+      
       const result = await Promise.race([
-        aiCoachAPI.chat(userMessage),
+        aiCoachAPI.chat(userMessage, null, currentLanguage),
         timeoutPromise
       ])
 
@@ -160,7 +260,7 @@ function AICoachChat({ userId, onClearChat }) {
       if (result.type === 'SUCCESS') {
         // Validate response
         if (!result.data || !result.data.assistantMessage) {
-          setError('Received empty response. Please try again.')
+          setError(t('aiCoach.emptyResponse'))
           return
         }
         
@@ -175,7 +275,7 @@ function AICoachChat({ userId, onClearChat }) {
         setMessages(prev => [...prev, assistantMsg])
         setError(null) // Clear any previous errors
       } else if (result.type === 'ERROR') {
-        setError(result.error || 'Failed to get response. Please try again.')
+        setError(result.error || t('aiCoach.failedToSend'))
         // Remove loading message
         setMessages(prev => prev.filter(m => !m.loading))
       }
@@ -187,11 +287,11 @@ function AICoachChat({ userId, onClearChat }) {
       
       // Handle specific error types
       if (err.message && err.message.includes('timeout')) {
-        setError('Request took too long. Please try again.')
+        setError(t('aiCoach.requestTimeout'))
       } else if (err.message && err.message.includes('Network')) {
-        setError('Network error. Please check your connection and try again.')
+        setError(t('aiCoach.networkError'))
       } else {
-        setError(err.message || 'Failed to send message. Please try again.')
+        setError(err.message || t('aiCoach.failedToSend'))
       }
     } finally {
       setLoading(false)
@@ -228,7 +328,7 @@ function AICoachChat({ userId, onClearChat }) {
               {message.loading ? (
                 <div className="loading-indicator">
                   <div className="spinner"></div>
-                  <span>AI Coach is thinking...</span>
+                  <span>{t('aiCoach.thinking')}</span>
                 </div>
               ) : (
                 <>
@@ -245,9 +345,11 @@ function AICoachChat({ userId, onClearChat }) {
                 </>
               )}
             </div>
-            <div className="message-timestamp">
-              {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
+            {message.role !== 'system' && (
+              <div className="message-timestamp">
+                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />
@@ -258,7 +360,7 @@ function AICoachChat({ userId, onClearChat }) {
         <div className="chat-error">
           <span>{error}</span>
           <button onClick={handleRetry} className="retry-button">
-            Retry
+            {t('aiCoach.retry')}
           </button>
         </div>
       )}
@@ -268,7 +370,7 @@ function AICoachChat({ userId, onClearChat }) {
         <input
           type="text"
           className="chat-input"
-          placeholder="Ask me anything about workouts, nutrition, or the app..."
+          placeholder={t('aiCoach.placeholder')}
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           onKeyPress={handleKeyPress}
@@ -279,7 +381,7 @@ function AICoachChat({ userId, onClearChat }) {
           className="chat-send-button"
           disabled={!inputMessage.trim() || loading}
         >
-          {loading ? '...' : 'Send'}
+          {loading ? '...' : t('aiCoach.send')}
         </button>
       </form>
     </div>

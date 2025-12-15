@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { authAPI, userAPI } from '../services/api'
-import { ERROR_MESSAGES, UI_LABELS, BUTTON_TEXT, FORM_LABELS, PLACEHOLDERS, INFO_MESSAGES, PAGE_TITLES } from '../config/constants'
+import { ERROR_MESSAGES } from '../config/constants'
 import './Auth.css'
 
 function Login() {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     usernameOrEmail: '',
     password: '',
@@ -87,8 +89,8 @@ function Login() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>{PAGE_TITLES.LOGIN}</h1>
-          <p>{INFO_MESSAGES.WELCOME_BACK}</p>
+          <h1>{t('auth.login')}</h1>
+          <p>{t('auth.welcomeBack')}</p>
         </div>
 
         {success && (
@@ -112,28 +114,28 @@ function Login() {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="usernameOrEmail">{FORM_LABELS.USERNAME_OR_EMAIL}</label>
+            <label htmlFor="usernameOrEmail">{t('auth.usernameOrEmail')}</label>
             <input
               type="text"
               id="usernameOrEmail"
               name="usernameOrEmail"
               value={formData.usernameOrEmail}
               onChange={handleChange}
-              placeholder={PLACEHOLDERS.USERNAME_OR_EMAIL}
+              placeholder={t('placeholders.usernameOrEmail')}
               required
               autoComplete="username"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">{FORM_LABELS.PASSWORD}</label>
+            <label htmlFor="password">{t('auth.password')}</label>
             <input
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder={PLACEHOLDERS.PASSWORD}
+              placeholder={t('placeholders.password')}
               required
               autoComplete="current-password"
             />
@@ -144,15 +146,15 @@ function Login() {
             className="submit-button"
             disabled={loading}
           >
-            {loading ? UI_LABELS.SIGNING_IN : BUTTON_TEXT.SIGN_IN}
+            {loading ? t('auth.signingIn') : t('auth.signIn')}
           </button>
         </form>
 
         <div className="auth-footer">
           <p>
-            {INFO_MESSAGES.DONT_HAVE_ACCOUNT}{' '}
+            {t('auth.dontHaveAccount')}{' '}
             <Link to="/signup" className="link">
-              {INFO_MESSAGES.SIGN_UP_HERE}
+              {t('auth.signUpHere')}
             </Link>
           </p>
         </div>

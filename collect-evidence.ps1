@@ -158,3 +158,4 @@ Write-Host "5. Check backend console for exception stack traces" -ForegroundColo
 Write-Host "6. Run database queries (see collect-database-evidence.sql)" -ForegroundColor White
 Write-Host ""
 
+

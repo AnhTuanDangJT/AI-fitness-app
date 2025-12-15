@@ -1,0 +1,207 @@
+/* Badge Preview Component Styles */
+
+.badge-preview-container {
+  padding: 20px;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--blur-md));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-medium);
+  box-shadow: var(--shadow-glass);
+}
+
+.badge-preview-header {
+  margin-bottom: 16px;
+}
+
+.badge-preview-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  background: linear-gradient(135deg, #FFFFFF 0%, #60AFFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.badge-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.badge-preview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border-medium);
+  background: var(--color-space-gray);
+  transition: all var(--transition-normal);
+  position: relative;
+}
+
+.badge-preview-item.unlocked {
+  border-color: var(--glass-border-neon);
+  box-shadow: var(--shadow-neumorphic-soft),
+              var(--glow-neon-blue);
+  background: linear-gradient(135deg, rgba(96, 175, 255, 0.1) 0%, rgba(110, 231, 255, 0.08) 100%);
+}
+
+.badge-preview-item.locked {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+
+.badge-preview-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 6px rgba(96, 175, 255, 0.4));
+}
+
+.badge-preview-item.locked .badge-preview-icon {
+  filter: grayscale(1) opacity(0.5);
+}
+
+.badge-preview-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-preview-item.locked .badge-preview-name {
+  color: var(--text-tertiary);
+}
+
+.badge-preview-more {
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid var(--glass-border-medium);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+}
+
+.badge-preview-more:hover {
+  border-color: var(--color-neon-ice-blue);
+  background: var(--glass-bg-medium);
+  box-shadow: var(--shadow-glass);
+}
+
+/* Badge Modal Styles */
+.badge-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.badge-modal {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--blur-lg));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-neon);
+  box-shadow: var(--shadow-glass-elevated),
+              var(--glow-neon-blue);
+  position: relative;
+  max-width: 520px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.badge-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid var(--glass-border-medium);
+}
+
+.badge-modal-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  background: linear-gradient(135deg, #FFFFFF 0%, #60AFFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.badge-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 32px;
+  font-weight: 300;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-normal);
+  opacity: 0.7;
+}
+
+.badge-modal-close:hover {
+  opacity: 1;
+  background: var(--glass-bg-medium);
+}
+
+.badge-modal-content {
+  padding: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .badge-preview-container {
+    padding: 16px;
+  }
+
+  .badge-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 12px;
+  }
+
+  .badge-preview-icon {
+    font-size: 24px;
+  }
+
+  .badge-modal {
+    max-width: 95%;
+    max-height: 85vh;
+  }
+
+  .badge-modal-header {
+    padding: 20px;
+  }
+
+  .badge-modal-content {
+    padding: 20px;
+  }
+}
+

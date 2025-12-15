@@ -25,3 +25,4 @@ CREATE INDEX IF NOT EXISTS idx_user_date ON daily_checkins(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_user_created ON daily_checkins(user_id, created_at);
 
 
+

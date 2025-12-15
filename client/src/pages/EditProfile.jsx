@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import { invalidateGamificationCache } from '../services/gamificationApi'
 import { FORM_LABELS, FORM_PLACEHOLDERS, ACTIVITY_LEVELS, FITNESS_GOALS, GENDER_OPTIONS, DIETARY_PREFERENCES } from '../config/profileFormConfig'
 import { ERROR_MESSAGES, UI_LABELS, BUTTON_TEXT, STATUS_MESSAGES, PAGE_TITLES, VALIDATION_MESSAGES, INFO_MESSAGES } from '../config/constants'
 import './EditProfile.css'
@@ -164,6 +165,10 @@ function EditProfile() {
       const response = await api.put('/profile/update', updateData)
 
       if (response.data.success) {
+        // Invalidate gamification cache after successful profile update
+        // This ensures XP updates are reflected in the UI
+        invalidateGamificationCache()
+        
         // Redirect to dashboard after successful update
         // This will trigger a recalculation and update the dashboard
         navigate('/dashboard')

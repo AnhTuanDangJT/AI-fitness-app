@@ -16,6 +16,8 @@ public class ChatRequest {
     
     private LocalDate date; // Optional date for context (default: today)
     
+    private String language; // UI language (en | vi), defaults to "en"
+    
     private Map<String, Object> context; // Optional client hints
     
     // Constructors
@@ -23,9 +25,10 @@ public class ChatRequest {
     public ChatRequest() {
     }
     
-    public ChatRequest(String message, LocalDate date, Map<String, Object> context) {
+    public ChatRequest(String message, LocalDate date, String language, Map<String, Object> context) {
         this.message = message;
         this.date = date;
+        this.language = language;
         this.context = context;
     }
     
@@ -45,6 +48,14 @@ public class ChatRequest {
     
     public void setDate(LocalDate date) {
         this.date = date;
+    }
+    
+    public String getLanguage() {
+        return language;
+    }
+    
+    public void setLanguage(String language) {
+        this.language = language;
     }
     
     public Map<String, Object> getContext() {

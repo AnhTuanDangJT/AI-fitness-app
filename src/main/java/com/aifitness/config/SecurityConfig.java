@@ -101,6 +101,8 @@ public class SecurityConfig {
                 .requestMatchers("/calculate/**").permitAll() // Calculation endpoints (JWT validation in controller)
                 .requestMatchers("/meal-preferences/**").permitAll() // TEMPORARY: Meal preferences - permitAll for testing (change back to authenticated() after)
                 .requestMatchers("/ai/**").permitAll() // AI endpoints (JWT validation in controllers)
+                .requestMatchers("/feedback/**").permitAll() // Feedback endpoint (JWT validation in controller)
+                .requestMatchers("/gamification/**").permitAll() // Gamification endpoints (JWT validation in controller)
                 .anyRequest().authenticated() // All other endpoints require authentication
             );
         

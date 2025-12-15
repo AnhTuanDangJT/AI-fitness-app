@@ -3,9 +3,11 @@ package com.aifitness.controller;
 import com.aifitness.dto.ApiResponse;
 import com.aifitness.dto.GroceryItem;
 import com.aifitness.dto.MealPlanResponseDTO;
+import com.aifitness.entity.EventType;
 import com.aifitness.entity.MealPlan;
 import com.aifitness.entity.User;
 import com.aifitness.repository.UserRepository;
+import com.aifitness.service.GamificationService;
 import com.aifitness.service.MealPlanService;
 import com.aifitness.util.JwtTokenService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,14 +38,17 @@ public class MealPlanController {
     private final MealPlanService mealPlanService;
     private final JwtTokenService jwtTokenService;
     private final UserRepository userRepository;
+    private final GamificationService gamificationService;
     
     @Autowired
     public MealPlanController(MealPlanService mealPlanService,
                              JwtTokenService jwtTokenService,
-                             UserRepository userRepository) {
+                             UserRepository userRepository,
+                             GamificationService gamificationService) {
         this.mealPlanService = mealPlanService;
         this.jwtTokenService = jwtTokenService;
         this.userRepository = userRepository;
+        this.gamificationService = gamificationService;
     }
     
     /**
@@ -135,6 +140,20 @@ public class MealPlanController {
             logger.info("[RequestId: {}] Meal plan generated and persisted for userId={}. MealPlanId={}, EntriesCount={}", 
                     requestId, userId, responseDTO.getId(), 
                     responseDTO.getEntries() != null ? responseDTO.getEntries().size() : 0);
+            
+            // Record gamification event (AFTER successful save)
+            // Note: activityDate parameter is ignored - GamificationService always uses UTC today
+            try {
+                gamificationService.recordEvent(
+                    user,
+                    EventType.MEAL_PLAN_CREATED,
+                    responseDTO.getId().toString(),
+                    java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+                );
+            } catch (Exception e) {
+                // Log but don't fail the request if gamification fails
+                logger.warn("[RequestId: {}] Error recording gamification event: {}", requestId, e.getMessage());
+            }
             
             return ResponseEntity.ok(ApiResponse.success(
                 "Meal plan generated successfully",

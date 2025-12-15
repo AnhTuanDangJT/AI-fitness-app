@@ -114,5 +114,70 @@ public class EmailService {
             verificationCode
         );
     }
+    
+    /**
+     * Sends user feedback email to the support email address.
+     * 
+     * @param toEmail The recipient email address (support email)
+     * @param userEmail The email address of the user submitting feedback
+     * @param subject Optional subject line
+     * @param message The feedback message content
+     * @throws EmailServiceException if email service is not configured or sending fails
+     */
+    public void sendFeedbackEmail(String toEmail, String userEmail, String subject, String message) {
+        if (!isEmailConfigured) {
+            logger.error("Email service not configured - Cannot send feedback email to: {}", toEmail);
+            throw new EmailServiceException("Email service not configured. Please contact support.");
+        }
+        
+        try {
+            SimpleMailMessage mailMessage = new SimpleMailMessage();
+            // Use configured from email or fallback
+            String from = fromEmail != null && !fromEmail.trim().isEmpty() 
+                ? fromEmail 
+                : (mailUsername != null && !mailUsername.trim().isEmpty() ? mailUsername : "no-reply@aifitness.com");
+            mailMessage.setFrom(from);
+            mailMessage.setTo(toEmail);
+            
+            // Build subject
+            String emailSubject = subject != null && !subject.trim().isEmpty()
+                ? String.format("[AI Fitness Feedback] %s", subject)
+                : "[AI Fitness Feedback] User Feedback";
+            mailMessage.setSubject(emailSubject);
+            
+            // Build email body
+            mailMessage.setText(buildFeedbackEmailBody(userEmail, message));
+            
+            mailSender.send(mailMessage);
+            
+            logger.info("Feedback email sent successfully from user: {} to: {}", userEmail, toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send feedback email from: {} to: {}", userEmail, toEmail, e);
+            logger.error("Email sending exception cause: {}", e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+            throw new EmailServiceException("Failed to send feedback email", e);
+        }
+    }
+    
+    /**
+     * Builds the email body for feedback email.
+     * 
+     * @param userEmail The email address of the user submitting feedback
+     * @param message The feedback message content
+     * @return The email body text
+     */
+    private String buildFeedbackEmailBody(String userEmail, String message) {
+        return String.format(
+            "User Feedback Submission\n\n" +
+            "User Email: %s\n" +
+            "Timestamp: %s\n\n" +
+            "Message:\n" +
+            "%s\n\n" +
+            "---\n" +
+            "This is an automated message from AI Fitness feedback system.",
+            userEmail,
+            java.time.LocalDateTime.now().toString(),
+            message
+        );
+    }
 }
 

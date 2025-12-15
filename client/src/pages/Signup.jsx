@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { authAPI } from '../services/api'
-import { ERROR_MESSAGES, SUCCESS_MESSAGES, UI_LABELS, BUTTON_TEXT, FORM_LABELS, PLACEHOLDERS, INFO_MESSAGES, PAGE_TITLES, VALIDATION_MESSAGES } from '../config/constants'
+import { ERROR_MESSAGES } from '../config/constants'
 import './Auth.css'
 
 function Signup() {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -30,13 +32,13 @@ function Signup() {
 
     // Client-side validation
     if (formData.password !== formData.confirmPassword) {
-      setError(VALIDATION_MESSAGES.PASSWORD_MISMATCH)
+      setError(t('validation.passwordMismatch'))
       setLoading(false)
       return
     }
 
     if (formData.password.length < 6) {
-      setError(VALIDATION_MESSAGES.PASSWORD_MIN_LENGTH)
+      setError(t('validation.passwordMinLength'))
       setLoading(false)
       return
     }
@@ -86,8 +88,8 @@ function Signup() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>{PAGE_TITLES.SIGNUP}</h1>
-          <p>{INFO_MESSAGES.CREATE_ACCOUNT}</p>
+          <h1>{t('auth.signup')}</h1>
+          <p>{t('auth.createAccountMessage')}</p>
         </div>
 
         {error && (
@@ -98,14 +100,14 @@ function Signup() {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="username">{FORM_LABELS.USERNAME}</label>
+            <label htmlFor="username">{t('auth.username')}</label>
             <input
               type="text"
               id="username"
               name="username"
               value={formData.username}
               onChange={handleChange}
-              placeholder={PLACEHOLDERS.USERNAME}
+              placeholder={t('placeholders.username')}
               required
               minLength={3}
               maxLength={50}
@@ -114,28 +116,28 @@ function Signup() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">{FORM_LABELS.EMAIL}</label>
+            <label htmlFor="email">{t('auth.email')}</label>
             <input
               type="email"
               id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder={PLACEHOLDERS.EMAIL}
+              placeholder={t('placeholders.email')}
               required
               autoComplete="email"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">{FORM_LABELS.PASSWORD}</label>
+            <label htmlFor="password">{t('auth.password')}</label>
             <input
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder={PLACEHOLDERS.PASSWORD}
+              placeholder={t('placeholders.password')}
               required
               minLength={6}
               autoComplete="new-password"
@@ -143,14 +145,14 @@ function Signup() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">{FORM_LABELS.CONFIRM_PASSWORD}</label>
+            <label htmlFor="confirmPassword">{t('auth.confirmPassword')}</label>
             <input
               type="password"
               id="confirmPassword"
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              placeholder={PLACEHOLDERS.CONFIRM_PASSWORD}
+              placeholder={t('placeholders.confirmPassword')}
               required
               minLength={6}
               autoComplete="new-password"
@@ -162,15 +164,15 @@ function Signup() {
             className="submit-button"
             disabled={loading}
           >
-            {loading ? UI_LABELS.CREATING_ACCOUNT : BUTTON_TEXT.SIGN_UP}
+            {loading ? t('auth.creatingAccount') : t('auth.signUp')}
           </button>
         </form>
 
         <div className="auth-footer">
           <p>
-            {INFO_MESSAGES.ALREADY_HAVE_ACCOUNT}{' '}
+            {t('auth.alreadyHaveAccount')}{' '}
             <Link to="/login" className="link">
-              {INFO_MESSAGES.SIGN_IN_HERE}
+              {t('auth.signInHere')}
             </Link>
           </p>
         </div>

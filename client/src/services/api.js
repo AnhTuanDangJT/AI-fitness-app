@@ -322,11 +322,13 @@ export const aiCoachAPI = {
    * 
    * @param {string} message - User's message (AI infers intent from content)
    * @param {string} date - Optional date (YYYY-MM-DD), defaults to today
+   * @param {string} language - UI language (en | vi), defaults to 'en'
    */
-  chat: async (message, date = null) => {
+  chat: async (message, date = null, language = 'en') => {
     try {
       const requestBody = {
         message,
+        language: language || 'en', // Ensure language is always provided
       }
       
       if (date) {
@@ -345,6 +347,48 @@ export const aiCoachAPI = {
       
     } catch (error) {
       // All errors (network, 401, 500, etc.) are real errors
+      return { 
+        type: 'ERROR', 
+        error: error.genericMessage || error.message || ERROR_MESSAGES.GENERIC
+      }
+    }
+  },
+  
+  /**
+   * GET /api/ai/context
+   * Retrieves comprehensive user context for AI Coach
+   */
+  getAiContext: async () => {
+    try {
+      const response = await api.get('/ai/context')
+      
+      if (response.data?.success && response.data?.data) {
+        return { type: 'SUCCESS', data: response.data.data }
+      }
+      
+      return { type: 'ERROR', error: ERROR_MESSAGES.GENERIC }
+    } catch (error) {
+      return { 
+        type: 'ERROR', 
+        error: error.genericMessage || error.message || ERROR_MESSAGES.GENERIC
+      }
+    }
+  },
+  
+  /**
+   * PUT /api/users/language
+   * Updates user's preferred language
+   */
+  updateLanguage: async (language) => {
+    try {
+      const response = await api.put('/users/language', { language })
+      
+      if (response.data?.success) {
+        return { type: 'SUCCESS', data: response.data.data }
+      }
+      
+      return { type: 'ERROR', error: ERROR_MESSAGES.GENERIC }
+    } catch (error) {
       return { 
         type: 'ERROR', 
         error: error.genericMessage || error.message || ERROR_MESSAGES.GENERIC

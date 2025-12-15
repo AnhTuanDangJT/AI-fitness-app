@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { mealPlanAPI } from '../../services/api'
 import './MealPlanPanel.css'
 
 function MealPlanPanel() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [status, setStatus] = useState('loading') // 'loading' | 'empty' | 'success' | 'error'
   const [mealPlan, setMealPlan] = useState(null)
@@ -35,7 +37,7 @@ function MealPlanPanel() {
     return (
       <div className="meal-plan-panel">
         <div className="meal-plan-loading">
-          <p>Loading meal plan...</p>
+          <p>{t('mealPlan.loading')}</p>
         </div>
       </div>
     )
@@ -45,12 +47,12 @@ function MealPlanPanel() {
     return (
       <div className="meal-plan-panel">
         <div className="meal-plan-placeholder">
-          <p>Meal plan will appear here.</p>
+          <p>{t('mealPlan.willAppearHere')}</p>
           <button 
             className="generate-plan-button-small"
             onClick={() => navigate('/meal-plan')}
           >
-            Generate Weekly Plan
+            {t('mealPlan.generateWeeklyPlan')}
           </button>
         </div>
       </div>
@@ -61,12 +63,12 @@ function MealPlanPanel() {
     return (
       <div className="meal-plan-panel">
         <div className="meal-plan-error">
-          <p>Unable to load meal plan.</p>
+          <p>{t('mealPlan.unableToLoad')}</p>
           <button 
             className="retry-button-small"
             onClick={fetchMealPlan}
           >
-            Retry
+            {t('dashboard.retry')}
           </button>
         </div>
       </div>
@@ -81,13 +83,13 @@ function MealPlanPanel() {
     return (
       <div className="meal-plan-panel">
         <div className="meal-plan-preview">
-          <p className="meal-plan-week">Week of {weekStart}</p>
-          <p className="meal-plan-meals">{entriesCount} meals planned</p>
+          <p className="meal-plan-week">{t('mealPlan.weekOf', { date: weekStart })}</p>
+          <p className="meal-plan-meals">{t('mealPlan.mealsPlanned', { count: entriesCount })}</p>
           <button 
             className="view-plan-button"
             onClick={() => navigate('/meal-plan')}
           >
-            View Full Plan
+            {t('mealPlan.viewFullPlan')}
           </button>
         </div>
       </div>
@@ -97,7 +99,7 @@ function MealPlanPanel() {
   return (
     <div className="meal-plan-panel">
       <div className="meal-plan-placeholder">
-        <p>Meal plan will appear here.</p>
+        <p>{t('mealPlan.willAppearHere')}</p>
       </div>
     </div>
   )

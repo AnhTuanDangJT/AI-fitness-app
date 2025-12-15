@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { mealPlanAPI } from '../services/api'
+import { invalidateGamificationCache } from '../services/gamificationApi'
 import { 
   MEAL_PLAN_LABELS, 
   MEAL_PLAN_STATUS, 
@@ -10,6 +12,7 @@ import GroceryList from '../components/grocery-list/GroceryList'
 import './MealPlan.css'
 
 function MealPlan() {
+  const { t } = useTranslation()
   // Explicit status state: "loading" | "empty" | "success" | "error"
   // This replaces the ambiguous combination of mealPlan/error/loading states
   const [status, setStatus] = useState('loading') // 'loading' | 'empty' | 'success' | 'error'
@@ -94,7 +97,7 @@ function MealPlan() {
 
   const handleGenerate = async () => {
     const confirmed = window.confirm(
-      `${MEAL_PLAN_LABELS.CONFIRM_GENERATE}\n\n${MEAL_PLAN_LABELS.CONFIRM_GENERATE_MESSAGE}`
+      `${t('mealPlan.confirmGenerate')}\n\n${t('mealPlan.confirmGenerateMessage')}`
     )
     
     if (!confirmed) {
@@ -115,6 +118,10 @@ function MealPlan() {
       
       const response = await mealPlanAPI.generate(weekStart)
       if (response.success) {
+        // Invalidate gamification cache after successful meal plan generation
+        // This ensures XP updates are reflected in the UI
+        invalidateGamificationCache()
+        
         // After successful generation, refresh the meal plan
         // This will fetch the newly created meal plan
         await fetchMealPlan()
@@ -144,13 +151,13 @@ function MealPlan() {
   const getDayName = (dateString) => {
     const date = new Date(dateString)
     const days = [
-      MEAL_PLAN_LABELS.SUNDAY,
-      MEAL_PLAN_LABELS.MONDAY,
-      MEAL_PLAN_LABELS.TUESDAY,
-      MEAL_PLAN_LABELS.WEDNESDAY,
-      MEAL_PLAN_LABELS.THURSDAY,
-      MEAL_PLAN_LABELS.FRIDAY,
-      MEAL_PLAN_LABELS.SATURDAY,
+      t('mealPlan.sunday'),
+      t('mealPlan.monday'),
+      t('mealPlan.tuesday'),
+      t('mealPlan.wednesday'),
+      t('mealPlan.thursday'),
+      t('mealPlan.friday'),
+      t('mealPlan.saturday'),
     ]
     return days[date.getDay()]
   }
@@ -185,13 +192,13 @@ function MealPlan() {
   const getMealTypeLabel = (mealType) => {
     switch (mealType) {
       case 'BREAKFAST':
-        return MEAL_PLAN_LABELS.BREAKFAST
+        return t('mealPlan.breakfast')
       case 'LUNCH':
-        return MEAL_PLAN_LABELS.LUNCH
+        return t('mealPlan.lunch')
       case 'DINNER':
-        return MEAL_PLAN_LABELS.DINNER
+        return t('mealPlan.dinner')
       case 'SNACK':
-        return MEAL_PLAN_LABELS.SNACK
+        return t('mealPlan.snack')
       default:
         return mealType
     }
@@ -233,7 +240,7 @@ function MealPlan() {
       <div className="meal-plan-page">
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>{MEAL_PLAN_STATUS.LOADING}</p>
+          <p>{t('mealPlan.loading')}</p>
         </div>
       </div>
     )
@@ -246,10 +253,10 @@ function MealPlan() {
     return (
       <div className="meal-plan-page">
         <div className="no-meal-plan-container">
-          <h2>No Meal Plan Yet</h2>
-          <p>Generate your first personalized meal plan</p>
+          <h2>{t('mealPlan.noMealPlanYet')}</h2>
+          <p>{t('mealPlan.generateFirstPlan')}</p>
           <button onClick={handleGenerate} className="generate-button" disabled={generating}>
-            {generating ? MEAL_PLAN_LABELS.GENERATING : 'Generate Meal Plan'}
+            {generating ? t('mealPlan.generating') : t('mealPlan.generateNew')}
           </button>
         </div>
       </div>
@@ -263,10 +270,10 @@ function MealPlan() {
     return (
       <div className="meal-plan-page">
         <div className="error-container">
-          <h2>Error Loading Meal Plan</h2>
+          <h2>{t('mealPlan.errorLoading')}</h2>
           <p>{error}</p>
           <button onClick={fetchMealPlan} className="generate-button" disabled={generating}>
-            Retry
+            {t('mealPlan.retry')}
           </button>
         </div>
       </div>
@@ -282,7 +289,7 @@ function MealPlan() {
       <div className="meal-plan-page">
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Loading...</p>
+          <p>{t('common.loading')}</p>
         </div>
       </div>
     )
@@ -290,27 +297,27 @@ function MealPlan() {
 
   const mealsByDay = groupMealsByDay(mealPlan.entries)
   const dayOrder = [
-    MEAL_PLAN_LABELS.MONDAY,
-    MEAL_PLAN_LABELS.TUESDAY,
-    MEAL_PLAN_LABELS.WEDNESDAY,
-    MEAL_PLAN_LABELS.THURSDAY,
-    MEAL_PLAN_LABELS.FRIDAY,
-    MEAL_PLAN_LABELS.SATURDAY,
-    MEAL_PLAN_LABELS.SUNDAY,
+    t('mealPlan.monday'),
+    t('mealPlan.tuesday'),
+    t('mealPlan.wednesday'),
+    t('mealPlan.thursday'),
+    t('mealPlan.friday'),
+    t('mealPlan.saturday'),
+    t('mealPlan.sunday'),
   ]
 
   return (
     <div className="meal-plan-page">
       <div className="meal-plan-header">
         <div>
-          <h1>{MEAL_PLAN_LABELS.TITLE}</h1>
+          <h1>{t('mealPlan.title')}</h1>
           {mealPlan.weekStartDate && (() => {
             const weekRange = formatWeekRange(mealPlan.weekStartDate)
             // Use week range if available, otherwise fallback to start date only
             const dateDisplay = weekRange || formatDate(mealPlan.weekStartDate)
             return (
               <p className="week-info">
-                {MEAL_PLAN_LABELS.WEEK_START} {dateDisplay}
+                {t('mealPlan.weekOf', { date: dateDisplay })}
               </p>
             )
           })()}
@@ -321,7 +328,7 @@ function MealPlan() {
             className="generate-button"
             disabled={generating}
           >
-            {generating ? MEAL_PLAN_LABELS.GENERATING : MEAL_PLAN_LABELS.GENERATE_NEW}
+            {generating ? t('mealPlan.generating') : t('mealPlan.generateNew')}
           </button>
         </div>
       </div>
@@ -333,13 +340,13 @@ function MealPlan() {
             className={`tab-button ${activeTab === 'meal-plan' ? 'active' : ''}`}
             onClick={() => setActiveTab('meal-plan')}
           >
-            Meal Plan
+            {t('mealPlan.mealPlanTab')}
           </button>
           <button
             className={`tab-button ${activeTab === 'grocery-list' ? 'active' : ''}`}
             onClick={() => setActiveTab('grocery-list')}
           >
-            Grocery List
+            {t('mealPlan.groceryListTab')}
           </button>
         </div>
 
@@ -348,23 +355,23 @@ function MealPlan() {
           <>
             {mealPlan.dailyTargets && (
               <div className="daily-targets">
-                <h2>{MEAL_PLAN_LABELS.DAILY_TARGETS}</h2>
+                <h2>{t('mealPlan.dailyTargets')}</h2>
                 <div className="targets-grid">
                   <div className="target-item">
-                    <span className="target-label">{MEAL_PLAN_LABELS.CALORIES}</span>
-                    <span className="target-value">{mealPlan.dailyTargets.calories} {MEAL_PLAN_LABELS.KCAL}</span>
+                    <span className="target-label">{t('mealPlan.calories')}</span>
+                    <span className="target-value">{mealPlan.dailyTargets.calories} {t('mealPlan.kcal')}</span>
                   </div>
                   <div className="target-item">
-                    <span className="target-label">{MEAL_PLAN_LABELS.PROTEIN}</span>
-                    <span className="target-value">{mealPlan.dailyTargets.protein} {MEAL_PLAN_LABELS.GRAMS}</span>
+                    <span className="target-label">{t('mealPlan.protein')}</span>
+                    <span className="target-value">{mealPlan.dailyTargets.protein} {t('mealPlan.grams')}</span>
                   </div>
                   <div className="target-item">
-                    <span className="target-label">{MEAL_PLAN_LABELS.CARBS}</span>
-                    <span className="target-value">{mealPlan.dailyTargets.carbs} {MEAL_PLAN_LABELS.GRAMS}</span>
+                    <span className="target-label">{t('mealPlan.carbs')}</span>
+                    <span className="target-value">{mealPlan.dailyTargets.carbs} {t('mealPlan.grams')}</span>
                   </div>
                   <div className="target-item">
-                    <span className="target-label">{MEAL_PLAN_LABELS.FATS}</span>
-                    <span className="target-value">{mealPlan.dailyTargets.fats} {MEAL_PLAN_LABELS.GRAMS}</span>
+                    <span className="target-label">{t('mealPlan.fats')}</span>
+                    <span className="target-value">{mealPlan.dailyTargets.fats} {t('mealPlan.grams')}</span>
                   </div>
                 </div>
               </div>
@@ -400,16 +407,16 @@ function MealPlan() {
                             </div>
                             <div className="meal-macros">
                               <span className="macro-item">
-                                {meal.calories} {MEAL_PLAN_LABELS.KCAL}
+                                {meal.calories} {t('mealPlan.kcal')}
                               </span>
                               <span className="macro-item">
-                                {MEAL_PLAN_LABELS.PROTEIN}: {meal.protein}{MEAL_PLAN_LABELS.GRAMS}
+                                {t('mealPlan.protein')}: {meal.protein}{t('mealPlan.grams')}
                               </span>
                               <span className="macro-item">
-                                {MEAL_PLAN_LABELS.CARBS}: {meal.carbs}{MEAL_PLAN_LABELS.GRAMS}
+                                {t('mealPlan.carbs')}: {meal.carbs}{t('mealPlan.grams')}
                               </span>
                               <span className="macro-item">
-                                {MEAL_PLAN_LABELS.FATS}: {meal.fats}{MEAL_PLAN_LABELS.GRAMS}
+                                {t('mealPlan.fats')}: {meal.fats}{t('mealPlan.grams')}
                               </span>
                             </div>
                           </div>

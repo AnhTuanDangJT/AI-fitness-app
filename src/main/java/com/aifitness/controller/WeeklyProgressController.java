@@ -3,8 +3,10 @@ package com.aifitness.controller;
 import com.aifitness.dto.ApiResponse;
 import com.aifitness.dto.WeeklyProgressRequest;
 import com.aifitness.dto.WeeklyProgressResponse;
+import com.aifitness.entity.EventType;
 import com.aifitness.entity.User;
 import com.aifitness.repository.UserRepository;
+import com.aifitness.service.GamificationService;
 import com.aifitness.service.WeeklyProgressService;
 import com.aifitness.util.JwtTokenService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,14 +32,17 @@ public class WeeklyProgressController {
     private final WeeklyProgressService weeklyProgressService;
     private final JwtTokenService jwtTokenService;
     private final UserRepository userRepository;
+    private final GamificationService gamificationService;
     
     @Autowired
     public WeeklyProgressController(WeeklyProgressService weeklyProgressService,
                                    JwtTokenService jwtTokenService,
-                                   UserRepository userRepository) {
+                                   UserRepository userRepository,
+                                   GamificationService gamificationService) {
         this.weeklyProgressService = weeklyProgressService;
         this.jwtTokenService = jwtTokenService;
         this.userRepository = userRepository;
+        this.gamificationService = gamificationService;
     }
     
     /**
@@ -118,6 +123,20 @@ public class WeeklyProgressController {
             
             // Save weekly progress
             WeeklyProgressResponse response = weeklyProgressService.saveWeeklyProgress(user, request);
+            
+            // Record gamification event (AFTER successful save)
+            // Note: activityDate parameter is ignored - GamificationService always uses UTC today
+            try {
+                gamificationService.recordEvent(
+                    user,
+                    EventType.WEEKLY_PROGRESS,
+                    response.getId().toString(),
+                    java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+                );
+            } catch (Exception e) {
+                // Log but don't fail the request if gamification fails
+                System.err.println("Error recording gamification event: " + e.getMessage());
+            }
             
             // Return success response
             return ResponseEntity.ok(ApiResponse.success(

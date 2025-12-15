@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { isAuthenticated } from '../utils/auth'
 import api from '../services/api'
 
 /**
@@ -10,16 +12,15 @@ import api from '../services/api'
  * Redirects to /login if not authenticated.
  */
 function ProtectedRoute({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null)
+  const { t } = useTranslation()
+  const [isAuthenticatedState, setIsAuthenticatedState] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const checkAuthentication = async () => {
-      const token = localStorage.getItem('token')
-      
-      // If no token, user is not authenticated
-      if (!token) {
-        setIsAuthenticated(false)
+      // Use centralized auth utility - check if token exists
+      if (!isAuthenticated()) {
+        setIsAuthenticatedState(false)
         setLoading(false)
         return
       }
@@ -30,12 +31,12 @@ function ProtectedRoute({ children }) {
       try {
         // Check if token is present and not expired (basic check)
         // You can add token validation here if needed
-        setIsAuthenticated(true)
+        setIsAuthenticatedState(true)
       } catch (error) {
         // Token is invalid
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-        setIsAuthenticated(false)
+        setIsAuthenticatedState(false)
       } finally {
         setLoading(false)
       }
@@ -65,14 +66,14 @@ function ProtectedRoute({ children }) {
             animation: 'spin 1s linear infinite',
             margin: '0 auto 20px'
           }}></div>
-          <p>Loading...</p>
+          <p>{t('common.loading')}</p>
         </div>
       </div>
     )
   }
 
   // Redirect to login if not authenticated
-  if (!isAuthenticated) {
+  if (!isAuthenticatedState) {
     return <Navigate to="/login" replace />
   }
 

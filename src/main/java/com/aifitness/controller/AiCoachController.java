@@ -211,8 +211,8 @@ public class AiCoachController {
             String message = chatRequest.getMessage();
             
             // LOG REQUEST PAYLOAD
-            logger.info("[RequestId: {}] Received chat request payload: message='{}', date={}", 
-                    requestId, message, chatRequest.getDate());
+            logger.info("[RequestId: {}] Received chat request payload: message='{}', date={}, language={}", 
+                    requestId, message, chatRequest.getDate(), chatRequest.getLanguage());
             
             if (message == null || message.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -236,15 +236,22 @@ public class AiCoachController {
                 date = today;
             }
             
-            logger.info("[RequestId: {}] Processing chat: date={}, message='{}' (length={})", 
-                    requestId, date, message, message.length());
+            // Get language (default to "en" if not provided or invalid)
+            String language = chatRequest.getLanguage();
+            if (language == null || language.trim().isEmpty() || 
+                (!language.equals("vi") && !language.equals("en"))) {
+                language = "en"; // Default to English
+            }
+            
+            logger.info("[RequestId: {}] Processing chat: date={}, language={}, message='{}' (length={})", 
+                    requestId, date, language, message, message.length());
             
             // Process chat request with timeout protection
             ChatResponse response;
             try {
                 // Set a timeout for AI processing (30 seconds)
                 // In a real implementation with external AI, this would use CompletableFuture with timeout
-                response = aiCoachService.handleChat(user, message, date);
+                response = aiCoachService.handleChat(user, message, date, language);
             } catch (Exception e) {
                 // Check if it's a timeout-related exception in the cause chain
                 if (e.getCause() instanceof java.util.concurrent.TimeoutException) {

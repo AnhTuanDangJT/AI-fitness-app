@@ -1,5 +1,6 @@
 package com.aifitness.service;
 
+import com.aifitness.ai.OpenAiClient;
 import com.aifitness.dto.DailyMacrosDTO;
 import com.aifitness.dto.DailyMealPlanDTO;
 import com.aifitness.dto.GroceryItem;
@@ -11,6 +12,7 @@ import com.aifitness.entity.User;
 import com.aifitness.repository.MealPlanEntryRepository;
 import com.aifitness.repository.MealPlanRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,17 +37,20 @@ public class MealPlanService {
     private final MealPlanEntryRepository mealPlanEntryRepository;
     private final NutritionService nutritionService;
     private final ProfileService profileService;
+    private final OpenAiClient openAiClient;
     private final ObjectMapper objectMapper;
     
     @Autowired
     public MealPlanService(MealPlanRepository mealPlanRepository,
                           MealPlanEntryRepository mealPlanEntryRepository,
                           NutritionService nutritionService,
-                          ProfileService profileService) {
+                          ProfileService profileService,
+                          OpenAiClient openAiClient) {
         this.mealPlanRepository = mealPlanRepository;
         this.mealPlanEntryRepository = mealPlanEntryRepository;
         this.nutritionService = nutritionService;
         this.profileService = profileService;
+        this.openAiClient = openAiClient;
         this.objectMapper = new ObjectMapper();
     }
     
@@ -92,17 +97,440 @@ public class MealPlanService {
     }
     
     /**
-     * Generates a weekly meal plan for a user.
+     * Generates a weekly meal plan for a user using AI.
      * 
-     * TEMPORARY: Returns hardcoded mock data for testing.
-     * Does not require user preferences.
+     * Uses OpenAI to generate a personalized meal plan based on user preferences,
+     * dietary restrictions, calorie targets, and macro requirements.
      * 
      * @param user The user to generate the meal plan for
      * @param startDate The start date of the week (typically Monday)
      * @return The generated meal plan
      */
     public MealPlan generateWeeklyMealPlanForUser(User user, LocalDate startDate) {
-        // TEMPORARY: Return mock data - no validation required
+        // Check if meal plan already exists for this week
+        Optional<MealPlan> existingPlan = mealPlanRepository.findByUserAndWeekStartDate(user, startDate);
+        if (existingPlan.isPresent()) {
+            // Delete existing plan and create a new one
+            mealPlanRepository.delete(existingPlan.get());
+        }
+        
+        // Create meal plan (save first to get ID)
+        MealPlan mealPlan = new MealPlan(user, startDate);
+        mealPlan = mealPlanRepository.save(mealPlan);
+        
+        try {
+            // Calculate nutrition targets
+            double bmr = nutritionService.calculateBMR(user.getWeight(), user.getHeight(), user.getAge(), user.getSex());
+            double tdee = nutritionService.calculateTDEE(bmr, user.getActivityLevel());
+            double goalCalories = nutritionService.calculateGoalCalories(tdee, user.getCalorieGoal());
+            double proteinTarget = nutritionService.calculateProtein(user.getCalorieGoal(), user.getWeight());
+            double fatTarget = nutritionService.calculateFat(user.getWeight());
+            double carbTarget = nutritionService.calculateCarbs(goalCalories, proteinTarget, fatTarget);
+            
+            // Build prompt with hard constraints
+            String prompt = buildMealPlanPrompt(user, goalCalories, proteinTarget, carbTarget, fatTarget, startDate);
+            
+            // Generate meal plan with validation and retry if needed
+            List<MealPlanEntry> entries = generateMealPlanWithValidation(user, prompt, mealPlan, startDate);
+            
+            // Add entries to meal plan
+            for (MealPlanEntry entry : entries) {
+                mealPlan.addEntry(entry);
+            }
+            
+            // Save meal plan with all entries
+            mealPlan = mealPlanRepository.save(mealPlan);
+            
+            return mealPlan;
+        } catch (Exception e) {
+            // If AI generation fails, fall back to hardcoded meals
+            // This ensures the system still works if AI is unavailable
+            System.err.println("AI meal generation failed, using fallback: " + e.getMessage());
+            return generateWeeklyMealPlanForUserFallback(user, startDate);
+        }
+    }
+    
+    /**
+     * Builds the meal plan prompt with hard constraints based on user preferences.
+     */
+    private String buildMealPlanPrompt(User user, double calories, double protein, double carbs, double fats, LocalDate startDate) {
+        StringBuilder prompt = new StringBuilder();
+        
+        prompt.append("You are a professional nutritionist and regional cuisine expert.\n\n");
+        prompt.append("The meal plan MUST strictly follow the user's preferences.\n");
+        prompt.append("These are NOT suggestions — they are REQUIREMENTS.\n\n");
+        
+        prompt.append("USER PREFERENCES:\n");
+        
+        // Preferred cuisine
+        if (user.getFavoriteCuisines() != null && !user.getFavoriteCuisines().trim().isEmpty()) {
+            String cuisines = user.getFavoriteCuisines().trim();
+            prompt.append("- Preferred cuisine: ").append(cuisines).append("\n");
+        } else {
+            prompt.append("- Preferred cuisine: Not specified (use balanced international cuisine)\n");
+        }
+        
+        // Preferred foods (mandatory ingredients)
+        if (user.getPreferredFoods() != null && !user.getPreferredFoods().trim().isEmpty()) {
+            String preferred = user.getPreferredFoods().trim();
+            prompt.append("- Mandatory ingredients: ").append(preferred).append("\n");
+        } else {
+            prompt.append("- Mandatory ingredients: None specified\n");
+        }
+        
+        // Dietary restriction
+        if (user.getDietaryPreference() != null && !user.getDietaryPreference().trim().isEmpty()) {
+            String dietary = user.getDietaryPreference().trim();
+            prompt.append("- Dietary restriction: ").append(dietary).append("\n");
+        }
+        
+        // Allergies (must avoid)
+        if (user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) {
+            prompt.append("- Allergies (MUST AVOID): ").append(user.getAllergies().trim()).append("\n");
+        }
+        
+        // Disliked foods (must avoid)
+        if (user.getDislikedFoods() != null && !user.getDislikedFoods().trim().isEmpty()) {
+            prompt.append("- Disliked foods (MUST AVOID): ").append(user.getDislikedFoods().trim()).append("\n");
+        }
+        
+        // Cooking time constraint
+        if (user.getMaxCookingTimePerMeal() != null && user.getMaxCookingTimePerMeal() > 0) {
+            prompt.append("- Maximum cooking time per meal: ").append(user.getMaxCookingTimePerMeal()).append(" minutes\n");
+        }
+        
+        prompt.append("\n");
+        prompt.append("NUTRITION TARGETS (per day):\n");
+        prompt.append("- Calories: ").append(Math.round(calories)).append(" kcal\n");
+        prompt.append("- Protein: ").append(Math.round(protein)).append(" g\n");
+        prompt.append("- Carbohydrates: ").append(Math.round(carbs)).append(" g\n");
+        prompt.append("- Fats: ").append(Math.round(fats)).append(" g\n");
+        
+        prompt.append("\n");
+        prompt.append("RULES (HARD CONSTRAINTS - VIOLATION MAKES OUTPUT INVALID):\n");
+        
+        // Build cuisine-specific rules
+        if (user.getFavoriteCuisines() != null && !user.getFavoriteCuisines().trim().isEmpty()) {
+            String cuisines = user.getFavoriteCuisines().toLowerCase();
+            if (cuisines.contains("asian") || cuisines.contains("chinese") || cuisines.contains("japanese") || 
+                cuisines.contains("korean") || cuisines.contains("thai") || cuisines.contains("vietnamese")) {
+                prompt.append("1. Every meal MUST include rice or rice-based products as the primary carbohydrate.\n");
+                prompt.append("2. Meals MUST be Asian-style (no pasta, bread, cheese, or Western sauces unless explicitly requested).\n");
+                prompt.append("3. Cooking style MUST be Asian (e.g., stir-fry, steaming, pan-fry, soups).\n");
+            } else if (cuisines.contains("european") || cuisines.contains("italian") || cuisines.contains("french") ||
+                       cuisines.contains("mediterranean") || cuisines.contains("german")) {
+                prompt.append("1. Meals MUST follow European/Mediterranean cooking styles.\n");
+                prompt.append("2. Use traditional European ingredients and preparation methods.\n");
+            } else if (cuisines.contains("mexican") || cuisines.contains("latin")) {
+                prompt.append("1. Meals MUST follow Mexican/Latin American cooking styles.\n");
+                prompt.append("2. Use traditional Latin ingredients (corn, beans, peppers, etc.).\n");
+            } else {
+                prompt.append("1. Meals MUST strictly follow ").append(user.getFavoriteCuisines()).append(" cuisine style.\n");
+            }
+        }
+        
+        // Preferred foods rules
+        if (user.getPreferredFoods() != null && !user.getPreferredFoods().trim().isEmpty()) {
+            String[] preferred = user.getPreferredFoods().split(",");
+            prompt.append("2. Protein rotation MUST prioritize: ");
+            List<String> proteins = new ArrayList<>();
+            List<String> carbsList = new ArrayList<>();
+            for (String food : preferred) {
+                String trimmed = food.trim().toLowerCase();
+                if (trimmed.contains("chicken") || trimmed.contains("beef") || trimmed.contains("pork") || 
+                    trimmed.contains("fish") || trimmed.contains("salmon") || trimmed.contains("tofu") ||
+                    trimmed.contains("turkey") || trimmed.contains("lamb")) {
+                    proteins.add(food.trim());
+                } else if (trimmed.contains("rice") || trimmed.contains("quinoa") || trimmed.contains("pasta") ||
+                          trimmed.contains("potato") || trimmed.contains("bread")) {
+                    carbsList.add(food.trim());
+                }
+            }
+            if (!proteins.isEmpty()) {
+                prompt.append(String.join(", ", proteins));
+            }
+            if (!carbsList.isEmpty()) {
+                prompt.append("\n3. Carbohydrate sources MUST prioritize: ").append(String.join(", ", carbsList));
+            }
+            prompt.append("\n");
+        }
+        
+        // Dietary restriction rules
+        if (user.getDietaryPreference() != null) {
+            String dietary = user.getDietaryPreference().toLowerCase();
+            if (dietary.equals("vegan")) {
+                prompt.append("4. ALL meals MUST be 100% vegan (no animal products whatsoever).\n");
+            } else if (dietary.equals("vegetarian")) {
+                prompt.append("4. ALL meals MUST be vegetarian (no meat or fish, eggs and dairy allowed).\n");
+            } else if (dietary.equals("pescatarian")) {
+                prompt.append("4. ALL meals MUST be pescatarian (fish and seafood allowed, no meat).\n");
+            } else if (dietary.equals("halal")) {
+                prompt.append("4. ALL meals MUST be halal (no pork, no alcohol, halal-certified meat only).\n");
+            } else if (dietary.equals("kosher")) {
+                prompt.append("4. ALL meals MUST be kosher (no pork, no shellfish, kosher-certified meat only).\n");
+            }
+        }
+        
+        // Allergies and dislikes
+        if ((user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) ||
+            (user.getDislikedFoods() != null && !user.getDislikedFoods().trim().isEmpty())) {
+            prompt.append("5. NEVER include any of these: ");
+            List<String> avoid = new ArrayList<>();
+            if (user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) {
+                avoid.addAll(Arrays.asList(user.getAllergies().split(",")));
+            }
+            if (user.getDislikedFoods() != null && !user.getDislikedFoods().trim().isEmpty()) {
+                avoid.addAll(Arrays.asList(user.getDislikedFoods().split(",")));
+            }
+            prompt.append(String.join(", ", avoid.stream().map(String::trim).collect(Collectors.toList())));
+            prompt.append("\n");
+        }
+        
+        prompt.append("6. Meals MUST respect calorie and macro targets exactly.\n");
+        prompt.append("7. If preferences conflict, prioritize cuisine and ingredients over creativity.\n");
+        prompt.append("8. Maximum cooking time per meal: ");
+        if (user.getMaxCookingTimePerMeal() != null && user.getMaxCookingTimePerMeal() > 0) {
+            prompt.append(user.getMaxCookingTimePerMeal()).append(" minutes\n");
+        } else {
+            prompt.append("No limit\n");
+        }
+        
+        prompt.append("\n");
+        prompt.append("If you violate any rule, the output is INVALID.\n\n");
+        
+        prompt.append("OUTPUT FORMAT:\n");
+        prompt.append("Return a JSON array with 7 days (Monday to Sunday), each day with 3 meals (BREAKFAST, LUNCH, DINNER).\n");
+        prompt.append("Each meal must have:\n");
+        prompt.append("- day: \"Monday\", \"Tuesday\", etc.\n");
+        prompt.append("- mealType: \"BREAKFAST\", \"LUNCH\", or \"DINNER\"\n");
+        prompt.append("- name: meal name (e.g., \"Chicken teriyaki bowl with jasmine rice\")\n");
+        prompt.append("- calories: integer\n");
+        prompt.append("- protein: integer (grams)\n");
+        prompt.append("- carbs: integer (grams)\n");
+        prompt.append("- fats: integer (grams)\n");
+        prompt.append("- ingredients: array of objects with \"name\" and \"quantityText\"\n\n");
+        
+        prompt.append("Example format:\n");
+        prompt.append("[\n");
+        prompt.append("  {\n");
+        prompt.append("    \"day\": \"Monday\",\n");
+        prompt.append("    \"mealType\": \"BREAKFAST\",\n");
+        prompt.append("    \"name\": \"Chicken congee with vegetables\",\n");
+        prompt.append("    \"calories\": 400,\n");
+        prompt.append("    \"protein\": 30,\n");
+        prompt.append("    \"carbs\": 50,\n");
+        prompt.append("    \"fats\": 10,\n");
+        prompt.append("    \"ingredients\": [{\"name\": \"chicken breast\", \"quantityText\": \"150g\"}, {\"name\": \"jasmine rice\", \"quantityText\": \"100g cooked\"}]\n");
+        prompt.append("  },\n");
+        prompt.append("  ...\n");
+        prompt.append("]\n\n");
+        
+        prompt.append("Week start date: ").append(startDate.toString()).append("\n");
+        prompt.append("Generate meals for 7 days starting from ").append(startDate.toString()).append(".\n");
+        
+        return prompt.toString();
+    }
+    
+    /**
+     * Generates meal plan with validation and retry if preferences are violated.
+     */
+    private List<MealPlanEntry> generateMealPlanWithValidation(User user, String prompt, MealPlan mealPlan, LocalDate startDate) {
+        int maxRetries = 2;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                // Generate meal plan
+                String aiResponse = openAiClient.generateMealPlan(prompt);
+                
+                // Parse response
+                List<MealPlanEntry> entries = parseAiResponse(aiResponse, mealPlan, startDate);
+                
+                // Validate preferences were followed
+                if (validatePreferencesFollowed(user, entries)) {
+                    return entries;
+                } else {
+                    // Preferences violated, retry with stronger warning
+                    if (attempt < maxRetries - 1) {
+                        prompt = addValidationWarning(prompt, user);
+                        continue;
+                    }
+                }
+            } catch (Exception e) {
+                if (attempt == maxRetries - 1) {
+                    throw new RuntimeException("Failed to generate meal plan after " + maxRetries + " attempts: " + e.getMessage(), e);
+                }
+                // Retry on error
+                continue;
+            }
+        }
+        
+        // If we get here, validation failed after all retries
+        throw new RuntimeException("Generated meal plan does not respect user preferences after " + maxRetries + " attempts.");
+    }
+    
+    /**
+     * Validates that generated meals follow user preferences.
+     */
+    private boolean validatePreferencesFollowed(User user, List<MealPlanEntry> entries) {
+        // Check cuisine preferences
+        if (user.getFavoriteCuisines() != null && !user.getFavoriteCuisines().trim().isEmpty()) {
+            String cuisines = user.getFavoriteCuisines().toLowerCase();
+            if (cuisines.contains("asian") || cuisines.contains("chinese") || cuisines.contains("japanese") ||
+                cuisines.contains("korean") || cuisines.contains("thai") || cuisines.contains("vietnamese")) {
+                // Check for rice in meals
+                boolean hasRice = entries.stream().anyMatch(entry -> {
+                    String name = entry.getName().toLowerCase();
+                    String ingredients = entry.getIngredients() != null ? entry.getIngredients().toLowerCase() : "";
+                    return name.contains("rice") || ingredients.contains("rice");
+                });
+                if (!hasRice) {
+                    return false; // Asian cuisine requires rice
+                }
+                
+                // Check for Western staples (should not be present)
+                boolean hasWesternStaples = entries.stream().anyMatch(entry -> {
+                    String name = entry.getName().toLowerCase();
+                    return name.contains("pasta") || name.contains("bread") || name.contains("sandwich") ||
+                           name.contains("pizza") || name.contains("burger");
+                });
+                if (hasWesternStaples) {
+                    return false; // Asian cuisine should not have Western staples
+                }
+            }
+        }
+        
+        // Check preferred foods are included
+        if (user.getPreferredFoods() != null && !user.getPreferredFoods().trim().isEmpty()) {
+            String[] preferred = user.getPreferredFoods().split(",");
+            for (String food : preferred) {
+                String trimmed = food.trim().toLowerCase();
+                boolean found = entries.stream().anyMatch(entry -> {
+                    String name = entry.getName().toLowerCase();
+                    String ingredients = entry.getIngredients() != null ? entry.getIngredients().toLowerCase() : "";
+                    return name.contains(trimmed) || ingredients.contains(trimmed);
+                });
+                if (!found && (trimmed.contains("chicken") || trimmed.contains("tofu") || trimmed.contains("rice"))) {
+                    // Important preferred foods should appear
+                    return false;
+                }
+            }
+        }
+        
+        // Check allergies and dislikes are avoided
+        List<String> avoid = new ArrayList<>();
+        if (user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) {
+            avoid.addAll(Arrays.asList(user.getAllergies().split(",")));
+        }
+        if (user.getDislikedFoods() != null && !user.getDislikedFoods().trim().isEmpty()) {
+            avoid.addAll(Arrays.asList(user.getDislikedFoods().split(",")));
+        }
+        
+        for (String avoidFood : avoid) {
+            String trimmed = avoidFood.trim().toLowerCase();
+            boolean found = entries.stream().anyMatch(entry -> {
+                String name = entry.getName().toLowerCase();
+                String ingredients = entry.getIngredients() != null ? entry.getIngredients().toLowerCase() : "";
+                return name.contains(trimmed) || ingredients.contains(trimmed);
+            });
+            if (found) {
+                return false; // Found a food that should be avoided
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Adds validation warning to prompt for retry.
+     */
+    private String addValidationWarning(String originalPrompt, User user) {
+        StringBuilder warning = new StringBuilder();
+        warning.append("\n\n");
+        warning.append("⚠️ CRITICAL: Your previous response violated user preferences.\n");
+        warning.append("Regenerate the meal plan strictly following these requirements:\n\n");
+        
+        if (user.getFavoriteCuisines() != null && !user.getFavoriteCuisines().trim().isEmpty()) {
+            String cuisines = user.getFavoriteCuisines().toLowerCase();
+            if (cuisines.contains("asian")) {
+                warning.append("- EVERY meal MUST be Asian-style with rice as primary carbohydrate.\n");
+                warning.append("- NO pasta, bread, sandwiches, or Western staples.\n");
+            }
+        }
+        
+        if (user.getPreferredFoods() != null && !user.getPreferredFoods().trim().isEmpty()) {
+            warning.append("- MUST include these ingredients: ").append(user.getPreferredFoods()).append("\n");
+        }
+        
+        if (user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) {
+            warning.append("- MUST NEVER include: ").append(user.getAllergies()).append("\n");
+        }
+        
+        warning.append("\nIf you violate preferences again, the output is INVALID.\n");
+        
+        return originalPrompt + warning.toString();
+    }
+    
+    /**
+     * Parses AI response JSON into MealPlanEntry objects.
+     */
+    private List<MealPlanEntry> parseAiResponse(String aiResponse, MealPlan mealPlan, LocalDate startDate) {
+        try {
+            JsonNode root = objectMapper.readTree(aiResponse);
+            if (!root.isArray()) {
+                throw new RuntimeException("AI response is not a JSON array");
+            }
+            
+            List<MealPlanEntry> entries = new ArrayList<>();
+            Map<String, LocalDate> dayMap = new HashMap<>();
+            dayMap.put("monday", startDate);
+            dayMap.put("tuesday", startDate.plusDays(1));
+            dayMap.put("wednesday", startDate.plusDays(2));
+            dayMap.put("thursday", startDate.plusDays(3));
+            dayMap.put("friday", startDate.plusDays(4));
+            dayMap.put("saturday", startDate.plusDays(5));
+            dayMap.put("sunday", startDate.plusDays(6));
+            
+            for (JsonNode mealNode : root) {
+                String day = mealNode.get("day").asText().toLowerCase();
+                String mealType = mealNode.get("mealType").asText();
+                String name = mealNode.get("name").asText();
+                int calories = mealNode.get("calories").asInt();
+                int protein = mealNode.get("protein").asInt();
+                int carbs = mealNode.get("carbs").asInt();
+                int fats = mealNode.get("fats").asInt();
+                
+                LocalDate date = dayMap.get(day);
+                if (date == null) {
+                    throw new RuntimeException("Invalid day: " + day);
+                }
+                
+                // Parse ingredients
+                String ingredientsJson = "[]";
+                if (mealNode.has("ingredients") && mealNode.get("ingredients").isArray()) {
+                    ingredientsJson = objectMapper.writeValueAsString(mealNode.get("ingredients"));
+                }
+                
+                MealPlanEntry entry = new MealPlanEntry(
+                    mealPlan, date, mealType, name, calories, protein, carbs, fats, ingredientsJson
+                );
+                entries.add(entry);
+            }
+            
+            return entries;
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse AI response: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Fallback method: Generates a weekly meal plan for a user using hardcoded data.
+     * Used when AI is not available.
+     * 
+     * @param user The user to generate the meal plan for
+     * @param startDate The start date of the week (typically Monday)
+     * @return The generated meal plan
+     */
+    private MealPlan generateWeeklyMealPlanForUserFallback(User user, LocalDate startDate) {
         // Check if meal plan already exists for this week
         Optional<MealPlan> existingPlan = mealPlanRepository.findByUserAndWeekStartDate(user, startDate);
         if (existingPlan.isPresent()) {

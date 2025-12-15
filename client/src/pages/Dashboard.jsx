@@ -1,40 +1,114 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api, { userAPI } from '../services/api'
+import { logout } from '../utils/auth'
+import { gamificationAPI } from '../services/gamificationApi'
 import jsPDF from 'jspdf'
 import { ERROR_MESSAGES, UI_LABELS, BUTTON_TEXT, STATUS_MESSAGES, PAGE_TITLES } from '../config/constants'
+import DailyChallenges from '../components/gamification/DailyChallenges'
+import XPBoard from '../components/gamification/XPBoard'
+import DailySummaryStrip from '../components/dashboard/DailySummaryStrip'
+import FeedbackModal from '../components/FeedbackModal'
+import AchievementsModal from '../components/AchievementsModal'
+import MealPreferencesModal from '../components/MealPreferencesModal'
 import './Dashboard.css'
 
 function Dashboard() {
+  const { t, i18n } = useTranslation()
   const [analysis, setAnalysis] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [gamificationStatus, setGamificationStatus] = useState(null)
+  const [activeStatTab, setActiveStatTab] = useState('BMI') // Tab state for Your Stats section
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
+  const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false)
+  const [isMealPlannerOpen, setIsMealPlannerOpen] = useState(false)
   const navigate = useNavigate()
+  const loadingCompletedRef = useRef(false)
+
+  // Helper function to handle 401/403 errors
+  const handleAuthError = (err) => {
+    const status = err?.response?.status
+    if (status === 401 || status === 403) {
+      console.error('Authentication failed:', err)
+      logout()
+      navigate('/login')
+      return true
+    }
+    return false
+  }
 
   useEffect(() => {
+    let timeoutId = null
+    let isMounted = true
+    loadingCompletedRef.current = false
+
+    // Timeout safety mechanism - if loading hasn't completed after 8 seconds, redirect to login
+    timeoutId = setTimeout(() => {
+      if (isMounted && !loadingCompletedRef.current) {
+        console.error('Dashboard loading timeout - redirecting to login')
+        logout()
+        navigate('/login')
+        setLoading(false)
+      }
+    }, 8000)
+
     // First check if profile is complete before attempting to fetch data
     const checkProfileAndFetch = async () => {
       try {
         const profileCheck = await userAPI.checkProfileComplete()
+        
         if (!profileCheck.success || !profileCheck.data?.isComplete) {
           // Profile is incomplete, redirect to profile setup
-          navigate('/profile-setup', { state: { incompleteProfile: true } })
+          if (isMounted) {
+            loadingCompletedRef.current = true
+            navigate('/profile-setup', { state: { incompleteProfile: true } })
+          }
           return
         }
         
         // Profile is complete, proceed with fetching data
         await fetchFullAnalysis()
         await fetchProfile()
+        await fetchGamificationStatus()
       } catch (err) {
+        // Handle 401/403 explicitly
+        if (handleAuthError(err)) {
+          loadingCompletedRef.current = true
+          return
+        }
+        
         // If check fails, assume incomplete and redirect
         console.error('Error checking profile completeness:', err)
-        navigate('/profile-setup', { state: { incompleteProfile: true } })
+        if (isMounted) {
+          loadingCompletedRef.current = true
+          navigate('/profile-setup', { state: { incompleteProfile: true } })
+        }
+      } finally {
+        if (isMounted) {
+          loadingCompletedRef.current = true
+          setLoading(false)
+        }
+        // Clear timeout if we successfully completed loading
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
       }
     }
     
     checkProfileAndFetch()
-  }, [navigate])
+
+    // Cleanup function
+    return () => {
+      isMounted = false
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]) // Only run on mount - do NOT add fetchGamificationStatus or other dependencies
 
   const fetchFullAnalysis = async () => {
     try {
@@ -47,6 +121,11 @@ function Dashboard() {
         setError(response.data.message || ERROR_MESSAGES.ANALYSIS_LOAD_FAILED)
       }
     } catch (err) {
+      // Handle 401/403 explicitly
+      if (handleAuthError(err)) {
+        return
+      }
+      
       // Use generic error message from API interceptor
       const errorMessage = err.genericMessage || ERROR_MESSAGES.ANALYSIS_LOAD_FAILED
       
@@ -70,13 +149,51 @@ function Dashboard() {
         setProfile(response.data.data)
       }
     } catch (err) {
+      // Handle 401/403 explicitly
+      if (handleAuthError(err)) {
+        return
+      }
       console.error('Error fetching profile:', err)
     }
   }
 
-  const handleRecalculate = () => {
-    fetchFullAnalysis()
-    fetchProfile() // Also refresh profile data for recommendations
+  const fetchGamificationStatus = async () => {
+    try {
+      // ALWAYS forceRefresh on Dashboard load to ensure fresh data
+      // This prevents stale cache issues after page refreshes, backend restarts, or timezone changes
+      // Frontend is DISPLAY-ONLY - backend is the source of truth for all gamification data
+      const result = await gamificationAPI.getGamificationStatus(true)
+      if (result.type === 'SUCCESS') {
+        setGamificationStatus(result.data)
+      } else {
+        // If API returns error, set safe defaults to prevent UI crash
+        setGamificationStatus({
+          xp: 0,
+          currentStreakDays: 0,
+          longestStreakDays: 0,
+          badges: []
+        })
+      }
+    } catch (err) {
+      // Handle 401/403 explicitly - but don't break rendering
+      if (handleAuthError(err)) {
+        // Set safe defaults even on auth error to keep UI functional
+        setGamificationStatus({
+          xp: 0,
+          currentStreakDays: 0,
+          longestStreakDays: 0,
+          badges: []
+        })
+        return
+      }
+      // For other errors, set safe defaults to prevent UI crash
+      setGamificationStatus({
+        xp: 0,
+        currentStreakDays: 0,
+        longestStreakDays: 0,
+        badges: []
+      })
+    }
   }
 
   const downloadProfilePdf = async () => {
@@ -159,7 +276,7 @@ function Dashboard() {
       doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b)
       doc.setFontSize(32)
       doc.setFont("helvetica", "bold")
-      const pdfTitle = data.name ? `${data.name}'s Fitness Profile` : "Your Fitness Profile"
+      const pdfTitle = data.name ? t('dashboard.fitnessProfileName', { name: data.name }) : t('dashboard.fitnessProfile')
       const pageCenter = 105 // A4 width is 210mm, center is 105mm
       doc.text(pdfTitle, pageCenter, 25, { align: "center" })
       
@@ -172,7 +289,7 @@ function Dashboard() {
       doc.setFontSize(10)
       doc.setFont("helvetica", "normal")
       doc.setTextColor(textRgb.r, textRgb.g, textRgb.b)
-      doc.text(`Generated on ${today}`, pageCenter, 36, { align: "center" })
+      doc.text(t('dashboard.generatedOn', { date: today }), pageCenter, 36, { align: "center" })
       
       let y = 50
 
@@ -190,18 +307,18 @@ function Dashboard() {
       doc.setFontSize(14)
       doc.setFont("helvetica", "bold")
       doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.text("PERSONAL INFORMATION", sectionX + 5, y + 8)
+      doc.text(t('dashboard.personalInformation'), sectionX + 5, y + 8)
       
       // Section content
       y += 15
       doc.setFontSize(11)
       doc.setFont("helvetica", "normal")
       doc.setTextColor(textRgb.r, textRgb.g, textRgb.b)
-      doc.text(`Name: ${data.name || "N/A"}`, sectionX + 5, y)
+      doc.text(`${t('dashboard.name')}: ${data.name || "N/A"}`, sectionX + 5, y)
       y += 8
-      doc.text(`Email: ${data.email || "N/A"}`, sectionX + 5, y)
+      doc.text(`${t('dashboard.email')}: ${data.email || "N/A"}`, sectionX + 5, y)
       y += 8
-      doc.text(`Gender: ${data.sex !== null && data.sex !== undefined ? (data.sex ? "Male" : "Female") : "N/A"}`, sectionX + 5, y)
+      doc.text(`${t('dashboard.gender')}: ${data.sex !== null && data.sex !== undefined ? (data.sex ? t('dashboard.male') : t('dashboard.female')) : "N/A"}`, sectionX + 5, y)
       y += 12 // Bottom padding
 
       // BODY METRICS Section
@@ -213,7 +330,7 @@ function Dashboard() {
       doc.setFontSize(14)
       doc.setFont("helvetica", "bold")
       doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.text("BODY METRICS", sectionX + 5, y + 8)
+      doc.text(t('dashboard.bodyMetrics'), sectionX + 5, y + 8)
       
       // Section content
       y += 15
@@ -222,51 +339,51 @@ function Dashboard() {
       doc.setTextColor(textRgb.r, textRgb.g, textRgb.b)
       
       // Height
-      doc.text(`Height: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.height')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${data.height ? formatNumber(data.height, 0) : "N/A"} cm`, sectionX + 35, y)
+      doc.text(`${data.height ? formatNumber(data.height, 0) : "N/A"} ${t('dashboard.cm')}`, sectionX + 35, y)
       y += 8
       
       // Weight
       doc.setFont("helvetica", "normal")
-      doc.text(`Weight: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.weight')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${data.weight ? formatNumber(data.weight, 0) : "N/A"} kg`, sectionX + 35, y)
+      doc.text(`${data.weight ? formatNumber(data.weight, 0) : "N/A"} ${t('dashboard.kg')}`, sectionX + 35, y)
       y += 8
       
       // BMI
       doc.setFont("helvetica", "normal")
-      doc.text(`BMI: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.bmiValue')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
       doc.text(`${formatNumber(data.bmi, 1)}`, sectionX + 35, y)
       y += 8
       
       // WHR
       doc.setFont("helvetica", "normal")
-      doc.text(`WHR: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.whrValue')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
       doc.text(`${formatNumber(data.whr, 3)}`, sectionX + 35, y)
       y += 8
       
       // Body Fat
       doc.setFont("helvetica", "normal")
-      doc.text(`Body Fat: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.bodyFat')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.bodyFat, 1)}%`, sectionX + 40, y)
+      doc.text(`${formatNumber(data.bodyFat, 1)}${t('dashboard.percent')}`, sectionX + 40, y)
       y += 8
       
       // BMR
       doc.setFont("helvetica", "normal")
-      doc.text(`BMR: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.bmrValue')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.bmr, 0)} kcal/day`, sectionX + 35, y)
+      doc.text(`${formatNumber(data.bmr, 0)} ${t('dashboard.kcalPerDayShort')}`, sectionX + 35, y)
       y += 8
       
       // TDEE
       doc.setFont("helvetica", "normal")
-      doc.text(`TDEE: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.tdeeValue')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.tdee, 0)} kcal/day`, sectionX + 35, y)
+      doc.text(`${formatNumber(data.tdee, 0)} ${t('dashboard.kcalPerDayShort')}`, sectionX + 35, y)
       y += 12 // Bottom padding
 
       // DAILY NUTRITION TARGETS Section
@@ -278,7 +395,7 @@ function Dashboard() {
       doc.setFontSize(14)
       doc.setFont("helvetica", "bold")
       doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.text("DAILY NUTRITION TARGETS", sectionX + 5, y + 8)
+      doc.text(t('dashboard.dailyNutritionTargets'), sectionX + 5, y + 8)
       
       // Section content
       y += 15
@@ -287,30 +404,30 @@ function Dashboard() {
       doc.setTextColor(textRgb.r, textRgb.g, textRgb.b)
       
       // Calories Needed
-      doc.text(`Calories Needed: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.caloriesNeeded')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.caloriesNeeded, 0)} kcal/day`, sectionX + 50, y)
+      doc.text(`${formatNumber(data.caloriesNeeded, 0)} ${t('dashboard.kcalPerDayShort')}`, sectionX + 50, y)
       y += 8
       
       // Protein
       doc.setFont("helvetica", "normal")
-      doc.text(`Protein: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.protein')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.protein, 0)} g/day`, sectionX + 35, y)
+      doc.text(`${formatNumber(data.protein, 0)} ${t('dashboard.gPerDay')}`, sectionX + 35, y)
       y += 8
       
       // Carbs
       doc.setFont("helvetica", "normal")
-      doc.text(`Carbs: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.carbs')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.carbs, 0)} g/day`, sectionX + 35, y)
+      doc.text(`${formatNumber(data.carbs, 0)} ${t('dashboard.gPerDay')}`, sectionX + 35, y)
       y += 8
       
       // Fat
       doc.setFont("helvetica", "normal")
-      doc.text(`Fat: `, sectionX + 5, y)
+      doc.text(`${t('dashboard.fat')}: `, sectionX + 5, y)
       doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.fat, 0)} g/day`, sectionX + 35, y)
+      doc.text(`${formatNumber(data.fat, 0)} ${t('dashboard.gPerDay')}`, sectionX + 35, y)
       
       const filename = `profile-${today.replace(/\//g, "-")}.pdf`
       doc.save(filename)
@@ -331,33 +448,33 @@ function Dashboard() {
     
     // BMI tips
     if (analysis.bmiCategory === 'Underweight') {
-      tips.push('Consider a gradual weight gain plan with nutrient-dense foods and strength training.')
+      tips.push(t('healthTips.underweightTip'))
     } else if (analysis.bmiCategory === 'Overweight' || analysis.bmiCategory.startsWith('Obese')) {
-      tips.push('Focus on creating a sustainable calorie deficit through balanced diet and regular exercise.')
+      tips.push(t('healthTips.overweightTip'))
     } else if (analysis.bmiCategory === 'Normal') {
-      tips.push('Maintain your healthy weight with consistent nutrition and regular physical activity.')
+      tips.push(t('healthTips.normalWeightTip'))
     }
 
     // WHR tips
     if (analysis.whrRisk === 'At risk') {
-      tips.push('Consider reducing waist circumference through cardiovascular exercise and a balanced diet.')
+      tips.push(t('healthTips.whrAtRiskTip'))
     } else {
-      tips.push('Your waist-to-hip ratio indicates good health. Keep up the great work!')
+      tips.push(t('healthTips.whrGoodTip'))
     }
 
     // TDEE and calories tips
     if (analysis.goalCalories < analysis.tdee - 300) {
-      tips.push('You\'re in a calorie deficit. Ensure adequate protein intake to preserve muscle mass.')
+      tips.push(t('healthTips.calorieDeficitTip'))
     } else if (analysis.goalCalories > analysis.tdee + 200) {
-      tips.push('You\'re in a calorie surplus. Focus on nutrient-dense foods and strength training.')
+      tips.push(t('healthTips.calorieSurplusTip'))
     } else {
-      tips.push('Your calorie target aligns with your TDEE. Maintain this balance for steady progress.')
+      tips.push(t('healthTips.calorieBalancedTip'))
     }
 
     // Protein tips
-    tips.push(`Aim to consume ${Math.round(analysis.proteinTarget)}g of protein daily to support your fitness goals.`)
+    tips.push(t('healthTips.proteinTip', { protein: Math.round(analysis.proteinTarget) }))
 
-    return tips[Math.floor(Math.random() * tips.length)] || 'Stay consistent with your nutrition and exercise plan!'
+    return tips[Math.floor(Math.random() * tips.length)] || t('healthTips.defaultTip')
   }
 
   if (loading) {
@@ -365,7 +482,7 @@ function Dashboard() {
       <div className="dashboard-page">
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>{STATUS_MESSAGES.LOADING_DASHBOARD}</p>
+          <p>{t('dashboard.loadingDashboard')}</p>
         </div>
       </div>
     )
@@ -382,14 +499,14 @@ function Dashboard() {
     return (
       <div className="dashboard-page">
         <div className="error-container">
-          <h2>Error</h2>
+          <h2>{t('dashboard.error')}</h2>
           <p>{error}</p>
           <div className="error-actions">
             <button onClick={fetchFullAnalysis} className="retry-button">
-              {BUTTON_TEXT.RETRY}
+              {t('dashboard.retry')}
             </button>
             <button onClick={() => navigate('/profile-setup')} className="setup-button">
-              {BUTTON_TEXT.COMPLETE_PROFILE_SETUP}
+              {t('dashboard.completeProfileSetup')}
             </button>
           </div>
         </div>
@@ -401,83 +518,182 @@ function Dashboard() {
     return (
       <div className="dashboard-page">
         <div className="empty-container">
-          <h2>{STATUS_MESSAGES.NO_ANALYSIS_DATA}</h2>
-          <p>{STATUS_MESSAGES.COMPLETE_PROFILE_TO_SEE_ANALYSIS}</p>
+          <h2>{t('dashboard.noAnalysisData')}</h2>
+          <p>{t('dashboard.completeProfileToSeeAnalysis')}</p>
           <button onClick={() => navigate('/profile-setup')} className="setup-button">
-            {BUTTON_TEXT.COMPLETE_PROFILE_SETUP}
+            {t('dashboard.completeProfileSetup')}
           </button>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="dashboard-page">
-      <div className="dashboard-header">
-        <h1>{PAGE_TITLES.DASHBOARD}</h1>
-        <div className="header-actions">
-          <button onClick={() => navigate('/profile/edit')} className="edit-profile-button">
-            {BUTTON_TEXT.EDIT_PROFILE}
-          </button>
-          <button onClick={handleRecalculate} className="recalculate-button" disabled={loading}>
-            {loading ? UI_LABELS.RECALCULATING : BUTTON_TEXT.RECALCULATE}
-          </button>
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              downloadProfilePdf();
-            }} 
-            className="download-profile-button"
-          >
-            {BUTTON_TEXT.DOWNLOAD_PROFILE_PDF}
-          </button>
-        </div>
-      </div>
 
-      {/* Dashboard Grid Layout */}
-      <div className="dashboard-grid">
+  return (
+    <div className="dashboard-root">
+      <header className="app-header">
+        <div className="app-header-inner">
+          {/* Left: Logo */}
+          <div className="app-logo" onClick={() => navigate('/dashboard')}>
+            AI Fitness
+          </div>
+
+          {/* Center: Empty */}
+
+          {/* Right: Language Toggle, Edit Profile, Download PDF, Feedback & Logout */}
+          <div className="app-actions">
+            <button
+              className="language-toggle"
+              onClick={() => {
+                const newLang = i18n.language === 'en' ? 'vi' : 'en'
+                i18n.changeLanguage(newLang)
+              }}
+            >
+              <span className={i18n.language === 'en' ? 'active' : ''}>EN</span>
+              <span className="divider">|</span>
+              <span className={i18n.language === 'vi' ? 'active' : ''}>VI</span>
+            </button>
+            <button
+              className="dashboard-action-btn primary-btn"
+              onClick={() => navigate('/profile/edit')}
+            >
+              {t('dashboard.editProfile') || '✏️ Edit Profile'}
+            </button>
+            <button
+              className="dashboard-action-btn primary-btn"
+              onClick={downloadProfilePdf}
+            >
+              {t('dashboard.downloadPdf') || 'Download PDF'}
+            </button>
+            <button
+              className="dashboard-action-btn primary-btn"
+              onClick={() => setIsFeedbackModalOpen(true)}
+            >
+              {t('dashboard.feedback') || 'Feedback'}
+            </button>
+            <button
+              className="dashboard-action-btn danger-btn"
+              onClick={() => {
+                if (confirm(t('dashboard.logOutConfirm'))) {
+                  logout();
+                  navigate("/");
+                }
+              }}
+            >
+              {t('dashboard.logOut')}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="dashboard-page">
+        {/* Single wrapper for ALL dashboard sections with consistent width */}
+        <div className="dashboard-content-wrapper">
+          {/* Greeting Section - Below header */}
+          <section className="dashboard-greeting">
+            <h2>{profile?.name ? `Hello, ${profile.name} 👋` : 'Hello 👋'}</h2>
+            <p>Here's your fitness overview today</p>
+          </section>
+
+          {/* Daily Summary Strip - Key metrics at a glance */}
+          <div className="dashboard-top-section">
+            <DailySummaryStrip
+              gamificationStatus={gamificationStatus}
+              calorieTarget={analysis?.goalCalories}
+              proteinTarget={analysis?.proteinTarget}
+            />
+          </div>
+
+          {/* XP Board - Compact gamification display */}
+          {gamificationStatus && (
+            <div className="dashboard-top-section">
+              <XPBoard
+                xp={gamificationStatus.xp ?? 0}
+                currentStreakDays={gamificationStatus.currentStreakDays ?? 0}
+                onOpenDetails={() => setIsAchievementsModalOpen(true)}
+              />
+            </div>
+          )}
+
+          {/* Dashboard Grid Layout */}
+          <div className="dashboard-grid">
         {/* Main Content Column */}
         <div className="dashboard-main-content">
-          {/* User Stats Section */}
-          <div className="dashboard-section">
-            <h2>Your Stats</h2>
-            <div className="stats-grid">
-              <div className="stat-card primary">
-                <div className="stat-label">BMI</div>
-                <div className="stat-value">{analysis.bmi ? analysis.bmi.toFixed(1) : 'N/A'}</div>
-                <div className="stat-category">{analysis.bmiCategory || 'N/A'}</div>
+
+          {/* Daily Challenges */}
+          {gamificationStatus && (
+            <div className="dashboard-section">
+              <DailyChallenges />
+            </div>
+          )}
+
+          {/* Stats and Progress Container - Shared Width */}
+          <div className="stats-progress-container">
+            {/* User Stats Section - Tab Layout */}
+            <div className="dashboard-section">
+              <h2>{t('dashboard.yourStats')}</h2>
+              <p className="section-subtitle">{t('dashboard.trackMetrics')}</p>
+              
+              {/* Tab Navigation */}
+              <div className="stats-tabs">
+                <button
+                  className={`stats-tab ${activeStatTab === 'BMI' ? 'active' : ''}`}
+                  onClick={() => setActiveStatTab('BMI')}
+                >
+                  {t('dashboard.bmiValue')}
+                </button>
+                <button
+                  className={`stats-tab ${activeStatTab === 'WHR' ? 'active' : ''}`}
+                  onClick={() => setActiveStatTab('WHR')}
+                >
+                  {t('dashboard.whrValue')}
+                </button>
               </div>
-              <div className="stat-card secondary">
-                <div className="stat-label">WHR</div>
-                <div className="stat-value">{analysis.whr ? analysis.whr.toFixed(2) : 'N/A'}</div>
-                <div className="stat-category">{analysis.whrRisk || 'N/A'}</div>
+
+              {/* Tab Content */}
+              <div className="stats-tab-content">
+                {activeStatTab === 'BMI' && (
+                  <div className="stat-card primary">
+                    <div className="stat-label">BMI</div>
+                    <div className="stat-value">{analysis.bmi ? analysis.bmi.toFixed(1) : 'N/A'}</div>
+                    <div className="stat-category">{analysis.bmiCategory || 'N/A'}</div>
+                  </div>
+                )}
+                {activeStatTab === 'WHR' && (
+                  <div className="stat-card secondary">
+                    <div className="stat-label">WHR</div>
+                    <div className="stat-value">{analysis.whr ? analysis.whr.toFixed(2) : 'N/A'}</div>
+                    <div className="stat-category">{analysis.whrRisk || 'N/A'}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* AI Features Section */}
           <div className="dashboard-section ai-features-section">
-            <h2>AI Features</h2>
+            <h2>{t('dashboard.aiFeatures')}</h2>
+            <p className="section-subtitle">{t('dashboard.aiFeaturesSubtitle')}</p>
             <div className="ai-features-grid">
               <button
-                className="ai-feature-card"
+                className="ai-feature-card ai-feature-card-dominant"
                 onClick={() => window.open('/ai-coach', '_blank')}
               >
+                <div className="ai-feature-badge">{t('dashboard.recommended')}</div>
                 <div className="ai-feature-icon">🤖</div>
-                <div className="ai-feature-title">AI Coach</div>
+                <div className="ai-feature-title">{t('dashboard.aiCoach')}</div>
                 <div className="ai-feature-description">
-                  Chat with your personal AI fitness coach
+                  {t('dashboard.aiCoachDescription')}
                 </div>
               </button>
               <button
                 className="ai-feature-card"
-                onClick={() => window.open('/meal-plan', '_blank')}
+                onClick={() => setIsMealPlannerOpen(true)}
               >
                 <div className="ai-feature-icon">🍽️</div>
-                <div className="ai-feature-title">AI Meal Planner</div>
+                <div className="ai-feature-title">{t('dashboard.aiMealPlanner')}</div>
                 <div className="ai-feature-description">
-                  Generate meal plans and grocery lists
+                  {t('dashboard.aiMealPlannerDescription')}
                 </div>
               </button>
             </div>
@@ -485,10 +701,11 @@ function Dashboard() {
 
           {/* BMI Details */}
           <div className="dashboard-section">
-            <h2>Body Mass Index (BMI)</h2>
+            <h2>{t('dashboard.bmi')}</h2>
+            <p className="section-subtitle">{t('dashboard.bmiSubtitle')}</p>
             <div className="metric-card bmi">
               <div className="metric-header">
-                <h3>Your BMI</h3>
+                <h3>{t('dashboard.yourBMI')}</h3>
                 <div className="bmi-value">{analysis.bmi ? analysis.bmi.toFixed(1) : 'N/A'}</div>
               </div>
               <div className="metric-body">
@@ -502,10 +719,10 @@ function Dashboard() {
                   ></div>
                 </div>
                 <div className="bmi-labels">
-                  <span>Underweight</span>
-                  <span>Normal</span>
-                  <span>Overweight</span>
-                  <span>Obese</span>
+                  <span>{t('dashboard.underweight')}</span>
+                  <span>{t('dashboard.normal')}</span>
+                  <span>{t('dashboard.overweight')}</span>
+                  <span>{t('dashboard.obese')}</span>
                 </div>
               </div>
             </div>
@@ -513,10 +730,11 @@ function Dashboard() {
 
           {/* WHR Details */}
           <div className="dashboard-section">
-            <h2>Waist-to-Hip Ratio (WHR)</h2>
+            <h2>{t('dashboard.whr')}</h2>
+            <p className="section-subtitle">{t('dashboard.whrSubtitle')}</p>
             <div className="metric-card whr">
               <div className="metric-header">
-                <h3>Your WHR</h3>
+                <h3>{t('dashboard.yourWHR')}</h3>
                 <div className="whr-value">{analysis.whr ? analysis.whr.toFixed(2) : 'N/A'}</div>
               </div>
               <div className="metric-body">
@@ -525,79 +743,111 @@ function Dashboard() {
                 </div>
                 <p className="risk-interpretation">
                   {analysis.whrRisk === 'Good condition' 
-                    ? 'Your waist-to-hip ratio indicates a healthy body fat distribution.'
-                    : 'Consider reducing waist circumference through targeted exercise and nutrition.'}
+                    ? t('dashboard.whrGoodCondition')
+                    : t('dashboard.whrAtRisk')}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Energy & Calories */}
-          <div className="dashboard-section">
-            <h2>Energy & Calories</h2>
-            <div className="energy-grid">
-              <div className="energy-card">
-                <div className="energy-label">BMR</div>
-                <div className="energy-value">{analysis.bmr ? Math.round(analysis.bmr) : 'N/A'}</div>
-                <div className="energy-unit">kcal/day</div>
-                <div className="energy-description">Basal Metabolic Rate<br />Calories at rest</div>
-              </div>
-              <div className="energy-card">
-                <div className="energy-label">TDEE</div>
-                <div className="energy-value">{analysis.tdee ? Math.round(analysis.tdee) : 'N/A'}</div>
-                <div className="energy-unit">kcal/day</div>
-                <div className="energy-description">Total Daily Energy Expenditure<br />Including activity</div>
-              </div>
-              <div className="energy-card highlight">
-                <div className="energy-label">Goal Calories</div>
-                <div className="energy-value">{analysis.goalCalories ? Math.round(analysis.goalCalories) : 'N/A'}</div>
-                <div className="energy-unit">kcal/day</div>
-                <div className="energy-description">Your daily calorie target<br />Based on your goal</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Protein Target */}
-          <div className="dashboard-section">
-            <h2>Nutrition Target</h2>
-            <div className="protein-card">
-              <div className="protein-header">
-                <h3>Daily Protein Target</h3>
-                <div className="protein-value">{analysis.proteinTarget ? Math.round(analysis.proteinTarget) : 'N/A'}</div>
-                <div className="protein-unit">grams/day</div>
-              </div>
-              <div className="protein-body">
-                <div className="protein-bar">
-                  <div 
-                    className="protein-fill"
-                    style={{ width: `${Math.min(100, ((analysis.proteinTarget || 0) / 200) * 100)}%` }}
-                  ></div>
+          {/* Nutrition Hub */}
+          <div className="dashboard-section nutrition-hub">
+            <h2>{t('dashboard.nutritionHub')}</h2>
+            <p className="section-subtitle">{t('dashboard.nutritionHubSubtitle')}</p>
+            
+            {/* Energy & Calories */}
+            <div className="nutrition-hub-section">
+              <h3 className="nutrition-hub-subtitle">{t('dashboard.energyCalories')}</h3>
+              <div className="energy-grid">
+                <div className="energy-card">
+                  <div className="energy-label">{t('dashboard.bmr')}</div>
+                  <div className="energy-value">{analysis.bmr ? Math.round(analysis.bmr) : 'N/A'}</div>
+                  <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
+                  <div className="energy-description">{t('dashboard.bmrDescription')}</div>
                 </div>
-                <p className="protein-tip">
-                  Spread protein intake across all meals to optimize muscle protein synthesis throughout the day.
-                </p>
+                <div className="energy-card">
+                  <div className="energy-label">{t('dashboard.tdee')}</div>
+                  <div className="energy-value">{analysis.tdee ? Math.round(analysis.tdee) : 'N/A'}</div>
+                  <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
+                  <div className="energy-description">{t('dashboard.tdeeDescription')}</div>
+                </div>
+                <div className="energy-card highlight">
+                  <div className="energy-label">{t('dashboard.goalCalories')}</div>
+                  <div className="energy-value">{analysis.goalCalories ? Math.round(analysis.goalCalories) : 'N/A'}</div>
+                  <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
+                  <div className="energy-description">{t('dashboard.goalCaloriesDescription')}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Protein Target */}
+            <div className="nutrition-hub-section">
+              <h3 className="nutrition-hub-subtitle">{t('dashboard.nutritionTarget')}</h3>
+              <div className="protein-card">
+                <div className="protein-header">
+                  <h3>{t('dashboard.dailyProteinTarget')}</h3>
+                  <div className="protein-value">{analysis.proteinTarget ? Math.round(analysis.proteinTarget) : 'N/A'}</div>
+                  <div className="protein-unit">{t('dashboard.gramsPerDay')}</div>
+                </div>
+                <div className="protein-body">
+                  <div className="protein-bar">
+                    <div 
+                      className="protein-fill"
+                      style={{ width: `${Math.min(100, ((analysis.proteinTarget || 0) / 200) * 100)}%` }}
+                    ></div>
+                  </div>
+                  <p className="protein-tip">
+                    {t('dashboard.proteinTip')}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Health Tips */}
           <div className="dashboard-section">
-            <h2>Health Tips</h2>
+            <h2>{t('dashboard.healthTips')}</h2>
+            <p className="section-subtitle">{t('dashboard.healthTipsSubtitle')}</p>
             <div className="health-tips-card">
               <div className="tip-icon">💡</div>
               <p className="health-tip">{getHealthTip()}</p>
             </div>
           </div>
 
-          {/* Health Recommendations */}
-          <div className="dashboard-section">
-            <h2>Health Recommendations</h2>
-            <div className="recommendations-card">
-              <HealthRecommendations analysis={analysis} profile={profile} />
+            {/* Health Recommendations - Progress Container */}
+            <div className="dashboard-section">
+              <h2>{t('dashboard.healthRecommendations')}</h2>
+              <p className="section-subtitle">{t('dashboard.healthRecommendationsSubtitle')}</p>
+              <div className="recommendations-card">
+                <HealthRecommendations 
+                  analysis={analysis} 
+                  profile={profile}
+                  onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+                  onOpenAchievements={() => setIsAchievementsModalOpen(true)}
+                  gamificationStatus={gamificationStatus}
+                />
+              </div>
             </div>
           </div>
         </div>
+        </div>
       </div>
+
+      {/* Modals - Rendered at root level */}
+      {isFeedbackModalOpen && (
+        <FeedbackModal onClose={() => setIsFeedbackModalOpen(false)} />
+      )}
+
+      {isAchievementsModalOpen && gamificationStatus && (
+        <AchievementsModal 
+          badges={gamificationStatus.badges || []}
+          onClose={() => setIsAchievementsModalOpen(false)} 
+        />
+      )}
+
+      {isMealPlannerOpen && (
+        <MealPreferencesModal onClose={() => setIsMealPlannerOpen(false)} />
+      )}
     </div>
   )
 }
@@ -610,7 +860,7 @@ function AICoachPanel({ advice, loading, error, onRetry }) {
       <div className="ai-coach-card">
         <div className="ai-coach-loading">
           <div className="loading-spinner-small"></div>
-          <p>{STATUS_MESSAGES.ANALYZING_PROGRESS}</p>
+          <p>{t('dashboard.analyzingProgress')}</p>
         </div>
       </div>
     )
@@ -621,14 +871,14 @@ function AICoachPanel({ advice, loading, error, onRetry }) {
     return (
       <div className="ai-coach-card">
         <div className="ai-coach-error">
-          <p>Unable to load advice right now.</p>
+          <p>{t('dashboard.unableToLoadAdvice')}</p>
           {onRetry && (
             <button 
               onClick={onRetry} 
               className="retry-button-small"
               style={{ marginTop: '12px' }}
             >
-              Retry
+              {t('dashboard.retry')}
             </button>
           )}
         </div>
@@ -647,7 +897,7 @@ function AICoachPanel({ advice, loading, error, onRetry }) {
     return (
       <div className="ai-coach-card">
         <div className="ai-coach-empty">
-          <p>AI coach is analyzing your data... Please log weekly progress for personalized feedback.</p>
+          <p>{t('dashboard.aiCoachAnalyzing')}</p>
         </div>
       </div>
     )
@@ -656,19 +906,19 @@ function AICoachPanel({ advice, loading, error, onRetry }) {
   // Display advice content
   const summaryText = advice.summary && advice.summary.trim() !== '' 
     ? advice.summary 
-    : "AI coach is analyzing your data... Please log weekly progress for personalized feedback."
+    : t('dashboard.aiCoachAnalyzing')
 
   return (
     <div className="ai-coach-card">
       <div className="ai-coach-content">
         <div className="ai-coach-summary">
-          <h3>Summary</h3>
+          <h3>{t('dashboard.summary')}</h3>
           <p>{summaryText}</p>
         </div>
         
         {advice.recommendations && advice.recommendations.length > 0 && (
           <div className="ai-coach-recommendations">
-            <h3>Recommendations</h3>
+            <h3>{t('dashboard.recommendations')}</h3>
             <ul>
               {advice.recommendations.map((recommendation, index) => (
                 <li key={index}>{recommendation}</li>
@@ -682,38 +932,52 @@ function AICoachPanel({ advice, loading, error, onRetry }) {
 }
 
 // Health Recommendations Component
-function HealthRecommendations({ analysis, profile }) {
+function HealthRecommendations({
+  analysis,
+  profile,
+  onOpenFeedback,
+  onOpenAchievements,
+  gamificationStatus,
+  ...props
+}) {
+  const { t } = useTranslation()
+
   if (!analysis) {
     return (
       <div className="recommendations-loading">
-        <p>Loading recommendations...</p>
+        <p>{t('healthRecommendations.loadingRecommendations')}</p>
       </div>
     )
   }
 
   const getWHRRecommendations = () => {
     // Based on Java code (mainOne.java lines 252-274)
-    const whrExplanation = 'WHR measures fat distribution — whether someone stores more fat around the abdomen (visceral fat) or the hips/thighs (subcutaneous fat). Visceral fat (around the waist) is more dangerous because it surrounds internal organs and raises the risk of:'
-    const risks = ['Heart disease', 'Type 2 diabetes', 'Stroke', 'Metabolic syndrome']
+    const whrExplanation = t('healthRecommendations.whrExplanation')
+    const risks = [
+      t('healthRecommendations.heartDisease'),
+      t('healthRecommendations.type2Diabetes'),
+      t('healthRecommendations.stroke'),
+      t('healthRecommendations.metabolicSyndrome')
+    ]
     
     if (analysis.whrRisk === 'At risk') {
       return {
-        title: 'WHR Health Risk',
+        title: t('healthRecommendations.whrHealthRisk'),
         explanation: whrExplanation,
         risks: risks,
         content: profile?.sex === 'Male' 
-          ? 'Your WHR is above 0.9, which means you are at risk of those problems above.'
-          : 'Your WHR is above 0.85, which means you are at risk of those problems above.',
+          ? t('healthRecommendations.whrAtRiskMale')
+          : t('healthRecommendations.whrAtRiskFemale'),
         severity: 'warning'
       }
     } else {
       return {
-        title: 'WHR Health Status',
+        title: t('healthRecommendations.whrHealthStatus'),
         explanation: whrExplanation,
         risks: risks,
         content: profile?.sex === 'Male'
-          ? 'Your WHR is below 0.9, which means you are in a good condition.'
-          : 'Your WHR is below 0.85, which means you are in a good condition.',
+          ? t('healthRecommendations.whrGoodMale')
+          : t('healthRecommendations.whrGoodFemale'),
         severity: 'good'
       }
     }
@@ -721,8 +985,8 @@ function HealthRecommendations({ analysis, profile }) {
 
   const getHeartDiseaseInfo = () => {
     return {
-      title: 'Heart Disease Prevention',
-      content: 'Maintaining a healthy waist-to-hip ratio is important for cardiovascular health. Abdominal obesity is a major risk factor for heart disease, stroke, and type 2 diabetes. Regular exercise, especially cardiovascular activities like walking, running, cycling, or swimming, can help reduce abdominal fat and improve heart health. Aim for at least 150 minutes of moderate-intensity exercise per week.',
+      title: t('healthRecommendations.heartDiseasePrevention'),
+      content: t('healthRecommendations.heartDiseaseContent'),
       severity: 'info'
     }
   }
@@ -731,28 +995,28 @@ function HealthRecommendations({ analysis, profile }) {
     const activityLevel = profile?.activityLevel || 3
     const suggestions = {
       1: {
-        title: 'Sedentary Lifestyle - Activity Suggestions',
-        content: 'Starting from a sedentary lifestyle, begin with light activities such as walking for 20-30 minutes daily, gentle stretching, or light yoga. Gradually increase duration and intensity over time. Even small increases in daily activity can significantly improve your health and metabolism.',
+        title: t('healthRecommendations.sedentaryTitle'),
+        content: t('healthRecommendations.sedentaryContent'),
         activities: ['Daily walking (20-30 min)', 'Light stretching or yoga', 'Gardening or household chores', 'Gentle swimming']
       },
       2: {
-        title: 'Lightly Active - Activity Suggestions',
-        content: 'You\'re already doing light exercise 1-3 times per week. To progress, add one more session per week or increase the duration of existing workouts. Consider mixing in strength training twice a week to build muscle and boost metabolism.',
+        title: t('healthRecommendations.lightlyActiveTitle'),
+        content: t('healthRecommendations.lightlyActiveContent'),
         activities: ['Moderate walking or jogging (30-45 min)', 'Strength training 2×/week', 'Cycling or swimming', 'Group fitness classes']
       },
       3: {
-        title: 'Moderately Active - Activity Suggestions',
-        content: 'You\'re exercising 3-5 times per week, which is excellent! To maximize results, focus on workout quality and variety. Include both cardiovascular and strength training, and ensure adequate rest days for recovery.',
+        title: t('healthRecommendations.moderatelyActiveTitle'),
+        content: t('healthRecommendations.moderatelyActiveContent'),
         activities: ['Cardiovascular exercise 3×/week', 'Strength training 2×/week', 'High-intensity intervals (HIIT)', 'Active recovery days (yoga, walking)']
       },
       4: {
-        title: 'Very Active - Activity Suggestions',
-        content: 'You\'re exercising 6-7 times per week - impressive dedication! At this level, focus on workout periodization, proper nutrition, and recovery. Consider varying intensities and incorporating active recovery to prevent overtraining.',
+        title: t('healthRecommendations.veryActiveTitle'),
+        content: t('healthRecommendations.veryActiveContent'),
         activities: ['Mixed cardio and strength training', 'Sport-specific training', 'Flexibility and mobility work', 'Adequate rest and recovery']
       },
       5: {
-        title: 'Extra Active - Activity Suggestions',
-        content: 'You\'re training twice daily - excellent commitment! Ensure you\'re prioritizing recovery, nutrition, and sleep. Periodize your training with varying intensities and include active recovery sessions to maintain performance.',
+        title: t('healthRecommendations.extraActiveTitle'),
+        content: t('healthRecommendations.extraActiveContent'),
         activities: ['Periodized training program', 'Sport-specific conditioning', 'Recovery and mobility work', 'Proper nutrition and hydration']
       }
     }
@@ -764,23 +1028,23 @@ function HealthRecommendations({ analysis, profile }) {
     const goal = profile?.calorieGoal || 2
     const tips = {
       1: {
-        title: 'Lose Weight - Goal-Based Recommendations',
-        content: 'The information below is suggested for your selected goal! For weight loss, maintain a moderate calorie deficit. Prioritize protein intake to preserve muscle mass during weight loss. Combine resistance training with cardiovascular exercise. Focus on whole foods, minimize processed foods, and stay hydrated.',
+        title: t('healthRecommendations.loseWeightTitle'),
+        content: t('healthRecommendations.loseWeightContent'),
         tips: ['Create a 500-750 calorie deficit daily', 'Prioritize protein (2g per kg body weight)', 'Include strength training 2-3×/week', 'Track food intake and stay consistent']
       },
       2: {
-        title: 'Maintain Weight - Goal-Based Recommendations',
-        content: 'The information below is suggested for your selected goal! To maintain your current weight, eat at your TDEE (Total Daily Energy Expenditure). Focus on balanced nutrition with adequate protein, healthy fats, and complex carbohydrates. Continue regular exercise to maintain muscle mass and metabolism.',
+        title: t('healthRecommendations.maintainWeightTitle'),
+        content: t('healthRecommendations.maintainWeightContent'),
         tips: ['Eat at your TDEE (maintenance calories)', 'Maintain balanced macronutrient intake', 'Continue regular exercise routine', 'Monitor weight weekly and adjust if needed']
       },
       3: {
-        title: 'Gain Muscle - Goal-Based Recommendations',
-        content: 'The information below is suggested for your selected goal! To gain muscle, eat in a slight calorie surplus with adequate protein. Prioritize progressive overload in strength training - gradually increase weight, reps, or sets over time. Focus on compound exercises and ensure sufficient rest and recovery.',
+        title: t('healthRecommendations.gainMuscleTitle'),
+        content: t('healthRecommendations.gainMuscleContent'),
         tips: ['Eat 300-500 calories above TDEE', 'Prioritize protein (1.6-2.2g per kg)', 'Progressive overload in strength training', 'Ensure adequate rest and recovery']
       },
       4: {
-        title: 'Body Recomposition - Goal-Based Recommendations',
-        content: 'The information below is suggested for your selected goal! Body recomposition (losing fat while gaining muscle) requires precise nutrition and training. Eat at maintenance calories or slight surplus, with high protein intake. Combine heavy strength training with moderate cardio.',
+        title: t('healthRecommendations.bodyRecompTitle'),
+        content: t('healthRecommendations.bodyRecompContent'),
         tips: ['Eat at maintenance or slight surplus', 'High protein intake (2.2-2.5g per kg)', 'Heavy strength training 3-4×/week', 'Moderate cardio 2-3×/week']
       }
     }

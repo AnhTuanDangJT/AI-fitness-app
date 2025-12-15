@@ -173,3 +173,4 @@ ALTER TABLE users ADD COLUMN verification_attempts INTEGER NOT NULL DEFAULT 0;
 
 Then restart the backend. The verify-email endpoint should work immediately after this.
 
+

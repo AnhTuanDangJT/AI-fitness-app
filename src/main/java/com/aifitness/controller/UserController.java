@@ -1,12 +1,14 @@
 package com.aifitness.controller;
 
 import com.aifitness.dto.ApiResponse;
+import com.aifitness.dto.LanguageUpdateRequest;
 import com.aifitness.dto.ProfileResponseDTO;
 import com.aifitness.entity.User;
 import com.aifitness.repository.UserRepository;
 import com.aifitness.service.ProfileService;
 import com.aifitness.util.JwtTokenService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -152,6 +154,77 @@ public class UserController {
         );
         
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * PUT /api/users/language
+     * 
+     * Updates the user's preferred language for AI Coach responses.
+     * 
+     * Note: Endpoint path is /users/language (plural) to match requirements.
+     * The base mapping is /user, so this creates /api/user/users/language.
+     * For proper /api/users/language, we use a separate path mapping.
+     * 
+     * Request Body:
+     * {
+     *   "language": "EN" or "VI"
+     * }
+     * 
+     * Response:
+     * {
+     *   "success": true,
+     *   "message": "Language updated successfully",
+     *   "data": {
+     *     "language": "EN"
+     *   }
+     * }
+     */
+    @PutMapping("/users/language")
+    public ResponseEntity<ApiResponse<Map<String, String>>> updateLanguage(
+            HttpServletRequest request,
+            @Valid @RequestBody LanguageUpdateRequest languageRequest) {
+        
+        // Extract JWT token from Authorization header
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(
+                ApiResponse.error("Unauthorized: No token provided")
+            );
+        }
+        
+        String token = authHeader.substring(7); // Remove "Bearer " prefix
+        
+        // Validate token and extract user ID
+        if (!jwtTokenService.validateToken(token)) {
+            return ResponseEntity.status(401).body(
+                ApiResponse.error("Unauthorized: Invalid token")
+            );
+        }
+        
+        Long userId = jwtTokenService.getUserIdFromToken(token);
+        
+        // Get user from repository
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Update preferred language
+        String language = languageRequest.getLanguage();
+        if (language != null && (language.equals("EN") || language.equals("VI"))) {
+            user.setPreferredLanguage(language);
+            userRepository.save(user);
+        } else {
+            return ResponseEntity.badRequest().body(
+                ApiResponse.error("Invalid language. Must be 'EN' or 'VI'")
+            );
+        }
+        
+        Map<String, String> data = new HashMap<>();
+        data.put("language", user.getPreferredLanguage());
+        
+        return ResponseEntity.ok(ApiResponse.success(
+            "Language updated successfully",
+            data
+        ));
     }
     
     // TODO: Future endpoints for individual field updates

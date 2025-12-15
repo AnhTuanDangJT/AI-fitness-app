@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../services/api'
+import { invalidateGamificationCache } from '../services/gamificationApi'
 import { ERROR_MESSAGES, UI_LABELS, BUTTON_TEXT, FORM_LABELS, PLACEHOLDERS, INFO_MESSAGES, PAGE_TITLES, VALIDATION_MESSAGES } from '../config/constants'
 import { ACTIVITY_LEVELS, FITNESS_GOALS, GENDER_OPTIONS } from '../config/profileFormConfig'
 import './Auth.css'
@@ -97,6 +98,10 @@ function ProfileSetup() {
       })
 
       if (response.data.success) {
+        // Invalidate gamification cache after successful profile save
+        // This ensures XP updates are reflected in the UI
+        invalidateGamificationCache()
+        
         // Redirect to dashboard after successful save
         navigate('/dashboard')
       } else {

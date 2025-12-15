@@ -1,6 +1,7 @@
 package com.aifitness.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -139,6 +140,32 @@ public class User {
     
     @Column(name = "verification_attempts", nullable = false)
     private Integer verificationAttempts = 0;
+    
+    /**
+     * Gamification Fields
+     */
+    @Column(name = "xp", nullable = false)
+    private Integer xp = 0;
+    
+    @Column(name = "current_streak_days", nullable = false)
+    private Integer currentStreakDays = 0;
+    
+    @Column(name = "longest_streak_days", nullable = false)
+    private Integer longestStreakDays = 0;
+    
+    @Column(name = "badges", length = 1000)
+    private String badges = "[]";
+    
+    @Column(name = "last_activity_date")
+    private LocalDate lastActivityDate;
+    
+    /**
+     * Preferred Language
+     * "EN" for English, "VI" for Vietnamese
+     * Defaults to "EN"
+     */
+    @Column(name = "preferred_language", length = 2, nullable = false)
+    private String preferredLanguage = "EN";
     
     // Note: Calculated metrics (BMI, WHR, WHtR, BMR, TDEE, BodyFat, etc.)
     // will be calculated on-the-fly in services rather than stored in database
@@ -417,6 +444,61 @@ public class User {
     
     public void setVerificationAttempts(Integer verificationAttempts) {
         this.verificationAttempts = verificationAttempts != null ? verificationAttempts : 0;
+    }
+    
+    // Gamification Getters and Setters
+    
+    public Integer getXp() {
+        return xp != null ? xp : 0;
+    }
+    
+    public void setXp(Integer xp) {
+        this.xp = xp != null ? xp : 0;
+    }
+    
+    public Integer getCurrentStreakDays() {
+        return currentStreakDays != null ? currentStreakDays : 0;
+    }
+    
+    public void setCurrentStreakDays(Integer currentStreakDays) {
+        this.currentStreakDays = currentStreakDays != null ? currentStreakDays : 0;
+    }
+    
+    public Integer getLongestStreakDays() {
+        return longestStreakDays != null ? longestStreakDays : 0;
+    }
+    
+    public void setLongestStreakDays(Integer longestStreakDays) {
+        this.longestStreakDays = longestStreakDays != null ? longestStreakDays : 0;
+    }
+    
+    public String getBadges() {
+        return badges != null ? badges : "[]";
+    }
+    
+    public void setBadges(String badges) {
+        this.badges = badges != null ? badges : "[]";
+    }
+    
+    public LocalDate getLastActivityDate() {
+        return lastActivityDate;
+    }
+    
+    public void setLastActivityDate(LocalDate lastActivityDate) {
+        this.lastActivityDate = lastActivityDate;
+    }
+    
+    public String getPreferredLanguage() {
+        return preferredLanguage != null ? preferredLanguage : "EN";
+    }
+    
+    public void setPreferredLanguage(String preferredLanguage) {
+        // Validate and normalize
+        if (preferredLanguage != null && (preferredLanguage.equals("EN") || preferredLanguage.equals("VI"))) {
+            this.preferredLanguage = preferredLanguage;
+        } else {
+            this.preferredLanguage = "EN"; // Default to English
+        }
     }
     
     /**

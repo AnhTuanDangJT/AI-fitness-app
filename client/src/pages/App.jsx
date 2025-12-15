@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import './AppPage.css'
 
 /**
@@ -15,6 +16,7 @@ import './AppPage.css'
  * For now, it's a placeholder with navigation structure.
  */
 function App() {
+  const { t } = useTranslation()
   const [user, setUser] = useState(null)
   const navigate = useNavigate()
 
@@ -35,7 +37,7 @@ function App() {
   if (!user) {
     return (
       <div className="app-page">
-        <div className="app-container">Loading...</div>
+        <div className="app-container">{t('common.loading')}</div>
       </div>
     )
   }
@@ -44,11 +46,11 @@ function App() {
     <div className="app-page">
       <div className="app-header">
         <div className="app-header-content">
-          <h1>AI Fitness</h1>
+          <h1>{t('appPage.title')}</h1>
           <div className="app-header-actions">
-            <span className="user-info">Welcome, {user.username}</span>
+            <span className="user-info">{t('appPage.welcome', { username: user.username })}</span>
             <button onClick={handleLogout} className="logout-button">
-              Logout
+              {t('appPage.logout')}
             </button>
           </div>
         </div>
@@ -57,36 +59,36 @@ function App() {
       <div className="app-container">
         <div className="app-sidebar">
           <nav className="app-nav">
-            <h2>Navigation</h2>
+            <h2>{t('appPage.navigation')}</h2>
             <ul>
               <li>
                 <a href="/dashboard" className="nav-link">
-                  Dashboard
+                  {t('appPage.dashboard')}
                 </a>
               </li>
               <li>
                 <a href="/app/profile" className="nav-link">
-                  Profile
+                  {t('appPage.profile')}
                 </a>
               </li>
               <li>
                 <a href="/meal-plan" className="nav-link">
-                  Meal Plan
+                  {t('appPage.mealPlan')}
                 </a>
               </li>
               <li>
                 <a href="#body-metrics" className="nav-link">
-                  Body Metrics
+                  {t('appPage.bodyMetrics')}
                 </a>
               </li>
               <li>
                 <a href="#nutrition" className="nav-link">
-                  Nutrition
+                  {t('appPage.nutrition')}
                 </a>
               </li>
               <li>
                 <a href="#settings" className="nav-link">
-                  Settings
+                  {t('appPage.settings')}
                 </a>
               </li>
             </ul>
@@ -95,60 +97,55 @@ function App() {
 
         <div className="app-main">
           <div className="app-content">
-            <h2>Welcome to AI Fitness</h2>
+            <h2>{t('appPage.welcomeToAI')}</h2>
             <p className="welcome-text">
-              This is the main application page. Here you'll find all the features
-              from your original Java program:
+              {t('appPage.mainAppDescription')}
             </p>
 
             <div className="feature-grid">
               <div className="feature-card">
-                <h3>Profile Overview</h3>
+                <h3>{t('appPage.profileOverview')}</h3>
                 <p>
-                  View your complete fitness profile including personal information,
-                  body measurements, and calculated metrics.
+                  {t('appPage.profileOverviewDescription')}
                 </p>
-                <span className="feature-status">Coming soon</span>
+                <span className="feature-status">{t('appPage.comingSoon')}</span>
               </div>
 
               <div className="feature-card">
-                <h3>Body Metrics</h3>
+                <h3>{t('appPage.bodyMetricsTitle')}</h3>
                 <p>
-                  See your BMI, WHR, WHtR, Body Fat percentage with health
-                  interpretations and risk assessments.
+                  {t('appPage.bodyMetricsDescription')}
                 </p>
-                <span className="feature-status">Coming soon</span>
+                <span className="feature-status">{t('appPage.comingSoon')}</span>
               </div>
 
               <div className="feature-card">
-                <h3>Nutrition Calculator</h3>
+                <h3>{t('appPage.nutritionCalculator')}</h3>
                 <p>
-                  Get personalized daily calorie goals, macronutrients (protein, fat, carbs),
-                  and micronutrient requirements based on your goals.
+                  {t('appPage.nutritionCalculatorDescription')}
                 </p>
-                <span className="feature-status">Coming soon</span>
+                <span className="feature-status">{t('appPage.comingSoon')}</span>
               </div>
 
               <div className="feature-card">
-                <h3>Profile Settings</h3>
+                <h3>{t('appPage.profileSettings')}</h3>
                 <p>
-                  Update your profile information, body measurements, activity level,
-                  and fitness goals. All metrics will be automatically recalculated.
+                  {t('appPage.profileSettingsDescription')}
                 </p>
-                <span className="feature-status">Coming soon</span>
+                <span className="feature-status">{t('appPage.comingSoon')}</span>
               </div>
             </div>
 
             <div className="user-info-section">
-              <h3>Your Account</h3>
+              <h3>{t('appPage.yourAccount')}</h3>
               <div className="info-item">
-                <strong>Username:</strong> {user.username}
+                <strong>{t('appPage.username')}</strong> {user.username}
               </div>
               <div className="info-item">
-                <strong>Email:</strong> {user.email}
+                <strong>{t('appPage.email')}</strong> {user.email}
               </div>
               <div className="info-item">
-                <strong>User ID:</strong> {user.id}
+                <strong>{t('appPage.userId')}</strong> {user.id}
               </div>
             </div>
           </div>

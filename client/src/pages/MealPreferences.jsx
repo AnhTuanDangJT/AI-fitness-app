@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { mealPreferencesAPI } from '../services/api'
+import { mealPreferencesAPI, mealPlanAPI } from '../services/api'
 import './MealPreferences.css'
 
-function MealPreferences() {
+function MealPreferences({ onClose: onCloseProp }) {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -76,20 +76,47 @@ function MealPreferences() {
         favoriteCuisines: formData.favoriteCuisines.trim() || null,
       }
 
-      const response = await mealPreferencesAPI.save(preferences)
+      // 1. Save preferences
+      const saveResponse = await mealPreferencesAPI.save(preferences)
       
-      if (response.success) {
-        setSuccess('Meal preferences saved successfully!')
-        // Redirect to dashboard after 1.5 seconds
-        setTimeout(() => {
-          navigate('/dashboard')
-        }, 1500)
-      } else {
-        setError(response.message || 'Failed to save preferences')
+      if (!saveResponse.success) {
+        setError(saveResponse.message || 'Failed to save preferences')
+        setSaving(false)
+        return
       }
+
+      setSuccess('Generating your meal plan...')
+
+      // 2. Generate meal plan
+      // Calculate next Monday (or today's Monday)
+      const today = new Date()
+      const dayOfWeek = today.getDay()
+      const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7
+      const nextMonday = new Date(today)
+      nextMonday.setDate(today.getDate() + daysUntilMonday)
+      const weekStart = nextMonday.toISOString().split('T')[0]
+
+      const generateResponse = await mealPlanAPI.generate(weekStart)
+      
+      if (!generateResponse.success) {
+        setError(generateResponse.message || 'Failed to generate meal plan. Please try again.')
+        setSaving(false)
+        return
+      }
+
+      // 3. Success - navigate to meal plan view
+      setSuccess('Meal plan generated successfully!')
+      
+      // Close modal if opened from dashboard, then navigate
+      if (onCloseProp) {
+        onCloseProp()
+      }
+      
+      // Navigate to meal plan page
+      navigate('/meal-plan')
     } catch (err) {
-      setError(err.genericMessage || 'Failed to save preferences. Please try again.')
-      console.error('Error saving preferences:', err)
+      setError(err.genericMessage || 'Unable to generate meal plan. Please try again.')
+      console.error('Error in meal plan flow:', err)
     } finally {
       setSaving(false)
     }
@@ -269,7 +296,13 @@ function MealPreferences() {
           <div className="form-actions">
             <button
               type="button"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => {
+                if (onCloseProp) {
+                  onCloseProp()
+                } else {
+                  navigate('/dashboard')
+                }
+              }}
               className="cancel-button"
               disabled={saving}
             >
