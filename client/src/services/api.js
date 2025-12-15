@@ -397,5 +397,25 @@ export const aiCoachAPI = {
   },
 }
 
+// Health Check API methods
+export const healthAPI = {
+  /**
+   * Checks the email health configuration status.
+   * 
+   * Returns email service configuration status for debugging production email issues.
+   * 
+   * @returns {Promise<Object>} Email configuration status
+   */
+  checkEmailHealth: async () => {
+    try {
+      const response = await api.get('/health/email')
+      return response.data
+    } catch (error) {
+      console.error('Error checking email health:', error)
+      throw error
+    }
+  },
+}
+
 export default api
 
