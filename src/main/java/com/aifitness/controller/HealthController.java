@@ -1,5 +1,6 @@
 package com.aifitness.controller;
 
+import com.aifitness.dto.ApiResponse;
 import com.aifitness.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -7,7 +8,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,9 +20,10 @@ import java.util.Map;
  * NOTE:
  * - All routes in this controller are mounted under /api/health
  * - Example: GET /api/health, GET /api/health/email
+ * - The context-path is already set to /api in application.properties
  */
 @RestController
-@RequestMapping("/api/health")
+@RequestMapping("/api")
 public class HealthController {
     
     private final EmailService emailService;
@@ -39,13 +40,11 @@ public class HealthController {
      * 
      * @return Health status response
      */
-    @GetMapping
+    @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "UP");
         response.put("service", "aifitness-backend");
-        response.put("timestamp", LocalDateTime.now().toString());
-        response.put("message", "Backend is running successfully");
         return ResponseEntity.ok(response);
     }
     
@@ -53,29 +52,32 @@ public class HealthController {
      * Email Configuration Health Check Endpoint
      *
      * Returns email service configuration status for debugging production email issues.
+     * Uses ApiResponse wrapper for consistent API response format.
      *
-     * Minimal contract (relied on by frontend/signup flow):
-     * - emailConfigured: true if all required env vars are present
-     * - provider: detected email provider (gmail-smtp, sendgrid-smtp, etc. or "none")
-     *
-     * Implementation also includes extra diagnostic booleans, but callers should
-     * only rely on the fields above.
-     *
-     * @return Email configuration status
+     * @return Email configuration status wrapped in ApiResponse
      */
-    @GetMapping("/email")
-    public ResponseEntity<Map<String, Object>> emailHealthCheck() {
+    @GetMapping("/health/email")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> checkEmailHealth() {
+        boolean emailConfigured = emailService.isEmailConfigured();
+        
+        // Create response data with email configuration status
+        Map<String, Object> emailStatus = new HashMap<>();
+        emailStatus.put("emailConfigured", emailConfigured);
+        
+        // Include detailed status if available
         EmailService.EmailConfigStatus configStatus = emailService.getEmailConfigStatus();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("emailConfigured", configStatus.isEmailConfigured());
-        response.put("provider", configStatus.isEmailConfigured() ? configStatus.getProvider() : "none");
-        response.put("hostSet", configStatus.isHostSet());
-        response.put("userSet", configStatus.isUserSet());
-        response.put("passSet", configStatus.isPassSet());
-        response.put("fromSet", configStatus.isFromSet());
-        response.put("timestamp", LocalDateTime.now().toString());
-
+        emailStatus.put("provider", configStatus.isEmailConfigured() ? configStatus.getProvider() : "none");
+        emailStatus.put("hostSet", configStatus.isHostSet());
+        emailStatus.put("userSet", configStatus.isUserSet());
+        emailStatus.put("passSet", configStatus.isPassSet());
+        emailStatus.put("fromSet", configStatus.isFromSet());
+        
+        // Create ApiResponse with success status and data
+        ApiResponse<Map<String, Object>> response = ApiResponse.success(
+            emailConfigured ? "Email service is configured" : "Email service is not configured",
+            emailStatus
+        );
+        
         return ResponseEntity.ok(response);
     }
 }
