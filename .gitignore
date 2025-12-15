@@ -82,3 +82,6 @@ logs/
 .env.local
 .env.*
 
+# Markdown files (exclude local documentation, but keep README.md)
+*.md
+!README.md
