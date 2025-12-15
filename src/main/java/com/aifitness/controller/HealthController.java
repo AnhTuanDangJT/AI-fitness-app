@@ -3,11 +3,13 @@ package com.aifitness.controller;
 import com.aifitness.dto.ApiResponse;
 import com.aifitness.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,12 +59,43 @@ public class HealthController {
      * @return Email configuration status wrapped in ApiResponse
      */
     @GetMapping("/health/email")
-    public ResponseEntity<ApiResponse<Boolean>> checkEmailHealth() {
-        boolean emailConfigured = emailService.isEmailConfigured();  // Check if email service is configured
-        ApiResponse<Boolean> response = new ApiResponse<>(emailConfigured, 
-            emailConfigured ? "Email service is configured" : "Email service is not configured", 
-            emailConfigured);
-        return ResponseEntity.ok(response);  // Return success response
+    public ResponseEntity<ApiResponse<Map<String, Object>>> checkEmailHealth() {
+        try {
+            boolean emailConfigured = emailService.isEmailConfigured();  // Check if email service is configured
+            EmailService.EmailConfigStatus configStatus = emailService.getEmailConfigStatus();
+            
+            // Build response data with all email configuration details
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("emailConfigured", emailConfigured);
+            responseData.put("provider", configStatus.getProvider());
+            responseData.put("hostSet", configStatus.isHostSet());
+            responseData.put("userSet", configStatus.isUserSet());
+            responseData.put("passSet", configStatus.isPassSet());
+            responseData.put("fromSet", configStatus.isFromSet());
+            responseData.put("timestamp", Instant.now().toString());
+            
+            ApiResponse<Map<String, Object>> response = new ApiResponse<>(
+                emailConfigured,
+                emailConfigured ? "Email service is configured" : "Email service is not configured",
+                responseData
+            );
+            
+            return ResponseEntity.ok(response);  // Return success response
+        } catch (Exception e) {
+            // Build error response data
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("emailConfigured", false);
+            errorData.put("error", e.getMessage());
+            errorData.put("timestamp", Instant.now().toString());
+            
+            ApiResponse<Map<String, Object>> response = new ApiResponse<>(
+                false,
+                "Email service configuration check failed: " + e.getMessage(),
+                errorData
+            );
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);  // Return error response
+        }
     }
 }
 
