@@ -13,12 +13,16 @@ import java.util.Map;
 
 /**
  * Health Check Controller
- * 
+ *
  * Provides health check endpoints for deployment verification.
  * These endpoints are public (no authentication required).
+ *
+ * NOTE:
+ * - All routes in this controller are mounted under /api/health
+ * - Example: GET /api/health, GET /api/health/email
  */
 @RestController
-@RequestMapping("/health")
+@RequestMapping("/api/health")
 public class HealthController {
     
     private final EmailService emailService;
@@ -47,31 +51,31 @@ public class HealthController {
     
     /**
      * Email Configuration Health Check Endpoint
-     * 
+     *
      * Returns email service configuration status for debugging production email issues.
-     * This endpoint is protected and should only be accessible to admins.
-     * 
-     * Response includes:
+     *
+     * Minimal contract (relied on by frontend/signup flow):
      * - emailConfigured: true if all required env vars are present
-     * - provider: detected email provider (gmail-smtp, sendgrid-smtp, etc.)
-     * 
-     * Does NOT expose actual credentials or values.
-     * 
+     * - provider: detected email provider (gmail-smtp, sendgrid-smtp, etc. or "none")
+     *
+     * Implementation also includes extra diagnostic booleans, but callers should
+     * only rely on the fields above.
+     *
      * @return Email configuration status
      */
     @GetMapping("/email")
     public ResponseEntity<Map<String, Object>> emailHealthCheck() {
         EmailService.EmailConfigStatus configStatus = emailService.getEmailConfigStatus();
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("emailConfigured", configStatus.isEmailConfigured());
-        response.put("provider", configStatus.getProvider());
+        response.put("provider", configStatus.isEmailConfigured() ? configStatus.getProvider() : "none");
         response.put("hostSet", configStatus.isHostSet());
         response.put("userSet", configStatus.isUserSet());
         response.put("passSet", configStatus.isPassSet());
         response.put("fromSet", configStatus.isFromSet());
         response.put("timestamp", LocalDateTime.now().toString());
-        
+
         return ResponseEntity.ok(response);
     }
 }

@@ -299,6 +299,19 @@ public class EmailService {
             fromEmail != null && !fromEmail.trim().isEmpty()
         );
     }
+
+    /**
+     * Lightweight check for callers that only care about whether email
+     * is configured, without throwing exceptions.
+     *
+     * This method is safe to call at any time and simply returns the
+     * current configuration flag computed in {@link #checkEmailConfiguration()}.
+     *
+     * @return true if email is configured, false otherwise
+     */
+    public boolean isEmailConfigured() {
+        return isEmailConfigured;
+    }
     
     /**
      * Email configuration status for health checks.
