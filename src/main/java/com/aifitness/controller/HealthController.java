@@ -20,12 +20,12 @@ import java.util.Map;
  * These endpoints are public (no authentication required).
  *
  * NOTE:
- * - All routes in this controller are mounted under /api/health
+ * - All routes in this controller are mounted under /health
+ * - With context-path=/api, endpoints are accessible at /api/health/**
  * - Example: GET /api/health, GET /api/health/email
- * - The context-path is already set to /api in application.properties
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/health")
 public class HealthController {
     
     private static final Logger log = LoggerFactory.getLogger(HealthController.class);
@@ -41,10 +41,11 @@ public class HealthController {
      * Health Check Endpoint
      * 
      * Returns a simple status response to verify the backend is running.
+     * Accessible at: GET /api/health (with context-path=/api)
      * 
      * @return Health status response
      */
-    @GetMapping("/health")
+    @GetMapping
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "UP");
@@ -57,10 +58,11 @@ public class HealthController {
      * 
      * Tests JavaMailSender by creating a MimeMessage.
      * Returns "EMAIL_OK" if successful.
+     * Accessible at: GET /api/health/email (with context-path=/api)
      * 
      * @return "EMAIL_OK" if email service is working
      */
-    @GetMapping("/health/email")
+    @GetMapping("/email")
     public String checkEmailHealth() {
         try {
             // Test JavaMailSender by creating a MimeMessage

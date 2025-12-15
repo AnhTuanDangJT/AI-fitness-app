@@ -94,8 +94,7 @@ public class SecurityConfig {
             
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/health/**").permitAll() // Legacy health check endpoint (public)
-                .requestMatchers("/api/health/**").permitAll() // New API health endpoints (public)
+                .requestMatchers("/health/**").permitAll() // Health check endpoints (public, accessible at /api/health/** with context-path)
                 .requestMatchers("/auth/**").permitAll() // Public endpoints (rate limited in filter)
                 .requestMatchers("/profile/**").permitAll() // All profile endpoints (JWT validation in controller)
                 .requestMatchers("/user/**").permitAll() // User endpoints (JWT validation in controller)
