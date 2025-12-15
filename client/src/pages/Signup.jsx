@@ -51,8 +51,20 @@ function Signup() {
       )
 
       if (response.success) {
-        // Redirect to email verification page
-        navigate('/verify-email', { state: { email: formData.email } })
+        // Check if email is already verified (e.g., verification was skipped due to email service failure)
+        const isEmailVerified = response.data?.isEmailVerified || false
+        if (isEmailVerified) {
+          // Email already verified, redirect to login
+          navigate('/login', { 
+            state: { 
+              email: formData.email,
+              message: 'Account created successfully! You can now log in.'
+            } 
+          })
+        } else {
+          // Redirect to email verification page
+          navigate('/verify-email', { state: { email: formData.email } })
+        }
       } else {
         setError(response.message || ERROR_MESSAGES.SIGNUP_FAILED)
       }

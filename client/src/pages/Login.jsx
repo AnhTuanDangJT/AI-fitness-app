@@ -59,6 +59,13 @@ function Login() {
           email: response.data.email,
         }))
 
+        // Show dismissible banner if email verification was skipped
+        const isEmailVerified = response.data?.isEmailVerified
+        if (isEmailVerified === false) {
+          // Note: This case shouldn't happen in relaxed mode, but handle it gracefully
+          console.warn('User logged in but email is not verified (may be in relaxed verification mode)')
+        }
+
         // Check if profile is complete and redirect accordingly
         try {
           const profileCheck = await userAPI.checkProfileComplete()

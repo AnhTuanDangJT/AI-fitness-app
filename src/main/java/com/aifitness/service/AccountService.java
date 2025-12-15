@@ -6,10 +6,12 @@ import com.aifitness.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.annotation.PostConstruct;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
@@ -45,11 +47,27 @@ public class AccountService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     
+    @Value("${app.auth.email-verification-strict:true}")
+    private boolean emailVerificationStrict;
+    
     @Autowired
     public AccountService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+    }
+    
+    /**
+     * Logs email verification strictness mode on startup.
+     */
+    @PostConstruct
+    public void logEmailVerificationMode() {
+        if (!emailVerificationStrict) {
+            logger.warn("EMAIL_VERIFICATION_STRICT=false: Email verification is RELAXED. Users can log in without email verification.");
+            logger.warn("This mode should only be used when email service is unavailable. Re-enable strict mode once email is configured.");
+        } else {
+            logger.info("EMAIL_VERIFICATION_STRICT=true: Email verification is REQUIRED for login.");
+        }
     }
     
     /**
@@ -109,13 +127,33 @@ public class AccountService {
             logger.info("Verification email sent successfully during signup - Email: {}", email);
         } catch (com.aifitness.exception.EmailServiceException e) {
             logger.error("Failed to send verification email during signup - Email: {}", email, e);
-            // Re-throw to fail signup if email fails (user needs verification email)
-            throw e;
+            
+            // If email verification is not strict, mark user as verified_pending_email and continue
+            if (!emailVerificationStrict) {
+                logger.warn("EMAIL_VERIFICATION_STRICT=false: Allowing signup despite email failure - Email: {}", email);
+                // Mark user as verified (bypassed) so they can log in
+                user.setIsEmailVerified(true);
+                user = userRepository.save(user);
+                logger.info("User marked as verified_pending_email due to relaxed verification mode - Email: {}", email);
+            } else {
+                // Re-throw to fail signup if email fails and strict mode is enabled
+                throw e;
+            }
         } catch (Exception e) {
             logger.error("Unexpected error sending verification email during signup - Email: {}", email, e);
-            // Wrap in EmailServiceException for consistent error handling
-            throw new com.aifitness.exception.EmailServiceException(
-                "Unable to send verification email. Please try again later.", e);
+            
+            // If email verification is not strict, mark user as verified_pending_email and continue
+            if (!emailVerificationStrict) {
+                logger.warn("EMAIL_VERIFICATION_STRICT=false: Allowing signup despite email failure - Email: {}", email);
+                // Mark user as verified (bypassed) so they can log in
+                user.setIsEmailVerified(true);
+                user = userRepository.save(user);
+                logger.info("User marked as verified_pending_email due to relaxed verification mode - Email: {}", email);
+            } else {
+                // Wrap in EmailServiceException for consistent error handling
+                throw new com.aifitness.exception.EmailServiceException(
+                    "Unable to send verification email. Please try again later.", e);
+            }
         }
         
         return user;
@@ -204,11 +242,22 @@ public class AccountService {
             );
         }
         
-        // Check if email is verified
+        // Check if email is verified (unless strict mode is disabled)
         if (!user.getIsEmailVerified()) {
-            throw new com.aifitness.exception.InvalidCredentialsException(
-                "Please verify your email first"
-            );
+            if (emailVerificationStrict) {
+                throw new com.aifitness.exception.InvalidCredentialsException(
+                    "Please verify your email first"
+                );
+            } else {
+                // In relaxed mode, allow login but log a warning
+                logger.warn("EMAIL_VERIFICATION_STRICT=false: Allowing login for unverified user - Username/Email: {}", usernameOrEmail);
+                // Optionally auto-verify user in relaxed mode (mark as verified_pending_email)
+                if (!user.getIsEmailVerified()) {
+                    user.setIsEmailVerified(true);
+                    user = userRepository.save(user);
+                    logger.info("User auto-verified due to relaxed verification mode - Username/Email: {}", usernameOrEmail);
+                }
+            }
         }
         
         return user;

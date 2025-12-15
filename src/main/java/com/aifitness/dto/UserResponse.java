@@ -13,6 +13,7 @@ public class UserResponse {
     private String username;
     private String email;
     private LocalDateTime createdAt;
+    private Boolean isEmailVerified; // Email verification status
     
     public UserResponse() {
     }
@@ -22,6 +23,14 @@ public class UserResponse {
         this.username = username;
         this.email = email;
         this.createdAt = createdAt;
+    }
+    
+    public UserResponse(Long id, String username, String email, LocalDateTime createdAt, Boolean isEmailVerified) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.createdAt = createdAt;
+        this.isEmailVerified = isEmailVerified;
     }
     
     // Getters and Setters
@@ -55,6 +64,14 @@ public class UserResponse {
     
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+    
+    public Boolean getIsEmailVerified() {
+        return isEmailVerified;
+    }
+    
+    public void setIsEmailVerified(Boolean isEmailVerified) {
+        this.isEmailVerified = isEmailVerified;
     }
 }
 

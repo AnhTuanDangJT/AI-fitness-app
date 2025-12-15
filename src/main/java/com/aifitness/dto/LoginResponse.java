@@ -15,6 +15,7 @@ public class LoginResponse {
     private String username;
     private String email;
     private LocalDateTime expiresAt;
+    private Boolean isEmailVerified; // Email verification status
     
     public LoginResponse() {
     }
@@ -25,6 +26,15 @@ public class LoginResponse {
         this.username = username;
         this.email = email;
         this.expiresAt = expiresAt;
+    }
+    
+    public LoginResponse(String token, Long userId, String username, String email, LocalDateTime expiresAt, Boolean isEmailVerified) {
+        this.token = token;
+        this.userId = userId;
+        this.username = username;
+        this.email = email;
+        this.expiresAt = expiresAt;
+        this.isEmailVerified = isEmailVerified;
     }
     
     // Getters and Setters
@@ -74,6 +84,14 @@ public class LoginResponse {
     
     public void setExpiresAt(LocalDateTime expiresAt) {
         this.expiresAt = expiresAt;
+    }
+    
+    public Boolean getIsEmailVerified() {
+        return isEmailVerified;
+    }
+    
+    public void setIsEmailVerified(Boolean isEmailVerified) {
+        this.isEmailVerified = isEmailVerified;
     }
 }
 

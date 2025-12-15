@@ -144,14 +144,15 @@ public class AuthController {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getIsEmailVerified()
             );
             
-            // Return success response indicating verification is required
-            ApiResponse<UserResponse> response = ApiResponse.success(
-                "User registered successfully. Please verify your email to continue.",
-                userResponse
-            );
+            // Return success response with appropriate message based on verification status
+            String message = user.getIsEmailVerified() 
+                ? "User registered successfully. You can now log in."
+                : "User registered successfully. Please verify your email to continue.";
+            ApiResponse<UserResponse> response = ApiResponse.success(message, userResponse);
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
@@ -243,7 +244,8 @@ public class AuthController {
             user.getId(),
             user.getUsername(),
             user.getEmail(),
-            expiresAt
+            expiresAt,
+            user.getIsEmailVerified()
         );
         
         // Return success response
@@ -318,7 +320,8 @@ public class AuthController {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getIsEmailVerified()
             );
             
             // Return success response
