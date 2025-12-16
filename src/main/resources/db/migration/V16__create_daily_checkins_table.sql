@@ -2,7 +2,6 @@
 -- Version: 16
 -- Description: Ensures daily_checkins has all required columns, constraints, and indexes
 
--- 1. Create table if it doesn't exist yet
 CREATE TABLE IF NOT EXISTS daily_checkins (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
@@ -16,6 +15,10 @@ CREATE TABLE IF NOT EXISTS daily_checkins (
     CONSTRAINT fk_daily_checkins_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT unique_user_date UNIQUE (user_id, date)
 );
+
+-- Ensure primary key column uses BIGINT for existing tables
+ALTER TABLE daily_checkins
+    ALTER COLUMN id TYPE BIGINT;
 
 -- 2. Rename legacy column if table was created manually (check_in_time -> created_at)
 DO $$
