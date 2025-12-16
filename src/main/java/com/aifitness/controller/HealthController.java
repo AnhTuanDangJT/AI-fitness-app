@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,6 +53,7 @@ public class HealthController {
     public HealthController(JavaMailSender javaMailSender, Environment environment) {
         this.javaMailSender = javaMailSender;
         this.environment = environment;
+        log.info("✅ HealthController loaded (email check is lazy)");
     }
     
     /**
@@ -90,62 +91,45 @@ public class HealthController {
                 ? String.join(",", environment.getActiveProfiles()) 
                 : "default";
             
+            String resolvedHost = resolveConfigValue("MAIL_HOST", "spring.mail.host", mailHost);
+            String resolvedPort = resolveConfigValue("MAIL_PORT", "spring.mail.port", mailPort > 0 ? String.valueOf(mailPort) : "");
+            String resolvedUsername = resolveConfigValue("MAIL_USERNAME", "spring.mail.username", mailUsername);
+            String resolvedFromEmail = resolveConfigValue("APP_EMAIL_FROM", "app.email.from", fromEmail);
+            
             // Mask username (show first 3 chars + ***)
-            String maskedUsername = mailUsername != null && !mailUsername.isEmpty()
-                ? (mailUsername.length() > 3 
-                    ? mailUsername.substring(0, Math.min(3, mailUsername.length())) + "***" 
+            String maskedUsername = StringUtils.hasText(resolvedUsername)
+                ? (resolvedUsername.length() > 3 
+                    ? resolvedUsername.substring(0, Math.min(3, resolvedUsername.length())) + "***" 
                     : "***")
                 : "not configured";
             
-            data.put("host", mailHost != null ? mailHost : "not configured");
-            data.put("port", mailPort);
+            data.put("host", StringUtils.hasText(resolvedHost) ? resolvedHost : "not configured");
+            data.put("port", StringUtils.hasText(resolvedPort) ? resolvedPort : "not configured");
             data.put("username", maskedUsername);
-            data.put("fromEmail", fromEmail != null && !fromEmail.isEmpty() ? fromEmail : "not configured");
+            data.put("fromEmail", StringUtils.hasText(resolvedFromEmail) ? resolvedFromEmail : "not configured");
             data.put("activeProfile", activeProfile);
             data.put("timestamp", java.time.LocalDateTime.now().toString());
+            data.put("mailSenderBeanPresent", javaMailSender != null);
             
-            // Test email connection
-            boolean connectionOk = false;
-            String connectionStatus = "unknown";
+            boolean configComplete = javaMailSender != null
+                && StringUtils.hasText(resolvedHost)
+                && StringUtils.hasText(resolvedPort)
+                && StringUtils.hasText(resolvedUsername)
+                && StringUtils.hasText(resolvedFromEmail);
             
-            if (javaMailSender instanceof JavaMailSenderImpl) {
-                JavaMailSenderImpl mailSenderImpl = (JavaMailSenderImpl) javaMailSender;
-                try {
-                    // Use testConnection() to verify SMTP connection
-                    mailSenderImpl.testConnection();
-                    connectionOk = true;
-                    connectionStatus = "OK";
-                    log.info("Email health check: Connection test successful");
-                } catch (Exception e) {
-                    connectionOk = false;
-                    connectionStatus = "FAILED: " + e.getMessage();
-                    log.warn("Email health check: Connection test failed - {}", e.getMessage());
-                }
-            } else {
-                // Fallback: Try to create a MimeMessage as lightweight validation
-                try {
-                    javaMailSender.createMimeMessage();
-                    connectionOk = true;
-                    connectionStatus = "OK (lightweight check)";
-                    log.info("Email health check: Lightweight validation successful");
-                } catch (Exception e) {
-                    connectionOk = false;
-                    connectionStatus = "FAILED: " + e.getMessage();
-                    log.warn("Email health check: Lightweight validation failed - {}", e.getMessage());
-                }
-            }
+            data.put("configComplete", configComplete);
             
-            data.put("connectionStatus", connectionStatus);
-            
-            if (connectionOk) {
+            if (configComplete) {
+                data.put("connectionStatus", "CONFIG_PRESENT");
                 ApiResponse<Map<String, Object>> response = ApiResponse.success(
-                    "Email health check OK", 
+                    "Email configuration detected. SMTP connection is checked lazily.",
                     data
                 );
                 return ResponseEntity.ok(response);
             } else {
+                data.put("connectionStatus", "CONFIG_INCOMPLETE");
                 ApiResponse<Map<String, Object>> response = ApiResponse.error(
-                    "Email health check failed: " + connectionStatus
+                    "Email configuration is incomplete. Verify MAIL_HOST, MAIL_PORT, MAIL_USERNAME, APP_EMAIL_FROM."
                 );
                 response.setData(data);
                 return ResponseEntity.status(503).body(response);
@@ -162,6 +146,17 @@ public class HealthController {
             response.setData(data);
             return ResponseEntity.status(503).body(response);
         }
+    }
+    
+    private String resolveConfigValue(String envKey, String propertyKey, String fallback) {
+        String value = environment.getProperty(envKey);
+        if (!StringUtils.hasText(value)) {
+            value = environment.getProperty(propertyKey);
+        }
+        if (!StringUtils.hasText(value)) {
+            value = fallback;
+        }
+        return value;
     }
 }
 
