@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -221,6 +222,22 @@ public class GlobalExceptionHandler {
         ApiResponse<Map<String, String>> response = ApiResponse.error(ex.getMessage());
         response.setData(errorData);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+    
+    /**
+     * Handle missing resource exceptions (404 Not Found).
+     * This prevents missing endpoints from returning 500 errors.
+     * Returns proper 404 response when a route is not found.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<String>> handleNoResourceFoundException(
+            NoResourceFoundException ex) {
+        
+        String path = ex.getResourcePath() != null ? ex.getResourcePath() : "unknown";
+        logger.warn("Resource not found: {}", path);
+        
+        ApiResponse<String> response = ApiResponse.error("Not found: " + path);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
     
     /**

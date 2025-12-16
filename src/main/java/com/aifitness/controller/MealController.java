@@ -19,7 +19,7 @@ import java.util.List;
  * Handles simple meal plan endpoints.
  */
 @RestController
-@RequestMapping("/api/meal")
+@RequestMapping("/meal")
 public class MealController {
     
     private final MealPlanService mealPlanService;
