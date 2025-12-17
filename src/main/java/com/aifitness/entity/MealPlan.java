@@ -13,10 +13,7 @@ import java.util.List;
  * Contains multiple meal plan entries (one per meal per day).
  */
 @Entity
-@Table(name = "meal_plans", indexes = {
-    @Index(name = "idx_user_week", columnList = "user_id, week_start_date"),
-    @Index(name = "idx_user_created", columnList = "user_id, created_at")
-})
+@Table(name = "meal_plans")
 public class MealPlan {
     
     /**

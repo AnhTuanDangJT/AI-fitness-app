@@ -10,10 +10,7 @@ import java.time.LocalDate;
  * Each entry corresponds to one meal (breakfast, lunch, dinner, or snack) on a specific date.
  */
 @Entity
-@Table(name = "meal_plan_entries", indexes = {
-    @Index(name = "idx_meal_plan_date", columnList = "meal_plan_id, date"),
-    @Index(name = "idx_meal_plan_type", columnList = "meal_plan_id, meal_type")
-})
+@Table(name = "meal_plan_entries")
 public class MealPlanEntry {
     
     /**

@@ -11,10 +11,7 @@ import java.time.LocalDateTime;
  * This data will be used by the AI coach to analyze trends and provide insights.
  */
 @Entity
-@Table(name = "weekly_progress", indexes = {
-    @Index(name = "idx_user_week", columnList = "user_id, week_start_date", unique = true),
-    @Index(name = "idx_user_created", columnList = "user_id, created_at")
-})
+@Table(name = "weekly_progress")
 public class WeeklyProgress {
     
     /**

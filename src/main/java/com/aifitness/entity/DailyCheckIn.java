@@ -11,10 +11,7 @@ import java.time.LocalDateTime;
  * This data will be used by the AI coach for day-by-day coaching.
  */
 @Entity
-@Table(name = "daily_checkins", indexes = {
-    @Index(name = "idx_user_date", columnList = "user_id, date", unique = true),
-    @Index(name = "idx_user_created", columnList = "user_id, created_at")
-})
+@Table(name = "daily_checkins")
 public class DailyCheckIn {
     
     /**

@@ -11,10 +11,7 @@ import java.time.LocalDateTime;
  * Each event is uniquely identified by (user, type, sourceId).
  */
 @Entity
-@Table(name = "gamification_events", indexes = {
-    @Index(name = "idx_user_type_source", columnList = "user_id, type, source_id", unique = true),
-    @Index(name = "idx_user_created", columnList = "user_id, created_at")
-})
+@Table(name = "gamification_events")
 public class GamificationEvent {
     
     /**

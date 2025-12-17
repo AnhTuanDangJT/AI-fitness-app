@@ -20,10 +20,7 @@ import java.time.LocalDateTime;
  * Infoclient.java will be removed.
  */
 @Entity
-@Table(name = "users", indexes = {
-    @Index(name = "idx_username", columnList = "username", unique = true),
-    @Index(name = "idx_email", columnList = "email", unique = true)
-})
+@Table(name = "users")
 public class User {
     
     /**
