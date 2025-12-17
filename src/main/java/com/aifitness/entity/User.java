@@ -36,14 +36,14 @@ public class User {
      * Username - Must be unique
      * This replaces the UserName field from Infoclient.java
      */
-    @Column(name = "username", nullable = false, unique = true, length = 50)
+    @Column(name = "username", nullable = false, length = 50)
     private String username;
     
     /**
      * Email address - Must be unique
      * New field for user identification
      */
-    @Column(name = "email", nullable = false, unique = true, length = 100)
+    @Column(name = "email", nullable = false, length = 100)
     private String email;
     
     /**

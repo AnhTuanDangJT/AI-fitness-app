@@ -110,9 +110,9 @@ public class GlobalExceptionHandler {
         
         // Check if it's a unique constraint violation
         if (details != null) {
-            if (details.contains("username") || details.contains("idx_username")) {
+            if (details.contains("username")) {
                 errorMessage = "Signup failed: Username already exists";
-            } else if (details.contains("email") || details.contains("idx_email")) {
+            } else if (details.contains("email")) {
                 errorMessage = "Signup failed: Email already exists";
             } else {
                 errorMessage = "Signup failed: " + details;
