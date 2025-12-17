@@ -1,5 +1,7 @@
 package com.aifitness;
 
+import java.util.Arrays;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +41,12 @@ public class AiFitnessApplication {
     public void onApplicationReady() {
         String ddlAuto = environment.getProperty("spring.jpa.hibernate.ddl-auto", "unspecified");
         logger.info("DDL-AUTO MODE = {}", ddlAuto);
+        boolean isProduction = Arrays.stream(environment.getActiveProfiles())
+                .anyMatch(profile -> "production".equalsIgnoreCase(profile));
+        if (isProduction && !"none".equalsIgnoreCase(ddlAuto)) {
+            throw new IllegalStateException(
+                    "Production requires spring.jpa.hibernate.ddl-auto=none but found '" + ddlAuto + "'");
+        }
         System.out.println("========================================");
         System.out.println("AI Fitness Backend Server Started!");
         System.out.println("Server running at: http://localhost:8080/api");
