@@ -69,9 +69,8 @@ public class EmailService {
     @PostConstruct
     public void checkEmailConfiguration() {
         // Check if we're in production mode
-        boolean isProduction = "production".equalsIgnoreCase(
-            environment.getProperty("spring.profiles.active", "development")
-        );
+        String activeProfile = environment.getProperty("spring.profiles.active");
+        boolean isProduction = "production".equalsIgnoreCase(activeProfile);
         
         // Detect provider from host
         String effectiveHost = mailHost != null && !mailHost.trim().isEmpty() 
