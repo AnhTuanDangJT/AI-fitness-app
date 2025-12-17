@@ -1,5 +1,6 @@
 package com.aifitness.config;
 
+import com.aifitness.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -10,6 +11,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -43,6 +45,12 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
     
     /**
      * BCrypt Password Encoder Bean
@@ -94,17 +102,23 @@ public class SecurityConfig {
             
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/health/**").permitAll() // Health check endpoints (public, accessible at /api/health/** with context-path)
-                .requestMatchers("/auth/**").permitAll() // Public endpoints (rate limited in filter)
-                .requestMatchers("/profile/**").permitAll() // All profile endpoints (JWT validation in controller)
-                .requestMatchers("/user/**").permitAll() // User endpoints (JWT validation in controller)
-                .requestMatchers("/calculate/**").permitAll() // Calculation endpoints (JWT validation in controller)
-                .requestMatchers("/meal-preferences/**").permitAll() // TEMPORARY: Meal preferences - permitAll for testing (change back to authenticated() after)
-                .requestMatchers("/ai/**").permitAll() // AI endpoints (JWT validation in controllers)
-                .requestMatchers("/feedback/**").permitAll() // Feedback endpoint (JWT validation in controller)
-                .requestMatchers("/gamification/**").permitAll() // Gamification endpoints (JWT validation in controller)
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/health/**", "/api/health/**").permitAll()
+                // Authentication endpoints (both with and without /api context path)
+                .requestMatchers(HttpMethod.POST,
+                    "/auth/signup", "/auth/register", "/auth/login",
+                    "/auth/verify-email", "/auth/resend-verification",
+                    "/api/auth/signup", "/api/auth/register", "/api/auth/login",
+                    "/api/auth/verify-email", "/api/auth/resend-verification"
+                ).permitAll()
+                .requestMatchers(HttpMethod.GET,
+                    "/auth/verify-email", "/api/auth/verify-email"
+                ).permitAll()
                 .anyRequest().authenticated() // All other endpoints require authentication
             );
+        
+        // Register JWT authentication filter before the default username/password filter
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
     }
