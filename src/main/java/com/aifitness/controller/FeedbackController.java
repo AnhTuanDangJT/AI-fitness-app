@@ -3,6 +3,7 @@ package com.aifitness.controller;
 import com.aifitness.dto.ApiResponse;
 import com.aifitness.dto.FeedbackRequest;
 import com.aifitness.entity.User;
+import com.aifitness.exception.EmailServiceException;
 import com.aifitness.repository.UserRepository;
 import com.aifitness.service.EmailService;
 import com.aifitness.util.JwtTokenService;
@@ -87,20 +88,32 @@ public class FeedbackController {
             @Valid @RequestBody FeedbackRequest request,
             HttpServletRequest httpRequest) {
         
+        User user = null;
+        String sanitizedSubject = null;
+        String sanitizedMessage = null;
+
         try {
             // Get authenticated user
-            User user = getAuthenticatedUser(httpRequest);
+            user = getAuthenticatedUser(httpRequest);
             
             // Sanitize input
-            String sanitizedSubject = request.getSubject() != null 
+            sanitizedSubject = request.getSubject() != null 
                 ? StringSanitizer.validateAndSanitize(request.getSubject()) 
                 : null;
-            String sanitizedMessage = StringSanitizer.validateAndSanitize(request.getMessage());
+            sanitizedMessage = StringSanitizer.validateAndSanitize(request.getMessage());
             
             // Validate message is not empty after sanitization
             if (sanitizedMessage == null || sanitizedMessage.trim().isEmpty()) {
                 return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Message cannot be empty"));
+            }
+            
+            if (!emailService.isEmailConfigured()) {
+                logger.warn("Feedback email service not configured - storing feedback locally for user {}", user.getId());
+                logFeedbackLocally(user, sanitizedSubject, sanitizedMessage);
+                return ResponseEntity.ok(
+                    ApiResponse.success("Feedback submitted successfully")
+                );
             }
             
             // Send feedback email
@@ -117,7 +130,13 @@ public class FeedbackController {
             return ResponseEntity.ok(
                 ApiResponse.success("Feedback submitted successfully")
             );
-            
+
+        } catch (EmailServiceException e) {
+            logger.error("Email delivery failed for feedback submission", e);
+            logFeedbackLocally(user, sanitizedSubject, sanitizedMessage != null ? sanitizedMessage : request.getMessage());
+            return ResponseEntity.ok(
+                ApiResponse.success("Feedback submitted successfully")
+            );
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("Unauthorized")) {
                 logger.warn("Unauthorized feedback submission attempt");
@@ -133,7 +152,28 @@ public class FeedbackController {
                 .body(ApiResponse.error("Failed to submit feedback. Please try again later."));
         }
     }
+
+    /**
+     * Stores feedback content in logs when email delivery is unavailable.
+     */
+    private void logFeedbackLocally(User user, String subject, String message) {
+        String safeSubject = subject != null ? subject : "(no subject)";
+        String safeMessage = message != null ? message : "(empty message)";
+        if (safeMessage.length() > 2000) {
+            safeMessage = safeMessage.substring(0, 2000) + "...[truncated]";
+        }
+
+        logger.info("FEEDBACK_CAPTURED userId={} username={} email={} subject=\"{}\" message=\"{}\"",
+            user != null ? user.getId() : "anonymous",
+            user != null ? user.getUsername() : "unknown",
+            user != null ? user.getEmail() : "unknown",
+            safeSubject,
+            safeMessage.replaceAll("\\s+", " ").trim()
+        );
+    }
 }
+
+
 
 
 

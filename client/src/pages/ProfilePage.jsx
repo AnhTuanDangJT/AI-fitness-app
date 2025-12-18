@@ -35,39 +35,17 @@ function ProfilePage() {
   }
 
   const downloadProfilePdf = async () => {
-    console.log("DOWNLOAD CLICKED");
     try {
       setDownloading(true)
       setError(null)
-      
-      // Call the export endpoint
-      const token = localStorage.getItem("token");
-      const res = await fetch("/profile/export", {
-        method: "GET",
-        headers: {
-          "Authorization": "Bearer " + token
-        }
-      })
-      
-      console.log("EXPORT RESPONSE:", res);
-      console.log("EXPORT STATUS:", res.status);
-      console.log("EXPORT STATUS TEXT:", res.statusText);
-      
-      const responseText = await res.text();
-      console.log("EXPORT TEXT:", responseText);
-      
-      if (!res.ok) {
-        console.error("EXPORT FAILED - Status:", res.status);
-        console.error("EXPORT FAILED - Response text:", responseText);
-        alert("Backend error (Status " + res.status + "): " + responseText);
-        setDownloading(false);
-        return;
+
+      // Use central API client so relative /api proxy + auth headers are handled automatically
+      const { data: apiResponse } = await api.get('/profile/export')
+      if (!apiResponse?.success || !apiResponse?.data) {
+        throw new Error(apiResponse?.message || ERROR_MESSAGES.EXPORT_FAILED)
       }
-      
-      const response = JSON.parse(responseText);
-      
-      // Handle both wrapped (ApiResponse) and direct Map responses
-      const data = response.data || response
+
+      const data = apiResponse.data
       
       // Always generate PDF, even if data is incomplete - show N/A for missing fields
       const doc = new jsPDF("p", "mm", "a4")
