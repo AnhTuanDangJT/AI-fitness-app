@@ -6,6 +6,10 @@
   "installCommand": "npm install",
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://web-production-4b668.up.railway.app/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
