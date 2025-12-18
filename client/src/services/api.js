@@ -1,10 +1,16 @@
 import axios from 'axios'
 import { ERROR_MESSAGES } from '../config/constants'
 
-// Use environment variable for API base URL, fallback to relative path for Vite proxy
-// In development, Vite proxy handles /api -> http://localhost:8080/api
-// In production, use full URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+// Determine API base URL.
+// - When running locally (localhost / 127.0.0.1) we allow overriding through VITE_API_BASE_URL
+//   so developers can target custom backends.
+// - For deployed builds (Vercel, custom domains, etc.) we always use the relative `/api` path so
+//   that platform rewrites/proxies forward requests to the backend.
+const isBrowser = typeof window !== 'undefined'
+const isLocalhost =
+  isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+const API_BASE_URL = isLocalhost && envBaseUrl ? envBaseUrl : '/api'
 
 const AUTH_ENDPOINTS = [
   '/auth/signup',
