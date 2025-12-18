@@ -6,69 +6,76 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
+import org.springframework.util.StringUtils;
 
 /**
- * Email Service backed by Resend HTTPS API.
+ * Email Service backed by Gmail SMTP (Spring Mail).
  */
 @Service
 public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
-    private static final String PROVIDER_NAME = "resend-api";
-    private static final String RESEND_BASE_URL = "https://api.resend.com";
+    private static final String PROVIDER_NAME = "gmail-smtp";
 
     private final Environment environment;
-    private final WebClient webClient;
+    private final JavaMailSender mailSender;
 
-    @Value("${resend.api-key:}")
-    private String resendApiKey;
+    @Value("${spring.mail.host:}")
+    private String mailHost;
 
-    @Value("${resend.from-email:}")
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
+
+    @Value("${app.email.from:}")
     private String fromEmail;
 
     private boolean isEmailConfigured = false;
 
-    public EmailService(Environment environment, WebClient.Builder webClientBuilder) {
+    public EmailService(Environment environment, JavaMailSender mailSender) {
         this.environment = environment;
-        this.webClient = webClientBuilder
-            .baseUrl(RESEND_BASE_URL)
-            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .build();
+        this.mailSender = mailSender;
     }
 
     @PostConstruct
     public void checkEmailConfiguration() {
-        String activeProfile = environment.getProperty("spring.profiles.active");
+        String activeProfile = environment.getProperty("spring.profiles.active", "default");
         boolean isProduction = "production".equalsIgnoreCase(activeProfile);
 
-        boolean hasApiKey = resendApiKey != null && !resendApiKey.trim().isEmpty();
-        boolean hasFrom = fromEmail != null && !fromEmail.trim().isEmpty();
+        boolean hasHost = StringUtils.hasText(mailHost);
+        boolean hasUsername = StringUtils.hasText(mailUsername);
+        boolean hasPassword = StringUtils.hasText(mailPassword);
+        boolean hasFrom = StringUtils.hasText(fromEmail);
 
-        isEmailConfigured = hasApiKey && hasFrom;
+        isEmailConfigured = hasHost && hasUsername && hasPassword && hasFrom;
 
-        logger.info("EMAIL_CONFIG_CHECK provider={} api_key_set={} from_set={}",
+        logger.info("EMAIL_CONFIG_CHECK provider={} host_set={} user_set={} pass_set={} from_set={}",
             PROVIDER_NAME,
-            hasApiKey,
+            hasHost,
+            hasUsername,
+            hasPassword,
             hasFrom
         );
 
         if (isEmailConfigured) {
-            logger.info("EMAIL_CONFIG_OK=true provider={} from={}", PROVIDER_NAME, "***");
+            logger.info("EMAIL_CONFIG_OK=true provider={} host={} from={}", PROVIDER_NAME, mailHost, "***");
         } else {
             StringBuilder missing = new StringBuilder();
-            if (!hasApiKey) missing.append("RESEND_API_KEY ");
-            if (!hasFrom) missing.append("RESEND_FROM_EMAIL ");
+            if (!hasHost) missing.append("MAIL_HOST ");
+            if (!hasUsername) missing.append("MAIL_USERNAME ");
+            if (!hasPassword) missing.append("MAIL_PASSWORD ");
+            if (!hasFrom) missing.append("APP_EMAIL_FROM ");
 
             logger.error("EMAIL_CONFIG_OK=false Missing required environment variables: {}", missing.toString().trim());
             if (isProduction) {
                 logger.warn("PRODUCTION MODE: Email service is not configured. " +
-                    "Application will start, but email sending will fail until RESEND_API_KEY and RESEND_FROM_EMAIL are set.");
+                    "Application will start, but email sending will fail until MAIL_* variables are set.");
             } else {
                 logger.warn("DEVELOPMENT MODE: Email service is not configured. Email sending will fail.");
             }
@@ -111,15 +118,17 @@ public class EmailService {
     }
 
     public EmailConfigStatus getEmailConfigStatus() {
-        boolean apiKeySet = resendApiKey != null && !resendApiKey.trim().isEmpty();
-        boolean fromSet = fromEmail != null && !fromEmail.trim().isEmpty();
+        boolean hostSet = StringUtils.hasText(mailHost);
+        boolean userSet = StringUtils.hasText(mailUsername);
+        boolean passSet = StringUtils.hasText(mailPassword);
+        boolean fromSet = StringUtils.hasText(fromEmail);
 
         return new EmailConfigStatus(
             isEmailConfigured,
             PROVIDER_NAME,
-            true,
-            apiKeySet,
-            apiKeySet,
+            hostSet,
+            userSet,
+            passSet,
             fromSet
         );
     }
@@ -152,12 +161,6 @@ public class EmailService {
         return isEmailConfigured;
     }
     
-    /**
-     * Builds the email body for verification email.
-     * 
-     * @param verificationCode The 6-digit verification code
-     * @return The email body text
-     */
     private String buildVerificationEmailBody(String verificationCode) {
         return String.format(
             "Welcome to AI Fitness!\n\n" +
@@ -186,24 +189,17 @@ public class EmailService {
     }
     
     private void sendEmail(String to, String subject, String text) {
-        ResendEmailPayload payload = new ResendEmailPayload(
-            fromEmail,
-            new String[]{to},
-            subject,
-            text
-        );
-
-        webClient.post()
-            .uri("/emails")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + resendApiKey)
-            .bodyValue(payload)
-            .retrieve()
-            .bodyToMono(Void.class)
-            .onErrorResume(WebClientResponseException.class, ex -> {
-                logger.error("EMAIL_SEND_FAILED_HTTP status={} body={}", ex.getStatusCode(), ex.getResponseBodyAsString());
-                return Mono.error(ex);
-            })
-            .block();
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(to);
+            message.setSubject(subject);
+            message.setText(text);
+            mailSender.send(message);
+        } catch (MailException ex) {
+            logger.error("EMAIL_SEND_FAILED_SMTP message={}", ex.getMessage(), ex);
+            throw ex;
+        }
     }
 
     private void handleSendFailure(String toEmail, Exception e, String type) {
@@ -257,7 +253,5 @@ public class EmailService {
             return fromSet;
         }
     }
-
-    private record ResendEmailPayload(String from, String[] to, String subject, String text) {}
 }
 

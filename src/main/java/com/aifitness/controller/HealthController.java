@@ -1,12 +1,12 @@
 package com.aifitness.controller;
 
 import com.aifitness.dto.ApiResponse;
+import com.aifitness.service.EmailService;
+import com.aifitness.service.EmailService.EmailConfigStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,19 +29,15 @@ import java.util.Map;
 @RestController
 @RequestMapping("/health")
 public class HealthController {
-    
+
     private static final Logger log = LoggerFactory.getLogger(HealthController.class);
-    
+
     private final Environment environment;
-    
-    @Value("${resend.api-key:}")
-    private String resendApiKey;
-    
-    @Value("${resend.from-email:}")
-    private String resendFromEmail;
-    
-    public HealthController(Environment environment) {
+    private final EmailService emailService;
+
+    public HealthController(Environment environment, EmailService emailService) {
         this.environment = environment;
+        this.emailService = emailService;
         log.info("✅ HealthController loaded (email check is lazy)");
     }
     
@@ -74,41 +70,32 @@ public class HealthController {
         Map<String, Object> data = new HashMap<>();
         
         try {
-            // Extract email configuration
-            String activeProfile = environment.getActiveProfiles().length > 0 
-                ? String.join(",", environment.getActiveProfiles()) 
+            String activeProfile = environment.getActiveProfiles().length > 0
+                ? String.join(",", environment.getActiveProfiles())
                 : "default";
-            
-            String resolvedApiKey = resolveConfigValue("RESEND_API_KEY", "resend.api-key", resendApiKey);
-            String resolvedFromEmail = resolveConfigValue("RESEND_FROM_EMAIL", "resend.from-email", resendFromEmail);
-            
-            String maskedKey = StringUtils.hasText(resolvedApiKey)
-                ? (resolvedApiKey.length() > 4 
-                    ? resolvedApiKey.substring(0, 4) + "***" 
-                    : "***")
-                : "not configured";
-            
-            data.put("provider", "resend-api");
-            data.put("apiKey", maskedKey);
-            data.put("fromEmail", StringUtils.hasText(resolvedFromEmail) ? resolvedFromEmail : "not configured");
+
+            EmailConfigStatus status = emailService.getEmailConfigStatus();
+
+            data.put("provider", status.getProvider());
             data.put("activeProfile", activeProfile);
             data.put("timestamp", java.time.LocalDateTime.now().toString());
-            
-            boolean configComplete = StringUtils.hasText(resolvedApiKey) && StringUtils.hasText(resolvedFromEmail);
-            
-            data.put("configComplete", configComplete);
-            
-            if (configComplete) {
+            data.put("hostSet", status.isHostSet());
+            data.put("userSet", status.isUserSet());
+            data.put("passSet", status.isPassSet());
+            data.put("fromSet", status.isFromSet());
+            data.put("configComplete", status.isEmailConfigured());
+
+            if (status.isEmailConfigured()) {
                 data.put("connectionStatus", "CONFIG_PRESENT");
                 ApiResponse<Map<String, Object>> response = ApiResponse.success(
-                    "Email configuration detected. Connection is handled via Resend API.",
+                    "Email configuration detected. Connection is handled via SMTP.",
                     data
                 );
                 return ResponseEntity.ok(response);
             } else {
                 data.put("connectionStatus", "CONFIG_INCOMPLETE");
                 ApiResponse<Map<String, Object>> response = ApiResponse.error(
-                    "Email configuration is incomplete. Verify RESEND_API_KEY and RESEND_FROM_EMAIL."
+                    "Email configuration is incomplete. Verify MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, and APP_EMAIL_FROM."
                 );
                 response.setData(data);
                 return ResponseEntity.status(503).body(response);
@@ -125,17 +112,6 @@ public class HealthController {
             response.setData(data);
             return ResponseEntity.status(503).body(response);
         }
-    }
-    
-    private String resolveConfigValue(String envKey, String propertyKey, String fallback) {
-        String value = environment.getProperty(envKey);
-        if (!StringUtils.hasText(value)) {
-            value = environment.getProperty(propertyKey);
-        }
-        if (!StringUtils.hasText(value)) {
-            value = fallback;
-        }
-        return value;
     }
 }
 
