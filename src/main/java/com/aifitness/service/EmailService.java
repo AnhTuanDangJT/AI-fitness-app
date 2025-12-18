@@ -1,46 +1,51 @@
 package com.aifitness.service;
 
 import com.aifitness.exception.EmailServiceException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.Map;
 
 /**
- * Email Service backed by Gmail SMTP (Spring Mail).
+ * Email Service backed by SendGrid HTTP API.
  */
 @Service
 public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
-    private static final String PROVIDER_NAME = "gmail-smtp";
+    private static final String PROVIDER_NAME = "sendgrid-api";
+    private static final String SENDGRID_BASE_URL = "https://api.sendgrid.com";
 
     private final Environment environment;
-    private final JavaMailSender mailSender;
+    private final WebClient webClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${spring.mail.host:}")
-    private String mailHost;
+    @Value("${sendgrid.api-key:}")
+    private String sendGridApiKey;
 
-    @Value("${spring.mail.username:}")
-    private String mailUsername;
-
-    @Value("${spring.mail.password:}")
-    private String mailPassword;
-
-    @Value("${app.email.from:}")
+    @Value("${sendgrid.from-email:}")
     private String fromEmail;
 
     private boolean isEmailConfigured = false;
 
-    public EmailService(Environment environment, JavaMailSender mailSender) {
+    public EmailService(Environment environment, WebClient.Builder webClientBuilder) {
         this.environment = environment;
-        this.mailSender = mailSender;
+        this.webClient = webClientBuilder
+            .baseUrl(SENDGRID_BASE_URL)
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .build();
     }
 
     @PostConstruct
@@ -48,34 +53,23 @@ public class EmailService {
         String activeProfile = environment.getProperty("spring.profiles.active", "default");
         boolean isProduction = "production".equalsIgnoreCase(activeProfile);
 
-        boolean hasHost = StringUtils.hasText(mailHost);
-        boolean hasUsername = StringUtils.hasText(mailUsername);
-        boolean hasPassword = StringUtils.hasText(mailPassword);
+        boolean hasKey = StringUtils.hasText(sendGridApiKey);
         boolean hasFrom = StringUtils.hasText(fromEmail);
 
-        isEmailConfigured = hasHost && hasUsername && hasPassword && hasFrom;
+        isEmailConfigured = hasKey && hasFrom;
 
-        logger.info("EMAIL_CONFIG_CHECK provider={} host_set={} user_set={} pass_set={} from_set={}",
-            PROVIDER_NAME,
-            hasHost,
-            hasUsername,
-            hasPassword,
-            hasFrom
-        );
+        logger.info("EMAIL_CONFIG_CHECK provider={} api_key_set={} from_set={}",
+            PROVIDER_NAME, hasKey, hasFrom);
 
         if (isEmailConfigured) {
-            logger.info("EMAIL_CONFIG_OK=true provider={} host={} from={}", PROVIDER_NAME, mailHost, "***");
+            logger.info("EMAIL_CONFIG_OK=true provider={} from={}", PROVIDER_NAME, "***");
         } else {
             StringBuilder missing = new StringBuilder();
-            if (!hasHost) missing.append("MAIL_HOST ");
-            if (!hasUsername) missing.append("MAIL_USERNAME ");
-            if (!hasPassword) missing.append("MAIL_PASSWORD ");
-            if (!hasFrom) missing.append("APP_EMAIL_FROM ");
-
+            if (!hasKey) missing.append("SENDGRID_API_KEY ");
+            if (!hasFrom) missing.append("SENDGRID_FROM_EMAIL ");
             logger.error("EMAIL_CONFIG_OK=false Missing required environment variables: {}", missing.toString().trim());
             if (isProduction) {
-                logger.warn("PRODUCTION MODE: Email service is not configured. " +
-                    "Application will start, but email sending will fail until MAIL_* variables are set.");
+                logger.warn("PRODUCTION MODE: Email service is not configured. Application will start, but email sending will fail until SendGrid variables are set.");
             } else {
                 logger.warn("DEVELOPMENT MODE: Email service is not configured. Email sending will fail.");
             }
@@ -118,17 +112,15 @@ public class EmailService {
     }
 
     public EmailConfigStatus getEmailConfigStatus() {
-        boolean hostSet = StringUtils.hasText(mailHost);
-        boolean userSet = StringUtils.hasText(mailUsername);
-        boolean passSet = StringUtils.hasText(mailPassword);
+        boolean keySet = StringUtils.hasText(sendGridApiKey);
         boolean fromSet = StringUtils.hasText(fromEmail);
 
         return new EmailConfigStatus(
             isEmailConfigured,
             PROVIDER_NAME,
-            hostSet,
-            userSet,
-            passSet,
+            true,
+            keySet,
+            keySet,
             fromSet
         );
     }
@@ -188,18 +180,27 @@ public class EmailService {
         );
     }
     
-    private void sendEmail(String to, String subject, String text) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(text);
-            mailSender.send(message);
-        } catch (MailException ex) {
-            logger.error("EMAIL_SEND_FAILED_SMTP message={}", ex.getMessage(), ex);
-            throw ex;
-        }
+    private void sendEmail(String to, String subject, String text) throws Exception {
+        Map<String, Object> payload = Map.of(
+            "personalizations", List.of(Map.of("to", List.of(Map.of("email", to)))),
+            "from", Map.of("email", fromEmail),
+            "subject", subject,
+            "content", List.of(Map.of("type", "text/plain", "value", text))
+        );
+
+        String json = objectMapper.writeValueAsString(payload);
+
+        webClient.post()
+            .uri("/v3/mail/send")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + sendGridApiKey)
+            .bodyValue(json)
+            .retrieve()
+            .bodyToMono(Void.class)
+            .onErrorResume(WebClientResponseException.class, ex -> {
+                logger.error("EMAIL_SEND_FAILED_HTTP status={} body={}", ex.getStatusCode(), ex.getResponseBodyAsString());
+                return Mono.error(ex);
+            })
+            .block();
     }
 
     private void handleSendFailure(String toEmail, Exception e, String type) {
