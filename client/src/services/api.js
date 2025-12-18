@@ -6,6 +6,18 @@ import { ERROR_MESSAGES } from '../config/constants'
 // In production, use full URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
+const AUTH_ENDPOINTS = [
+  '/auth/signup',
+  '/auth/register',
+  '/auth/login',
+  '/auth/verify-email',
+  '/auth/resend-verification',
+]
+
+const isAuthEndpoint = (url = '') => {
+  return AUTH_ENDPOINTS.some((endpoint) => url.includes(endpoint))
+}
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -75,7 +87,7 @@ const getGenericErrorMessage = (error) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isAuthEndpoint(error.config?.url || '')) {
       // Token expired or invalid
       localStorage.removeItem('token')
       localStorage.removeItem('user')
