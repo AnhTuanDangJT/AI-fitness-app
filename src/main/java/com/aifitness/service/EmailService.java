@@ -180,7 +180,7 @@ public class EmailService {
         );
     }
     
-    private void sendEmail(String to, String subject, String text) throws Exception {
+    private void sendEmail(String to, String subject, String text) {
         Map<String, Object> payload = Map.of(
             "personalizations", List.of(Map.of("to", List.of(Map.of("email", to)))),
             "from", Map.of("email", fromEmail),
@@ -188,19 +188,23 @@ public class EmailService {
             "content", List.of(Map.of("type", "text/plain", "value", text))
         );
 
-        String json = objectMapper.writeValueAsString(payload);
+        try {
+            String json = objectMapper.writeValueAsString(payload);
 
-        webClient.post()
-            .uri("/v3/mail/send")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + sendGridApiKey)
-            .bodyValue(json)
-            .retrieve()
-            .bodyToMono(Void.class)
-            .onErrorResume(WebClientResponseException.class, ex -> {
-                logger.error("EMAIL_SEND_FAILED_HTTP status={} body={}", ex.getStatusCode(), ex.getResponseBodyAsString());
-                return Mono.error(ex);
-            })
-            .block();
+            webClient.post()
+                .uri("/v3/mail/send")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + sendGridApiKey)
+                .bodyValue(json)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .onErrorResume(WebClientResponseException.class, ex -> {
+                    logger.error("EMAIL_SEND_FAILED_HTTP status={} body={}", ex.getStatusCode(), ex.getResponseBodyAsString());
+                    return Mono.error(ex);
+                })
+                .block();
+        } catch (Exception ex) {
+            throw new EmailServiceException("Failed to serialize or send email via SendGrid", ex);
+        }
     }
 
     private void handleSendFailure(String toEmail, Exception e, String type) {
