@@ -103,7 +103,7 @@ public class SecurityConfig {
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/health/**", "/api/health/**").permitAll()
+                .requestMatchers("/", "/health/**", "/api/health/**").permitAll()
                 // Authentication endpoints (both with and without /api context path)
                 .requestMatchers(HttpMethod.POST,
                     "/auth/signup", "/auth/register", "/auth/login",
