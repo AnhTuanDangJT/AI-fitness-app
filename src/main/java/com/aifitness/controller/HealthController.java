@@ -3,11 +3,9 @@ package com.aifitness.controller;
 import com.aifitness.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,24 +32,15 @@ public class HealthController {
     
     private static final Logger log = LoggerFactory.getLogger(HealthController.class);
     
-    private final JavaMailSender javaMailSender;
     private final Environment environment;
     
-    @Value("${spring.mail.host:}")
-    private String mailHost;
+    @Value("${resend.api-key:}")
+    private String resendApiKey;
     
-    @Value("${spring.mail.port:587}")
-    private int mailPort;
+    @Value("${resend.from-email:}")
+    private String resendFromEmail;
     
-    @Value("${spring.mail.username:}")
-    private String mailUsername;
-    
-    @Value("${app.email.from:${spring.mail.username:}}")
-    private String fromEmail;
-    
-    @Autowired
-    public HealthController(JavaMailSender javaMailSender, Environment environment) {
-        this.javaMailSender = javaMailSender;
+    public HealthController(Environment environment) {
         this.environment = environment;
         log.info("✅ HealthController loaded (email check is lazy)");
     }
@@ -75,7 +64,6 @@ public class HealthController {
     /**
      * Email Health Check Endpoint
      * 
-     * Tests JavaMailSender connection using testConnection() if available.
      * Returns structured JSON response with email configuration details.
      * Accessible at: GET /api/health/email (with context-path=/api)
      * 
@@ -91,45 +79,36 @@ public class HealthController {
                 ? String.join(",", environment.getActiveProfiles()) 
                 : "default";
             
-            String resolvedHost = resolveConfigValue("MAIL_HOST", "spring.mail.host", mailHost);
-            String resolvedPort = resolveConfigValue("MAIL_PORT", "spring.mail.port", mailPort > 0 ? String.valueOf(mailPort) : "");
-            String resolvedUsername = resolveConfigValue("MAIL_USERNAME", "spring.mail.username", mailUsername);
-            String resolvedFromEmail = resolveConfigValue("APP_EMAIL_FROM", "app.email.from", fromEmail);
+            String resolvedApiKey = resolveConfigValue("RESEND_API_KEY", "resend.api-key", resendApiKey);
+            String resolvedFromEmail = resolveConfigValue("RESEND_FROM_EMAIL", "resend.from-email", resendFromEmail);
             
-            // Mask username (show first 3 chars + ***)
-            String maskedUsername = StringUtils.hasText(resolvedUsername)
-                ? (resolvedUsername.length() > 3 
-                    ? resolvedUsername.substring(0, Math.min(3, resolvedUsername.length())) + "***" 
+            String maskedKey = StringUtils.hasText(resolvedApiKey)
+                ? (resolvedApiKey.length() > 4 
+                    ? resolvedApiKey.substring(0, 4) + "***" 
                     : "***")
                 : "not configured";
             
-            data.put("host", StringUtils.hasText(resolvedHost) ? resolvedHost : "not configured");
-            data.put("port", StringUtils.hasText(resolvedPort) ? resolvedPort : "not configured");
-            data.put("username", maskedUsername);
+            data.put("provider", "resend-api");
+            data.put("apiKey", maskedKey);
             data.put("fromEmail", StringUtils.hasText(resolvedFromEmail) ? resolvedFromEmail : "not configured");
             data.put("activeProfile", activeProfile);
             data.put("timestamp", java.time.LocalDateTime.now().toString());
-            data.put("mailSenderBeanPresent", javaMailSender != null);
             
-            boolean configComplete = javaMailSender != null
-                && StringUtils.hasText(resolvedHost)
-                && StringUtils.hasText(resolvedPort)
-                && StringUtils.hasText(resolvedUsername)
-                && StringUtils.hasText(resolvedFromEmail);
+            boolean configComplete = StringUtils.hasText(resolvedApiKey) && StringUtils.hasText(resolvedFromEmail);
             
             data.put("configComplete", configComplete);
             
             if (configComplete) {
                 data.put("connectionStatus", "CONFIG_PRESENT");
                 ApiResponse<Map<String, Object>> response = ApiResponse.success(
-                    "Email configuration detected. SMTP connection is checked lazily.",
+                    "Email configuration detected. Connection is handled via Resend API.",
                     data
                 );
                 return ResponseEntity.ok(response);
             } else {
                 data.put("connectionStatus", "CONFIG_INCOMPLETE");
                 ApiResponse<Map<String, Object>> response = ApiResponse.error(
-                    "Email configuration is incomplete. Verify MAIL_HOST, MAIL_PORT, MAIL_USERNAME, APP_EMAIL_FROM."
+                    "Email configuration is incomplete. Verify RESEND_API_KEY and RESEND_FROM_EMAIL."
                 );
                 response.setData(data);
                 return ResponseEntity.status(503).body(response);
