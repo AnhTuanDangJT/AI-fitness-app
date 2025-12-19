@@ -133,7 +133,9 @@
     "recalculate": "🔄 Tính lại",
     "recalculating": "Đang tính lại...",
     "downloadProfile": "TẢI XUỐNG HỒ SƠ (PDF)",
+    "downloadPdf": "Tải PDF",
     "feedback": "Gửi phản hồi trải nghiệm",
+    "headerAlignToggle": "Căn chỉnh thanh đầu trang",
     "logOut": "Đăng xuất",
     "logOutConfirm": "Bạn có chắc chắn muốn đăng xuất không?",
     "yourStats": "Chỉ số của bạn",
@@ -331,6 +333,65 @@
     "mealPlanTab": "Kế hoạch bữa ăn",
     "groceryListTab": "Danh sách mua sắm"
   },
+  "mealPreferences": {
+    "title": "Sở thích bữa ăn",
+    "subtitle": "Tùy chỉnh kế hoạch bữa ăn dựa trên sở thích của bạn",
+    "loading": "Đang tải sở thích...",
+    "foodPreferences": "Sở thích thực phẩm",
+    "preferredFoods": "Món ưa thích",
+    "dislikedFoods": "Món không thích",
+    "allergies": "Dị ứng",
+    "optional": "(tùy chọn)",
+    "preferredFoodsPlaceholder": "ví dụ: gà, cá hồi, quinoa, bông cải xanh, khoai lang",
+    "preferredFoodsHint": "Nhập các món bạn thích, cách nhau bằng dấu phẩy",
+    "dislikedFoodsPlaceholder": "ví dụ: nấm, ô liu, đồ cay",
+    "dislikedFoodsHint": "Nhập các món bạn không thích, cách nhau bằng dấu phẩy",
+    "allergiesPlaceholder": "ví dụ: đậu phộng, hải sản, sữa, gluten",
+    "allergiesHint": "Nhập các dị ứng hoặc thực phẩm cần tránh",
+    "dietaryLifestyle": "Chế độ ăn & lối sống",
+    "dietaryRestriction": "Chế độ ăn áp dụng",
+    "dietaryRestrictionPlaceholder": "Chọn chế độ ăn",
+    "dietaryRestrictionHint": "Chọn chế độ ăn hoặc hạn chế của bạn",
+    "dietaryOptions": {
+      "omnivore": "Ăn tạp",
+      "vegetarian": "Ăn chay",
+      "vegan": "Thuần chay",
+      "pescatarian": "Ăn chay cá",
+      "halal": "Halal",
+      "kosher": "Kosher"
+    },
+    "favoriteCuisines": "Ẩm thực yêu thích",
+    "favoriteCuisinesPlaceholder": "ví dụ: Ý, Mexico, Châu Á, Địa Trung Hải",
+    "favoriteCuisinesHint": "Nhập các nền ẩm thực bạn yêu thích, cách nhau bằng dấu phẩy",
+    "mealPlanningPreferences": "Tùy chọn lập kế hoạch bữa ăn",
+    "cookingTimePreference": "Thời gian nấu tối đa mỗi bữa",
+    "cookingTimePlaceholder": "ví dụ: 30",
+    "cookingTimeHint": "Số phút tối đa bạn muốn dành để nấu mỗi bữa",
+    "budgetPerDay": "Ngân sách mỗi ngày",
+    "budgetPerDayPlaceholder": "ví dụ: 500",
+    "budgetPerDayHint": "Ngân sách tối đa cho bữa ăn mỗi ngày (theo đơn vị tiền của bạn)",
+    "cancel": "Hủy",
+    "saving": "Đang lưu...",
+    "saveAndGenerate": "Lưu & tạo kế hoạch",
+    "saveError": "Không thể lưu sở thích",
+    "generatingMessage": "Đang tạo kế hoạch bữa ăn...",
+    "generateError": "Không thể tạo kế hoạch bữa ăn. Vui lòng thử lại.",
+    "generateSuccess": "Tạo kế hoạch bữa ăn thành công!"
+  },
+  "mealNames": {
+    "greek_yogurt_with_berries": "Sữa chua Hy Lạp với quả mọng",
+    "scrambled_eggs_with_toast": "Trứng bác với bánh mì nướng",
+    "avocado_toast_with_eggs": "Bánh mì bơ với trứng",
+    "protein_pancakes_with_syrup": "Bánh pancake giàu protein với siro",
+    "turkey_wrap_with_vegetables": "Bánh cuốn gà tây với rau",
+    "quinoa_salad_with_chickpeas": "Salad quinoa với đậu gà",
+    "salmon_salad_with_mixed_greens": "Salad cá hồi với rau xanh",
+    "chicken_caesar_salad": "Salad Caesar gà",
+    "beef_stir_fry_with_noodles": "Bò xào với mì",
+    "baked_chicken_with_sweet_potato": "Gà nướng với khoai lang",
+    "pasta_with_marinara_sauce": "Mì ống sốt cà chua Marinara",
+    "grilled_steak_with_roasted_vegetables": "Bít tết nướng với rau củ quay"
+  },
   "aiCoach": {
     "welcome": "Xin chào, tôi là Huấn luyện viên AI của bạn. Hãy hỏi tôi bất cứ điều gì về thể dục, thực phẩm hoặc ứng dụng.",
     "placeholder": "Hỏi tôi bất cứ điều gì về tập luyện, dinh dưỡng hoặc ứng dụng...",
@@ -443,6 +504,9 @@
     "userId": "ID người dùng:"
   }
 }
+
+
+
 
 
 

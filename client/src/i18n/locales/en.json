@@ -133,7 +133,9 @@
     "recalculate": "🔄 Recalculate",
     "recalculating": "Recalculating...",
     "downloadProfile": "DOWNLOAD PROFILE (PDF)",
+    "downloadPdf": "Download PDF",
     "feedback": "Feedback",
+    "headerAlignToggle": "Align header",
     "logOut": "Log out",
     "logOutConfirm": "Are you sure you want to log out?",
     "yourStats": "Your Stats",
@@ -331,6 +333,65 @@
     "mealPlanTab": "Meal Plan",
     "groceryListTab": "Grocery List"
   },
+  "mealPreferences": {
+    "title": "Meal Preferences",
+    "subtitle": "Customize your meal plan based on your preferences",
+    "loading": "Loading preferences...",
+    "foodPreferences": "Food Preferences",
+    "preferredFoods": "Preferred Foods",
+    "dislikedFoods": "Disliked Foods",
+    "allergies": "Allergies",
+    "optional": "(optional)",
+    "preferredFoodsPlaceholder": "e.g., chicken, salmon, quinoa, broccoli, sweet potatoes",
+    "preferredFoodsHint": "Enter foods you enjoy, separated by commas",
+    "dislikedFoodsPlaceholder": "e.g., mushrooms, olives, spicy food",
+    "dislikedFoodsHint": "Enter foods you don't like, separated by commas",
+    "allergiesPlaceholder": "e.g., peanuts, shellfish, dairy, gluten",
+    "allergiesHint": "Enter any food allergies or sensitivities",
+    "dietaryLifestyle": "Dietary & Lifestyle",
+    "dietaryRestriction": "Dietary Restriction",
+    "dietaryRestrictionPlaceholder": "Select a dietary restriction",
+    "dietaryRestrictionHint": "Select your dietary preference or restriction",
+    "dietaryOptions": {
+      "omnivore": "Omnivore",
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "pescatarian": "Pescatarian",
+      "halal": "Halal",
+      "kosher": "Kosher"
+    },
+    "favoriteCuisines": "Favorite Cuisines",
+    "favoriteCuisinesPlaceholder": "e.g., Italian, Mexican, Asian, Mediterranean, American",
+    "favoriteCuisinesHint": "Enter your favorite cuisines, separated by commas",
+    "mealPlanningPreferences": "Meal Planning Preferences",
+    "cookingTimePreference": "Maximum Cooking Time per Meal",
+    "cookingTimePlaceholder": "e.g., 30",
+    "cookingTimeHint": "Maximum minutes you're willing to spend cooking each meal",
+    "budgetPerDay": "Budget Per Day",
+    "budgetPerDayPlaceholder": "e.g., 50",
+    "budgetPerDayHint": "Maximum daily budget for meals (in your currency)",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saveAndGenerate": "Save & Generate Plan",
+    "saveError": "Failed to save preferences",
+    "generatingMessage": "Generating your meal plan...",
+    "generateError": "Failed to generate meal plan. Please try again.",
+    "generateSuccess": "Meal plan generated successfully!"
+  },
+  "mealNames": {
+    "greek_yogurt_with_berries": "Greek yogurt with berries",
+    "scrambled_eggs_with_toast": "Scrambled eggs with toast",
+    "avocado_toast_with_eggs": "Avocado toast with eggs",
+    "protein_pancakes_with_syrup": "Protein pancakes with syrup",
+    "turkey_wrap_with_vegetables": "Turkey wrap with vegetables",
+    "quinoa_salad_with_chickpeas": "Quinoa salad with chickpeas",
+    "salmon_salad_with_mixed_greens": "Salmon salad with mixed greens",
+    "chicken_caesar_salad": "Chicken Caesar salad",
+    "beef_stir_fry_with_noodles": "Beef stir-fry with noodles",
+    "baked_chicken_with_sweet_potato": "Baked chicken with sweet potato",
+    "pasta_with_marinara_sauce": "Pasta with marinara sauce",
+    "grilled_steak_with_roasted_vegetables": "Grilled steak with roasted vegetables"
+  },
   "aiCoach": {
     "welcome": "Hi, I'm your AI Coach. Ask me anything about fitness, food, or the app.",
     "placeholder": "Ask me anything about workouts, nutrition, or the app...",
@@ -443,6 +504,9 @@
     "userId": "User ID:"
   }
 }
+
+
+
 
 
 

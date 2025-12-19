@@ -14,7 +14,7 @@ public class ProfileUpdateRequest {
     
     @Size(max = 100, message = "Name must not exceed 100 characters")
     // Allow letters, spaces, hyphens, apostrophes (for names like O'Brien, Mary-Jane)
-    @Pattern(regexp = "^[a-zA-Z\\s'-]*$", message = "Name can only contain letters, spaces, hyphens, and apostrophes")
+    @Pattern(regexp = "^[\\p{L}\\p{M}\\s'-]*$", message = "Name can only contain letters, spaces, hyphens, and apostrophes")
     private String name;
     
     @Positive(message = "Weight must be positive")

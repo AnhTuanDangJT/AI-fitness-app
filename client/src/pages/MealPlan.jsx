@@ -12,7 +12,7 @@ import GroceryList from '../components/grocery-list/GroceryList'
 import './MealPlan.css'
 
 function MealPlan() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   // Explicit status state: "loading" | "empty" | "success" | "error"
   // This replaces the ambiguous combination of mealPlan/error/loading states
   const [status, setStatus] = useState('loading') // 'loading' | 'empty' | 'success' | 'error'
@@ -162,9 +162,11 @@ function MealPlan() {
     return days[date.getDay()]
   }
 
+  const getLocale = () => (i18n.language === 'vi' ? 'vi-VN' : 'en-US')
+
   const formatDate = (dateString) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return date.toLocaleDateString(getLocale(), { month: 'short', day: 'numeric' })
   }
 
   const formatWeekRange = (weekStartDate) => {
@@ -187,6 +189,16 @@ function MealPlan() {
       // Fallback: show only start date if calculation fails
       return formatDate(weekStartDate)
     }
+  }
+
+  const translateMealName = (name) => {
+    if (!name) return ''
+    const normalizedKey = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+    const translation = t(`mealNames.${normalizedKey}`, { defaultValue: name })
+    return translation
   }
 
   const getMealTypeLabel = (mealType) => {
@@ -403,7 +415,7 @@ function MealPlan() {
                           <div key={meal.id} className="meal-item">
                             <div className="meal-header">
                               <span className="meal-type">{getMealTypeLabel(meal.mealType)}</span>
-                              <span className="meal-name">{meal.name}</span>
+                              <span className="meal-name">{translateMealName(meal.name)}</span>
                             </div>
                             <div className="meal-macros">
                               <span className="macro-item">

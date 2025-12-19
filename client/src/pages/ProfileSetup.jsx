@@ -291,7 +291,7 @@ function ProfileSetup() {
             className="submit-button"
             disabled={loading}
           >
-            {loading ? UI_LABELS.SAVING_PROFILE : BUTTON_TEXT.SAVE}
+            {loading ? UI_LABELS.SAVING_PROFILE : UI_LABELS.SAVE}
           </button>
         </form>
 

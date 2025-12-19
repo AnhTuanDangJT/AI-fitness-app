@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { mealPreferencesAPI, mealPlanAPI } from '../services/api'
 import './MealPreferences.css'
 
 function MealPreferences({ onClose: onCloseProp }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -80,12 +82,12 @@ function MealPreferences({ onClose: onCloseProp }) {
       const saveResponse = await mealPreferencesAPI.save(preferences)
       
       if (!saveResponse.success) {
-        setError(saveResponse.message || 'Failed to save preferences')
+        setError(saveResponse.message || t('mealPreferences.saveError'))
         setSaving(false)
         return
       }
 
-      setSuccess('Generating your meal plan...')
+      setSuccess(t('mealPreferences.generatingMessage'))
 
       // 2. Generate meal plan
       // Calculate next Monday (or today's Monday)
@@ -99,13 +101,13 @@ function MealPreferences({ onClose: onCloseProp }) {
       const generateResponse = await mealPlanAPI.generate(weekStart)
       
       if (!generateResponse.success) {
-        setError(generateResponse.message || 'Failed to generate meal plan. Please try again.')
+        setError(generateResponse.message || t('mealPreferences.generateError'))
         setSaving(false)
         return
       }
 
       // 3. Success - navigate to meal plan view
-      setSuccess('Meal plan generated successfully!')
+      setSuccess(t('mealPreferences.generateSuccess'))
       
       // Close modal if opened from dashboard, then navigate
       if (onCloseProp) {
@@ -115,7 +117,7 @@ function MealPreferences({ onClose: onCloseProp }) {
       // Navigate to meal plan page
       navigate('/meal-plan')
     } catch (err) {
-      setError(err.genericMessage || 'Unable to generate meal plan. Please try again.')
+      setError(err.genericMessage || t('mealPreferences.generateError'))
       console.error('Error in meal plan flow:', err)
     } finally {
       setSaving(false)
@@ -128,7 +130,7 @@ function MealPreferences({ onClose: onCloseProp }) {
         <div className="meal-preferences-container">
           <div className="loading-container">
             <div className="loading-spinner"></div>
-            <p>Loading preferences...</p>
+            <p>{t('mealPreferences.loading')}</p>
           </div>
         </div>
       </div>
@@ -139,8 +141,8 @@ function MealPreferences({ onClose: onCloseProp }) {
     <div className="meal-preferences-page">
       <div className="meal-preferences-container">
         <div className="meal-preferences-header">
-          <h1>Meal Preferences</h1>
-          <p className="subtitle">Customize your meal plan based on your preferences</p>
+          <h1>{t('mealPreferences.title')}</h1>
+          <p className="subtitle">{t('mealPreferences.subtitle')}</p>
         </div>
 
         {error && (
@@ -158,64 +160,64 @@ function MealPreferences({ onClose: onCloseProp }) {
         <form onSubmit={handleSubmit} className="meal-preferences-form">
           {/* Food Preferences Section */}
           <div className="form-section">
-            <h2 className="section-title">Food Preferences</h2>
+            <h2 className="section-title">{t('mealPreferences.foodPreferences')}</h2>
             
             <div className="form-group">
               <label htmlFor="preferredFoods">
-                Preferred Foods <span className="optional">(optional)</span>
+                {t('mealPreferences.preferredFoods')} <span className="optional">{t('mealPreferences.optional')}</span>
               </label>
               <textarea
                 id="preferredFoods"
                 name="preferredFoods"
                 value={formData.preferredFoods}
                 onChange={handleChange}
-                placeholder="e.g., chicken, salmon, quinoa, broccoli, sweet potatoes"
+                placeholder={t('mealPreferences.preferredFoodsPlaceholder')}
                 rows="3"
                 className="glassy-input"
               />
-              <small className="form-hint">Enter foods you enjoy, separated by commas</small>
+              <small className="form-hint">{t('mealPreferences.preferredFoodsHint')}</small>
             </div>
 
             <div className="form-group">
               <label htmlFor="dislikedFoods">
-                Disliked Foods <span className="optional">(optional)</span>
+                {t('mealPreferences.dislikedFoods')} <span className="optional">{t('mealPreferences.optional')}</span>
               </label>
               <textarea
                 id="dislikedFoods"
                 name="dislikedFoods"
                 value={formData.dislikedFoods}
                 onChange={handleChange}
-                placeholder="e.g., mushrooms, olives, spicy food"
+                placeholder={t('mealPreferences.dislikedFoodsPlaceholder')}
                 rows="3"
                 className="glassy-input"
               />
-              <small className="form-hint">Enter foods you don't like, separated by commas</small>
+              <small className="form-hint">{t('mealPreferences.dislikedFoodsHint')}</small>
             </div>
 
             <div className="form-group">
               <label htmlFor="allergies">
-                Allergies <span className="optional">(optional)</span>
+                {t('mealPreferences.allergies')} <span className="optional">{t('mealPreferences.optional')}</span>
               </label>
               <textarea
                 id="allergies"
                 name="allergies"
                 value={formData.allergies}
                 onChange={handleChange}
-                placeholder="e.g., peanuts, shellfish, dairy, gluten"
+                placeholder={t('mealPreferences.allergiesPlaceholder')}
                 rows="3"
                 className="glassy-input"
               />
-              <small className="form-hint">Enter any food allergies, separated by commas</small>
+              <small className="form-hint">{t('mealPreferences.allergiesHint')}</small>
             </div>
           </div>
 
           {/* Dietary & Lifestyle Section */}
           <div className="form-section">
-            <h2 className="section-title">Dietary & Lifestyle</h2>
+            <h2 className="section-title">{t('mealPreferences.dietaryLifestyle')}</h2>
             
             <div className="form-group">
               <label htmlFor="dietaryRestriction">
-                Dietary Restriction <span className="optional">(optional)</span>
+                {t('mealPreferences.dietaryRestriction')} <span className="optional">{t('mealPreferences.optional')}</span>
               </label>
               <select
                 id="dietaryRestriction"
@@ -224,41 +226,41 @@ function MealPreferences({ onClose: onCloseProp }) {
                 onChange={handleChange}
                 className="glassy-input"
               >
-                <option value="">Select a dietary restriction</option>
-                <option value="omnivore">Omnivore</option>
-                <option value="vegetarian">Vegetarian</option>
-                <option value="vegan">Vegan</option>
-                <option value="pescatarian">Pescatarian</option>
-                <option value="halal">Halal</option>
-                <option value="kosher">Kosher</option>
+                <option value="">{t('mealPreferences.dietaryRestrictionPlaceholder')}</option>
+                <option value="omnivore">{t('mealPreferences.dietaryOptions.omnivore')}</option>
+                <option value="vegetarian">{t('mealPreferences.dietaryOptions.vegetarian')}</option>
+                <option value="vegan">{t('mealPreferences.dietaryOptions.vegan')}</option>
+                <option value="pescatarian">{t('mealPreferences.dietaryOptions.pescatarian')}</option>
+                <option value="halal">{t('mealPreferences.dietaryOptions.halal')}</option>
+                <option value="kosher">{t('mealPreferences.dietaryOptions.kosher')}</option>
               </select>
-              <small className="form-hint">Select your dietary preference or restriction</small>
+              <small className="form-hint">{t('mealPreferences.dietaryRestrictionHint')}</small>
             </div>
 
             <div className="form-group">
               <label htmlFor="favoriteCuisines">
-                Favorite Cuisines <span className="optional">(optional)</span>
+                {t('mealPreferences.favoriteCuisines')} <span className="optional">{t('mealPreferences.optional')}</span>
               </label>
               <textarea
                 id="favoriteCuisines"
                 name="favoriteCuisines"
                 value={formData.favoriteCuisines}
                 onChange={handleChange}
-                placeholder="e.g., Italian, Mexican, Asian, Mediterranean, American"
+                placeholder={t('mealPreferences.favoriteCuisinesPlaceholder')}
                 rows="3"
                 className="glassy-input"
               />
-              <small className="form-hint">Enter your favorite cuisines, separated by commas</small>
+              <small className="form-hint">{t('mealPreferences.favoriteCuisinesHint')}</small>
             </div>
           </div>
 
           {/* Meal Planning Preferences Section */}
           <div className="form-section">
-            <h2 className="section-title">Meal Planning Preferences</h2>
+            <h2 className="section-title">{t('mealPreferences.mealPlanningPreferences')}</h2>
             
             <div className="form-group">
               <label htmlFor="cookingTimePreference">
-                Maximum Cooking Time per Meal <span className="optional">(optional)</span>
+                {t('mealPreferences.cookingTimePreference')} <span className="optional">{t('mealPreferences.optional')}</span>
               </label>
               <input
                 type="number"
@@ -266,17 +268,17 @@ function MealPreferences({ onClose: onCloseProp }) {
                 name="cookingTimePreference"
                 value={formData.cookingTimePreference}
                 onChange={handleChange}
-                placeholder="e.g., 30"
+                placeholder={t('mealPreferences.cookingTimePlaceholder')}
                 min="5"
                 max="180"
                 className="glassy-input"
               />
-              <small className="form-hint">Maximum time in minutes you're willing to spend cooking per meal</small>
+              <small className="form-hint">{t('mealPreferences.cookingTimeHint')}</small>
             </div>
 
             <div className="form-group">
               <label htmlFor="budgetPerDay">
-                Budget Per Day <span className="optional">(optional)</span>
+                {t('mealPreferences.budgetPerDay')} <span className="optional">{t('mealPreferences.optional')}</span>
               </label>
               <input
                 type="number"
@@ -284,11 +286,11 @@ function MealPreferences({ onClose: onCloseProp }) {
                 name="budgetPerDay"
                 value={formData.budgetPerDay}
                 onChange={handleChange}
-                placeholder="e.g., 50"
+                placeholder={t('mealPreferences.budgetPerDayPlaceholder')}
                 min="1"
                 className="glassy-input"
               />
-              <small className="form-hint">Maximum daily budget for meals (in your currency)</small>
+              <small className="form-hint">{t('mealPreferences.budgetPerDayHint')}</small>
             </div>
           </div>
 
@@ -306,14 +308,14 @@ function MealPreferences({ onClose: onCloseProp }) {
               className="cancel-button"
               disabled={saving}
             >
-              Cancel
+              {t('mealPreferences.cancel')}
             </button>
             <button
               type="submit"
               className="submit-button"
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save Preferences'}
+              {saving ? t('mealPreferences.saving') : t('mealPreferences.saveAndGenerate')}
             </button>
           </div>
         </form>

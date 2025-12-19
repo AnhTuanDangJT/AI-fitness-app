@@ -38,6 +38,21 @@
   padding: 0 32px;
 }
 
+body.header-align-left .app-header-inner {
+  margin-left: 32px;
+  margin-right: auto;
+}
+
+body.header-align-center .app-header-inner {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body.header-align-right .app-header-inner {
+  margin-left: auto;
+  margin-right: 32px;
+}
+
 /* Left: Logo */
 .app-logo {
   font-size: 20px;
@@ -88,6 +103,24 @@
 .language-toggle .active {
   color: #ffffff;
   font-weight: 600;
+}
+
+.header-align-toggle {
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 8px 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.header-align-toggle:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* Dashboard Action Buttons - Shared Base Class */

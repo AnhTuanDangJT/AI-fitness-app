@@ -25,6 +25,7 @@ function Dashboard() {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
   const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false)
   const [isMealPlannerOpen, setIsMealPlannerOpen] = useState(false)
+  const [headerAlignment, setHeaderAlignment] = useState(() => localStorage.getItem('dashboardHeaderAlign') || 'center')
   const navigate = useNavigate()
   const loadingCompletedRef = useRef(false)
 
@@ -109,6 +110,23 @@ function Dashboard() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]) // Only run on mount - do NOT add fetchGamificationStatus or other dependencies
+
+  useEffect(() => {
+    const classes = ['header-align-left', 'header-align-center', 'header-align-right']
+    document.body.classList.remove(...classes)
+    document.body.classList.add(`header-align-${headerAlignment}`)
+    localStorage.setItem('dashboardHeaderAlign', headerAlignment)
+    return () => {
+      document.body.classList.remove(...classes)
+    }
+  }, [headerAlignment])
+
+  const cycleHeaderAlignment = () => {
+    const order = ['left', 'center', 'right']
+    const currentIndex = order.indexOf(headerAlignment)
+    const nextAlignment = order[(currentIndex + 1) % order.length]
+    setHeaderAlignment(nextAlignment)
+  }
 
   const fetchFullAnalysis = async () => {
     try {
@@ -202,7 +220,7 @@ function Dashboard() {
       if (!apiResponse?.success || !apiResponse?.data) {
         throw new Error(apiResponse?.message || ERROR_MESSAGES.EXPORT_FAILED)
       }
-
+      
       const data = apiResponse.data
       
       // Always generate PDF, even if data is incomplete - show N/A for missing fields
@@ -531,6 +549,15 @@ function Dashboard() {
               <span className={i18n.language === 'en' ? 'active' : ''}>EN</span>
               <span className="divider">|</span>
               <span className={i18n.language === 'vi' ? 'active' : ''}>VI</span>
+            </button>
+            <button
+              className="header-align-toggle"
+              onClick={cycleHeaderAlignment}
+            >
+              {headerAlignment === 'left' && '⇤ '}
+              {headerAlignment === 'center' && '⇆ '}
+              {headerAlignment === 'right' && '⇥ '}
+              {t('dashboard.headerAlignToggle')}
             </button>
             <button
               className="dashboard-action-btn primary-btn"
