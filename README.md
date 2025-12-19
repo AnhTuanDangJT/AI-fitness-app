@@ -166,11 +166,6 @@ If you like this project:
 
 🍴 Fork it
 
-🧠 Open an issue or PR
-
-yaml
-Sao chép mã
-
 ---
 
 
