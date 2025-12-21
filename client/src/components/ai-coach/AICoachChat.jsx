@@ -63,6 +63,42 @@ function AICoachChat({ userId, onClearChat }) {
       label: t('aiCoach.suggestions.app.label'),
       hint: t('aiCoach.suggestions.app.keywords'),
       prompt: t('aiCoach.suggestions.app.prompt')
+      },
+      {
+        id: 'cardio',
+        label: t('aiCoach.suggestions.cardio.label'),
+        hint: t('aiCoach.suggestions.cardio.keywords'),
+        prompt: t('aiCoach.suggestions.cardio.prompt')
+      },
+      {
+        id: 'mobility',
+        label: t('aiCoach.suggestions.mobility.label'),
+        hint: t('aiCoach.suggestions.mobility.keywords'),
+        prompt: t('aiCoach.suggestions.mobility.prompt')
+      },
+      {
+        id: 'plateau',
+        label: t('aiCoach.suggestions.plateau.label'),
+        hint: t('aiCoach.suggestions.plateau.keywords'),
+        prompt: t('aiCoach.suggestions.plateau.prompt')
+      },
+      {
+        id: 'habit',
+        label: t('aiCoach.suggestions.habit.label'),
+        hint: t('aiCoach.suggestions.habit.keywords'),
+        prompt: t('aiCoach.suggestions.habit.prompt')
+      },
+      {
+        id: 'mealPrep',
+        label: t('aiCoach.suggestions.mealPrep.label'),
+        hint: t('aiCoach.suggestions.mealPrep.keywords'),
+        prompt: t('aiCoach.suggestions.mealPrep.prompt')
+      },
+      {
+        id: 'progress',
+        label: t('aiCoach.suggestions.progress.label'),
+        hint: t('aiCoach.suggestions.progress.keywords'),
+        prompt: t('aiCoach.suggestions.progress.prompt')
     }
   ]), [t])
 

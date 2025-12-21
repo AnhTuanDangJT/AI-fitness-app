@@ -442,6 +442,36 @@
         "label": "How to use the app",
         "keywords": "Keywords: generate meal plan, update profile, grocery list",
         "prompt": "How do I generate a weekly meal plan, view the grocery list, and update my profile information in the app?"
+      },
+      "cardio": {
+        "label": "Cardio mix for endurance",
+        "keywords": "Keywords: cardio, HIIT, steady state",
+        "prompt": "Plan three cardio sessions this week—two HIIT interval workouts and one steady-state ride—to improve endurance without losing muscle."
+      },
+      "mobility": {
+        "label": "Mobility for tight hips & back",
+        "keywords": "Keywords: mobility, stretching, warm-up",
+        "prompt": "Give me a 15-minute mobility routine that opens my hips and eases lower-back tightness on rest days."
+      },
+      "plateau": {
+        "label": "Break a fat-loss plateau",
+        "keywords": "Keywords: plateau, adjust macros, training tweaks",
+        "prompt": "I'm stuck at the same weight for 3 weeks. How should I adjust training and macros to restart fat loss while keeping strength?"
+      },
+      "habit": {
+        "label": "Consistency & routine help",
+        "keywords": "Keywords: routine, habit, daily check-in",
+        "prompt": "Suggest a simple morning and evening routine that keeps me consistent with workouts, logging daily check-ins, and recovery."
+      },
+      "mealPrep": {
+        "label": "Sunday meal prep + grocery list",
+        "keywords": "Keywords: meal prep, grocery list, batch cook",
+        "prompt": "Outline a Sunday meal-prep plan with 3 protein-rich recipes and the grocery list so I can eat 150g of protein/day."
+      },
+      "progress": {
+        "label": "Weekly progress review",
+        "keywords": "Keywords: weekly progress, dashboard, feedback",
+        "prompt": "Look at my latest weekly progress entry and tell me what to focus on next week to stay on track with recomposition."
       }
     }
   },

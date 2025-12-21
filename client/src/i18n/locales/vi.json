@@ -442,6 +442,36 @@
         "label": "Cách dùng ứng dụng",
         "keywords": "Từ khóa: tạo kế hoạch bữa ăn, cập nhật hồ sơ, grocery list",
         "prompt": "Làm thế nào để tạo kế hoạch bữa ăn hàng tuần, xem danh sách mua sắm và cập nhật thông tin hồ sơ trong ứng dụng?"
+      },
+      "cardio": {
+        "label": "Phối hợp cardio tăng sức bền",
+        "keywords": "Từ khóa: cardio, HIIT, steady state",
+        "prompt": "Lên kế hoạch 3 buổi cardio tuần này—2 buổi HIIT và 1 buổi đạp xe steady-state—để tăng sức bền mà không mất cơ."
+      },
+      "mobility": {
+        "label": "Giãn cơ cho hông & lưng",
+        "keywords": "Từ khóa: mobility, kéo giãn, khởi động",
+        "prompt": "Cho tôi bài mobility 15 phút giúp mở khớp hông và giảm cứng lưng dưới vào ngày nghỉ."
+      },
+      "plateau": {
+        "label": "Thoát chững giảm mỡ",
+        "keywords": "Từ khóa: plateau, chỉnh macro, thay đổi bài tập",
+        "prompt": "Tôi đứng cân 3 tuần. Hãy gợi ý cách chỉnh chương trình tập và macro để giảm mỡ tiếp mà vẫn giữ sức mạnh."
+      },
+      "habit": {
+        "label": "Giữ thói quen ổn định",
+        "keywords": "Từ khóa: routine, habit, daily check-in",
+        "prompt": "Gợi ý lịch sinh hoạt sáng/tối giúp tôi duy trì tập luyện, ghi nhật ký daily check-in và phục hồi đều đặn."
+      },
+      "mealPrep": {
+        "label": "Meal prep + danh sách mua sắm",
+        "keywords": "Từ khóa: meal prep, grocery list, nấu mẻ",
+        "prompt": "Hãy lên kế hoạch meal prep Chủ nhật với 3 món giàu protein và danh sách mua sắm để tôi ăn 150g protein/ngày."
+      },
+      "progress": {
+        "label": "Đánh giá tiến độ tuần",
+        "keywords": "Từ khóa: weekly progress, dashboard, phản hồi",
+        "prompt": "Hãy xem mục weekly progress gần nhất của tôi và cho biết tuần tới nên tập trung điều gì để giữ lộ trình tái cấu trúc cơ thể."
       }
     }
   },
