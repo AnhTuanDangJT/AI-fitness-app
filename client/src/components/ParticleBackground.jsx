@@ -24,37 +24,11 @@ function ParticleBackground() {
     let animationFrameId
     let particles = []
 
-    // Set canvas size
-    const resizeCanvas = () => {
-      const scale = window.devicePixelRatio || 1
-      canvas.width = window.innerWidth * scale
-      canvas.height = window.innerHeight * scale
-      canvas.style.width = '100%'
-      canvas.style.height = '100%'
-      ctx.setTransform(scale, 0, 0, scale, 0, 0)
-      rebuildParticles()
-    }
-
     const getParticleCount = () => {
       const area = window.innerWidth * window.innerHeight
       const base = Math.floor(area / 40000)
       const isNarrow = window.innerWidth < 1024
       return Math.max(30, Math.min(isNarrow ? 60 : 120, base))
-    }
-
-    resizeCanvas()
-    window.addEventListener('resize', resizeCanvas)
-    const handleReducedMotion = (event) => {
-      if (event.matches) {
-        cancelAnimationFrame(animationFrameId)
-        window.removeEventListener('resize', resizeCanvas)
-        particles = []
-      }
-    }
-    if (typeof reducedMotionQuery.addEventListener === 'function') {
-      reducedMotionQuery.addEventListener('change', handleReducedMotion)
-    } else if (typeof reducedMotionQuery.addListener === 'function') {
-      reducedMotionQuery.addListener(handleReducedMotion)
     }
 
     // Particle class
@@ -146,7 +120,31 @@ function ParticleBackground() {
       }
     }
 
-    rebuildParticles()
+    // Set canvas size
+    const resizeCanvas = () => {
+      const scale = window.devicePixelRatio || 1
+      canvas.width = window.innerWidth * scale
+      canvas.height = window.innerHeight * scale
+      canvas.style.width = '100%'
+      canvas.style.height = '100%'
+      ctx.setTransform(scale, 0, 0, scale, 0, 0)
+      rebuildParticles()
+    }
+
+    resizeCanvas()
+    window.addEventListener('resize', resizeCanvas)
+    const handleReducedMotion = (event) => {
+      if (event.matches) {
+        cancelAnimationFrame(animationFrameId)
+        window.removeEventListener('resize', resizeCanvas)
+        particles = []
+      }
+    }
+    if (typeof reducedMotionQuery.addEventListener === 'function') {
+      reducedMotionQuery.addEventListener('change', handleReducedMotion)
+    } else if (typeof reducedMotionQuery.addListener === 'function') {
+      reducedMotionQuery.addListener(handleReducedMotion)
+    }
 
     // Animation loop
     const animate = () => {
