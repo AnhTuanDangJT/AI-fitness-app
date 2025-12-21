@@ -14,8 +14,9 @@ function ParticleBackground() {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (prefersReducedMotion) {
+
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    if (reducedMotionQuery.matches) {
       return
     }
 
@@ -43,14 +44,18 @@ function ParticleBackground() {
 
     resizeCanvas()
     window.addEventListener('resize', resizeCanvas)
-    const reducedMotionListener = window.matchMedia('(prefers-reduced-motion: reduce)')
     const handleReducedMotion = (event) => {
       if (event.matches) {
         cancelAnimationFrame(animationFrameId)
         window.removeEventListener('resize', resizeCanvas)
+        particles = []
       }
     }
-    reducedMotionListener.addEventListener('change', handleReducedMotion)
+    if (typeof reducedMotionQuery.addEventListener === 'function') {
+      reducedMotionQuery.addEventListener('change', handleReducedMotion)
+    } else if (typeof reducedMotionQuery.addListener === 'function') {
+      reducedMotionQuery.addListener(handleReducedMotion)
+    }
 
     // Particle class
     class Particle {
@@ -160,7 +165,11 @@ function ParticleBackground() {
     // Cleanup
     return () => {
       window.removeEventListener('resize', resizeCanvas)
-      reducedMotionListener.removeEventListener('change', handleReducedMotion)
+      if (typeof reducedMotionQuery.removeEventListener === 'function') {
+        reducedMotionQuery.removeEventListener('change', handleReducedMotion)
+      } else if (typeof reducedMotionQuery.removeListener === 'function') {
+        reducedMotionQuery.removeListener(handleReducedMotion)
+      }
       cancelAnimationFrame(animationFrameId)
     }
   }, [])
