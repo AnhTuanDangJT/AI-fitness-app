@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -39,6 +40,7 @@ public class MealPlanService {
     private final ProfileService profileService;
     private final OpenAiClient openAiClient;
     private final ObjectMapper objectMapper;
+    private final Random random;
     
     @Autowired
     public MealPlanService(MealPlanRepository mealPlanRepository,
@@ -52,6 +54,7 @@ public class MealPlanService {
         this.profileService = profileService;
         this.openAiClient = openAiClient;
         this.objectMapper = new ObjectMapper();
+        this.random = new Random();
     }
     
     /**
@@ -607,7 +610,7 @@ public class MealPlanService {
             Set<String> usedMeals,
             int rotationIndex) {
         
-        List<MealOption> options = getMealOptions(mealType, dietaryPreference, dislikedFoods);
+        List<MealOption> options = getMealOptions(mealType, dietaryPreference, dislikedFoods, cuisineKeywords);
         if (options.isEmpty()) {
             options = getOmnivoreMeals(mealType);
         }
@@ -645,18 +648,26 @@ public class MealPlanService {
         
         MealOption best = null;
         int bestScore = Integer.MIN_VALUE;
+        boolean hasCuisinePreference = cuisineKeywords != null && !cuisineKeywords.isEmpty();
+        
         for (MealOption option : options) {
             int score = 0;
-            if (containsPreferredKeyword(option, preferredFoods)) {
+            boolean matchesPreferred = containsPreferredKeyword(option, preferredFoods);
+            boolean matchesCuisine = matchesCuisineKeyword(option, cuisineKeywords);
+            
+            if (matchesPreferred) {
                 score += 6;
             }
-            if (matchesCuisineKeyword(option, cuisineKeywords)) {
-                score += 3;
+            if (matchesCuisine) {
+                score += 5;
+            } else if (hasCuisinePreference) {
+                score -= 2;
             }
             if (usedMeals.contains(option.name)) {
                 score -= 4;
             }
             score += Math.abs(option.name.hashCode() + rotationIndex) % 3; // encourage variety
+            score += random.nextInt(3); // introduce randomness so regenerate ≠ identical plan
             
             if (score > bestScore) {
                 best = option;
@@ -676,7 +687,7 @@ public class MealPlanService {
         if (preferredFoods == null || preferredFoods.isEmpty()) {
             return false;
         }
-        String haystack = (option.name + " " + option.ingredientsJson).toLowerCase();
+        String haystack = normalizeText(option.name + " " + option.ingredientsJson);
         return preferredFoods.stream().anyMatch(haystack::contains);
     }
     
@@ -684,7 +695,7 @@ public class MealPlanService {
         if (cuisineKeywords == null || cuisineKeywords.isEmpty()) {
             return false;
         }
-        String text = (option.name + " " + option.ingredientsJson).toLowerCase();
+        String text = normalizeText(option.name + " " + option.ingredientsJson);
         return cuisineKeywords.stream().anyMatch(text::contains);
     }
     
@@ -709,44 +720,52 @@ public class MealPlanService {
     
     private Set<String> buildCuisineKeywords(String favoriteCuisines) {
         Set<String> baseKeywords = parseCommaSeparatedValues(favoriteCuisines);
-        Set<String> expanded = new HashSet<>(baseKeywords);
+        Set<String> expanded = new HashSet<>();
         
         for (String keyword : baseKeywords) {
-            if (keyword.contains("viet")) {
+            String normalized = normalizeText(keyword);
+            expanded.add(normalized);
+            
+            if (normalized.contains("chau a") || normalized.contains("a dong") || normalized.contains("asian")) {
+                expanded.add("asian");
+                expanded.add("viet");
+                expanded.add("thai");
+                expanded.add("japanese");
+                expanded.add("korean");
+                expanded.add("chinese");
+                expanded.add("noodles");
+                expanded.add("rice");
+            } else if (normalized.contains("viet")) {
                 expanded.add("pho");
-                expanded.add("vermicelli");
+                expanded.add("bun");
                 expanded.add("lemongrass");
-            } else if (keyword.contains("thai")) {
+            } else if (normalized.contains("thai")) {
                 expanded.add("thai");
                 expanded.add("basil");
                 expanded.add("curry");
-            } else if (keyword.contains("japan")) {
+            } else if (normalized.contains("japan")) {
                 expanded.add("teriyaki");
                 expanded.add("miso");
                 expanded.add("soba");
-            } else if (keyword.contains("korean")) {
+            } else if (normalized.contains("korean")) {
                 expanded.add("kimchi");
                 expanded.add("bulgogi");
-            } else if (keyword.contains("mediterranean") || keyword.contains("greek")) {
+            } else if (normalized.contains("mediterranean") || normalized.contains("greek")) {
                 expanded.add("hummus");
                 expanded.add("feta");
                 expanded.add("shawarma");
-            } else if (keyword.contains("italian")) {
+            } else if (normalized.contains("italian")) {
                 expanded.add("pasta");
                 expanded.add("risotto");
                 expanded.add("marinara");
-            } else if (keyword.contains("mexican") || keyword.contains("latin")) {
+            } else if (normalized.contains("mexican") || normalized.contains("latin")) {
                 expanded.add("taco");
                 expanded.add("burrito");
                 expanded.add("enchilada");
-            } else if (keyword.contains("indian")) {
+            } else if (normalized.contains("indian")) {
                 expanded.add("masala");
                 expanded.add("tikka");
                 expanded.add("dal");
-            } else if (keyword.contains("asian")) {
-                expanded.add("stir-fry");
-                expanded.add("noodles");
-                expanded.add("rice");
             }
         }
         
@@ -760,8 +779,17 @@ public class MealPlanService {
         return Arrays.stream(input.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
-                .map(String::toLowerCase)
+                .map(this::normalizeText)
                 .collect(Collectors.toSet());
+    }
+    
+    private String normalizeText(String input) {
+        if (input == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        return normalized.toLowerCase(Locale.ROOT);
     }
     
     private static class MacroTargets {
@@ -879,7 +907,7 @@ public class MealPlanService {
                                        int targetCal, int targetProtein, int targetCarbs, int targetFats,
                                        String dietaryPreference, Set<String> dislikedFoods, int dayIndex) {
         // Get meal options based on dietary preference
-        List<MealOption> options = getMealOptions(mealType, dietaryPreference, dislikedFoods);
+        List<MealOption> options = getMealOptions(mealType, dietaryPreference, dislikedFoods, Collections.emptySet());
         
         // Select meal based on day index (for variety)
         MealOption selected = options.get(dayIndex % options.size());
@@ -903,7 +931,7 @@ public class MealPlanService {
     /**
      * Gets meal options based on meal type and dietary preference.
      */
-    private List<MealOption> getMealOptions(String mealType, String dietaryPreference, Set<String> dislikedFoods) {
+    private List<MealOption> getMealOptions(String mealType, String dietaryPreference, Set<String> dislikedFoods, Set<String> cuisineKeywords) {
         List<MealOption> allOptions = new ArrayList<>();
         
         // Filter by dietary preference
@@ -922,6 +950,12 @@ public class MealPlanService {
         } else {
             // Default to omnivore
             allOptions.addAll(getOmnivoreMeals(mealType));
+        }
+        
+        List<MealOption> cuisineSpecific = getCuisineSpecificMeals(mealType, cuisineKeywords);
+        if (!cuisineSpecific.isEmpty()) {
+            cuisineSpecific.addAll(allOptions);
+            allOptions = cuisineSpecific;
         }
         
         // Filter out disliked foods
@@ -953,6 +987,58 @@ public class MealPlanService {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toSet());
+    }
+    
+    private List<MealOption> getCuisineSpecificMeals(String mealType, Set<String> cuisineKeywords) {
+        if (cuisineKeywords == null || cuisineKeywords.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (matchesAny(cuisineKeywords, "asian", "viet", "thai", "japanese", "korean", "chinese", "noodles", "rice", "pho")) {
+            return getAsianMeals(mealType);
+        }
+        return Collections.emptyList();
+    }
+    
+    private boolean matchesAny(Set<String> keywords, String... targets) {
+        for (String target : targets) {
+            if (keywords.contains(target)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private List<MealOption> getAsianMeals(String mealType) {
+        List<MealOption> meals = new ArrayList<>();
+        switch (mealType) {
+            case MealPlanEntry.BREAKFAST:
+                meals.add(new MealOption("Vietnamese chicken congee with ginger", 380, 28, 50, 8,
+                    "[{\"name\":\"jasmine rice\",\"quantityText\":\"80g\"},{\"name\":\"shredded chicken\",\"quantityText\":\"120g\"},{\"name\":\"ginger\",\"quantityText\":\"5g\"}]"));
+                meals.add(new MealOption("Japanese miso soup with tofu and rice", 360, 22, 48, 9,
+                    "[{\"name\":\"miso paste\",\"quantityText\":\"1 tbsp\"},{\"name\":\"soft tofu\",\"quantityText\":\"120g\"},{\"name\":\"jasmine rice\",\"quantityText\":\"100g cooked\"}]"));
+                meals.add(new MealOption("Thai basil omelette with jasmine rice", 400, 24, 45, 15,
+                    "[{\"name\":\"eggs\",\"quantityText\":\"2 large\"},{\"name\":\"Thai basil\",\"quantityText\":\"10g\"},{\"name\":\"jasmine rice\",\"quantityText\":\"120g cooked\"}]"));
+                break;
+            case MealPlanEntry.LUNCH:
+                meals.add(new MealOption("Vietnamese lemongrass chicken rice plate", 520, 42, 55, 16,
+                    "[{\"name\":\"lemongrass chicken\",\"quantityText\":\"200g\"},{\"name\":\"jasmine rice\",\"quantityText\":\"180g cooked\"},{\"name\":\"pickled veggies\",\"quantityText\":\"80g\"}]"));
+                meals.add(new MealOption("Teriyaki salmon bowl with steamed vegetables", 500, 38, 48, 18,
+                    "[{\"name\":\"salmon fillet\",\"quantityText\":\"180g\"},{\"name\":\"jasmine rice\",\"quantityText\":\"150g cooked\"},{\"name\":\"vegetables\",\"quantityText\":\"120g\"}]"));
+                meals.add(new MealOption("Korean bulgogi beef with kimchi and rice", 540, 40, 52, 20,
+                    "[{\"name\":\"bulgogi beef\",\"quantityText\":\"200g\"},{\"name\":\"kimchi\",\"quantityText\":\"60g\"},{\"name\":\"short grain rice\",\"quantityText\":\"170g cooked\"}]"));
+                break;
+            case MealPlanEntry.DINNER:
+                meals.add(new MealOption("Thai green curry with chicken and jasmine rice", 560, 38, 60, 22,
+                    "[{\"name\":\"chicken thigh\",\"quantityText\":\"220g\"},{\"name\":\"green curry\",\"quantityText\":\"150g\"},{\"name\":\"jasmine rice\",\"quantityText\":\"180g cooked\"}]"));
+                meals.add(new MealOption("Pho-inspired beef noodle soup", 530, 36, 58, 16,
+                    "[{\"name\":\"rice noodles\",\"quantityText\":\"150g\"},{\"name\":\"beef sirloin\",\"quantityText\":\"180g\"},{\"name\":\"star anise broth\",\"quantityText\":\"400ml\"}]"));
+                meals.add(new MealOption("Japanese soba noodles with tofu and veggies", 480, 30, 62, 14,
+                    "[{\"name\":\"soba noodles\",\"quantityText\":\"120g\"},{\"name\":\"tofu\",\"quantityText\":\"150g\"},{\"name\":\"shiitake mushrooms\",\"quantityText\":\"80g\"}]"));
+                break;
+            default:
+                break;
+        }
+        return meals;
     }
     
     // Meal option classes and data
