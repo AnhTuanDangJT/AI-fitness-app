@@ -3,8 +3,11 @@ package com.aifitness.ai;
 import com.aifitness.dto.*;
 import com.aifitness.entity.User;
 import com.aifitness.service.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -193,23 +196,32 @@ public class AiCoachService {
         }
     }
     
+    private static final Logger logger = LoggerFactory.getLogger(AiCoachService.class);
+    
     private final WeeklyProgressService weeklyProgressService;
     private final DailyCheckInService dailyCheckInService;
     private final NutritionService nutritionService;
     private final MealPlanService mealPlanService;
     private final BodyMetricsService bodyMetricsService;
+    private final OpenAiClient openAiClient;
+    private final AiConfig aiConfig;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Autowired
     public AiCoachService(WeeklyProgressService weeklyProgressService,
                          DailyCheckInService dailyCheckInService,
                          NutritionService nutritionService,
                          MealPlanService mealPlanService,
-                         BodyMetricsService bodyMetricsService) {
+                         BodyMetricsService bodyMetricsService,
+                         OpenAiClient openAiClient,
+                         AiConfig aiConfig) {
         this.weeklyProgressService = weeklyProgressService;
         this.dailyCheckInService = dailyCheckInService;
         this.nutritionService = nutritionService;
         this.mealPlanService = mealPlanService;
         this.bodyMetricsService = bodyMetricsService;
+        this.openAiClient = openAiClient;
+        this.aiConfig = aiConfig;
     }
     
     /**
@@ -481,9 +493,15 @@ public class AiCoachService {
         // Enhance context with AI context data for richer responses
         enhanceContextWithAiData(context, aiContext, aiHistory);
         
-        // Build enhanced system prompt with context and history
-        // (For future OpenAI integration - currently used for rule-based logic enhancement)
-        String enhancedSystemPrompt = buildEnhancedSystemPrompt(user, aiContext, aiHistory, language);
+        // Attempt LLM-powered response first (falls back to rule-based if unavailable)
+        ChatResponse llmResponse = tryAiCoachLlm(user, message, language, aiContext, aiHistory, context);
+        if (llmResponse != null && llmResponse.getAssistantMessage() != null &&
+                !llmResponse.getAssistantMessage().trim().isEmpty()) {
+            if (llmResponse.getActions() == null || llmResponse.getActions().isEmpty()) {
+                llmResponse.setActions(generateActionsFromChat(context, language));
+            }
+            return llmResponse;
+        }
         
         // INTENT ROUTING: Check for specific intents first
         String intentResult = processIntentBasedRouting(user, message, context, language);
@@ -498,6 +516,122 @@ public class AiCoachService {
         List<String> actions = generateActionsFromChat(context, language);
         
         return new ChatResponse(assistantMessage, actions);
+    }
+    
+    /**
+     * Attempts to answer via OpenAI with full user context.
+     */
+    private ChatResponse tryAiCoachLlm(
+            User user,
+            String message,
+            String language,
+            AiContextResponse aiContext,
+            AiHistoryResponse aiHistory,
+            CoachContext context) {
+        
+        if (aiConfig == null || !aiConfig.isApiKeyConfigured()) {
+            return null;
+        }
+        
+        try {
+            String systemPrompt = buildEnhancedSystemPrompt(user, aiContext, aiHistory, language);
+            String userPrompt = buildUserPromptForLlm(user, message, aiContext, aiHistory, context, language);
+            
+            List<Map<String, String>> conversation = new ArrayList<>();
+            conversation.add(Map.of("role", "user", "content", userPrompt));
+            
+            String assistantMessage = openAiClient.generateChatResponse(
+                    systemPrompt,
+                    conversation,
+                    aiConfig.getTemperature(),
+                    Math.min(1500, aiConfig.getMaxTokens()));
+            
+            if (assistantMessage != null && !assistantMessage.trim().isEmpty()) {
+                ChatResponse response = new ChatResponse();
+                response.setAssistantMessage(assistantMessage.trim());
+                return response;
+            }
+        } catch (Exception e) {
+            logger.warn("LLM chat failed, falling back to rule-based logic: {}", e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Builds the user prompt that is sent to the LLM along with contextual data.
+     */
+    private String buildUserPromptForLlm(
+            User user,
+            String message,
+            AiContextResponse aiContext,
+            AiHistoryResponse aiHistory,
+            CoachContext context,
+            String language) {
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append("End-user question:\n").append(message.trim()).append("\n\n");
+        
+        sb.append("User profile & nutrition context (JSON):\n");
+        sb.append(toSafeJson(aiContext, 2200)).append("\n\n");
+        
+        sb.append("Recent history:\n");
+        sb.append(summarizeHistory(aiHistory)).append("\n\n");
+        
+        sb.append("Latest progress snapshot:\n");
+        String contextSummary = buildSummaryFromContext(user, context);
+        if (contextSummary != null && !contextSummary.isBlank()) {
+            sb.append(contextSummary);
+        } else {
+            sb.append("No recent progress logged.");
+        }
+        sb.append("\n\n");
+        
+        if ("vi".equals(language)) {
+            sb.append("Chỉ dẫn:\n");
+            sb.append("- Phản hồi 100% bằng tiếng Việt chuyên nghiệp.\n");
+            sb.append("- Kết hợp dữ liệu cá nhân ở trên với kiến thức sức khỏe/tập luyện cập nhật từ các nguồn đáng tin cậy trên internet (WHO, ACSM, NIH, PubMed, CDC, v.v.).\n");
+            sb.append("- Nêu rõ lý do, đưa ra bước hành động cụ thể, và nếu dùng kiến thức chung hãy ghi chú ngắn gọn nguồn hoặc năm.\n");
+        } else {
+            sb.append("Instructions:\n");
+            sb.append("- Respond entirely in professional English.\n");
+            sb.append("- Combine the personal context above with up-to-date evidence from reputable internet sources (WHO, ACSM, NIH, PubMed, CDC, etc.).\n");
+            sb.append("- Provide actionable steps and, when referencing general knowledge, mention the organisation or year if possible.\n");
+        }
+        
+        return sb.toString();
+    }
+    
+    private String summarizeHistory(AiHistoryResponse history) {
+        if (history == null || history.getEntries() == null || history.getEntries().isEmpty()) {
+            return "No logged history yet.";
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        history.getEntries().stream()
+                .limit(10)
+                .forEach(entry -> sb.append("- ")
+                        .append(entry.getDate())
+                        .append(" • ")
+                        .append(entry.getType())
+                        .append(" • ")
+                        .append(entry.getSummaryText())
+                        .append("\n"));
+        return sb.toString();
+    }
+    
+    private String toSafeJson(Object value, int maxLength) {
+        if (value == null) {
+            return "{}";
+        }
+        try {
+            String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
+            if (json.length() > maxLength) {
+                return json.substring(0, maxLength) + "...(truncated)";
+            }
+            return json;
+        } catch (Exception e) {
+            return value.toString();
+        }
     }
     
     /**

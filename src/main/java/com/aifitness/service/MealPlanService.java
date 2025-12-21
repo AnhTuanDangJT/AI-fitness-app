@@ -531,86 +531,244 @@ public class MealPlanService {
      * @return The generated meal plan
      */
     private MealPlan generateWeeklyMealPlanForUserFallback(User user, LocalDate startDate) {
-        // Check if meal plan already exists for this week
         Optional<MealPlan> existingPlan = mealPlanRepository.findByUserAndWeekStartDate(user, startDate);
-        if (existingPlan.isPresent()) {
-            // Delete existing plan and create a new one
-            mealPlanRepository.delete(existingPlan.get());
-        }
+        existingPlan.ifPresent(mealPlanRepository::delete);
         
-        // Create meal plan (save first to get ID)
         MealPlan mealPlan = new MealPlan(user, startDate);
         mealPlan = mealPlanRepository.save(mealPlan);
         
-        // Hardcoded mock meal plans for 7 days
-        LocalDate currentDate = startDate;
+        MacroTargets macroTargets = buildMacroTargets(user);
+        Set<String> preferredFoods = parsePreferredFoods(user.getPreferredFoods());
+        Set<String> dislikedFoods = parseDislikedFoods(user.getDislikedFoods());
+        Set<String> cuisineKeywords = buildCuisineKeywords(user.getFavoriteCuisines());
+        String dietaryPreference = user.getDietaryPreference();
+        Set<String> usedMeals = new HashSet<>();
         
-        // Day 1 - Total: ~1600 cal, ~120g protein, ~180g carbs, ~50g fat
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.BREAKFAST, "Oatmeal with banana", 400, 12, 65, 10, 
-            getIngredientsForMeal("Oatmeal with banana", MealPlanEntry.BREAKFAST)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.LUNCH, "Grilled chicken + rice", 500, 45, 60, 12,
-            getIngredientsForMeal("Grilled chicken + rice", MealPlanEntry.LUNCH)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.DINNER, "Salmon with veggies", 550, 40, 50, 22,
-            getIngredientsForMeal("Salmon with veggies", MealPlanEntry.DINNER)));
+        Map<String, Double> mealSplit = Map.of(
+            MealPlanEntry.BREAKFAST, 0.30,
+            MealPlanEntry.LUNCH, 0.35,
+            MealPlanEntry.DINNER, 0.35
+        );
         
-        currentDate = currentDate.plusDays(1);
-        // Day 2 - Total: ~1600 cal, ~120g protein, ~180g carbs, ~50g fat
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.BREAKFAST, "Greek yogurt with berries", 350, 18, 50, 8,
-            getIngredientsForMeal("Greek yogurt with berries", MealPlanEntry.BREAKFAST)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.LUNCH, "Turkey wrap with vegetables", 480, 38, 58, 16,
-            getIngredientsForMeal("Turkey wrap with vegetables", MealPlanEntry.LUNCH)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.DINNER, "Beef stir-fry with noodles", 570, 42, 65, 20,
-            getIngredientsForMeal("Beef stir-fry with noodles", MealPlanEntry.DINNER)));
+        for (int day = 0; day < 7; day++) {
+            LocalDate date = startDate.plusDays(day);
+            mealPlan.addEntry(createPersonalizedEntry(
+                mealPlan, date, MealPlanEntry.BREAKFAST, macroTargets, mealSplit.get(MealPlanEntry.BREAKFAST),
+                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day));
+            
+            mealPlan.addEntry(createPersonalizedEntry(
+                mealPlan, date, MealPlanEntry.LUNCH, macroTargets, mealSplit.get(MealPlanEntry.LUNCH),
+                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day + 7));
+            
+            mealPlan.addEntry(createPersonalizedEntry(
+                mealPlan, date, MealPlanEntry.DINNER, macroTargets, mealSplit.get(MealPlanEntry.DINNER),
+                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day + 14));
+        }
         
-        currentDate = currentDate.plusDays(1);
-        // Day 3 - Total: ~1600 cal, ~120g protein, ~180g carbs, ~50g fat
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.BREAKFAST, "Scrambled eggs with toast", 400, 20, 42, 18,
-            getIngredientsForMeal("Scrambled eggs with toast", MealPlanEntry.BREAKFAST)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.LUNCH, "Quinoa salad with chickpeas", 450, 20, 60, 12,
-            getIngredientsForMeal("Quinoa salad with chickpeas", MealPlanEntry.LUNCH)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.DINNER, "Baked chicken with sweet potato", 550, 48, 55, 18,
-            getIngredientsForMeal("Baked chicken with sweet potato", MealPlanEntry.DINNER)));
-        
-        currentDate = currentDate.plusDays(1);
-        // Day 4 - Total: ~1600 cal, ~120g protein, ~180g carbs, ~50g fat
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.BREAKFAST, "Avocado toast with eggs", 450, 18, 45, 22,
-            getIngredientsForMeal("Avocado toast with eggs", MealPlanEntry.BREAKFAST)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.LUNCH, "Salmon salad with mixed greens", 470, 38, 32, 24,
-            getIngredientsForMeal("Salmon salad with mixed greens", MealPlanEntry.LUNCH)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.DINNER, "Pasta with marinara sauce", 530, 28, 70, 14,
-            getIngredientsForMeal("Pasta with marinara sauce", MealPlanEntry.DINNER)));
-        
-        currentDate = currentDate.plusDays(1);
-        // Day 5 - Total: ~1600 cal, ~120g protein, ~180g carbs, ~50g fat
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.BREAKFAST, "Protein pancakes with syrup", 430, 28, 55, 12,
-            getIngredientsForMeal("Protein pancakes with syrup", MealPlanEntry.BREAKFAST)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.LUNCH, "Chicken Caesar salad", 480, 44, 35, 24,
-            getIngredientsForMeal("Chicken Caesar salad", MealPlanEntry.LUNCH)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.DINNER, "Grilled steak with roasted vegetables", 590, 52, 38, 26,
-            getIngredientsForMeal("Grilled steak with roasted vegetables", MealPlanEntry.DINNER)));
-        
-        currentDate = currentDate.plusDays(1);
-        // Day 6 - Total: ~1600 cal, ~120g protein, ~180g carbs, ~50g fat
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.BREAKFAST, "Chia pudding with fruits", 370, 14, 52, 12,
-            getIngredientsForMeal("Chia pudding with fruits", MealPlanEntry.BREAKFAST)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.LUNCH, "Vegetable curry with rice", 520, 20, 75, 16,
-            getIngredientsForMeal("Vegetable curry with rice", MealPlanEntry.LUNCH)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.DINNER, "Pork tenderloin with quinoa", 560, 44, 48, 20,
-            getIngredientsForMeal("Pork tenderloin with quinoa", MealPlanEntry.DINNER)));
-        
-        currentDate = currentDate.plusDays(1);
-        // Day 7 - Total: ~1600 cal, ~120g protein, ~180g carbs, ~50g fat
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.BREAKFAST, "Smoothie bowl with granola", 400, 16, 58, 10,
-            getIngredientsForMeal("Smoothie bowl with granola", MealPlanEntry.BREAKFAST)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.LUNCH, "Lentil soup with bread", 410, 22, 55, 8,
-            getIngredientsForMeal("Lentil soup with bread", MealPlanEntry.LUNCH)));
-        mealPlan.addEntry(new MealPlanEntry(mealPlan, currentDate, MealPlanEntry.DINNER, "Fish tacos with vegetables", 520, 36, 62, 18,
-            getIngredientsForMeal("Fish tacos with vegetables", MealPlanEntry.DINNER)));
-        
-        // Save meal plan with all entries (cascade will save entries)
         mealPlan = mealPlanRepository.save(mealPlan);
-        
         return mealPlan;
+    }
+    
+    private MacroTargets buildMacroTargets(User user) {
+        MacroTargets targets = new MacroTargets();
+        targets.calories = 2000;
+        targets.protein = user.getWeight() != null ? Math.max(90, user.getWeight() * 1.6) : 120;
+        targets.fats = user.getWeight() != null ? Math.max(55, user.getWeight() * 0.8) : 70;
+        targets.carbs = Math.max(180, (targets.calories - (targets.protein * 4) - (targets.fats * 9)) / 4);
+        
+        if (user.getWeight() != null && user.getHeight() != null && user.getAge() != null &&
+            user.getSex() != null && user.getActivityLevel() != null && user.getCalorieGoal() != null) {
+            double bmr = nutritionService.calculateBMR(user.getWeight(), user.getHeight(), user.getAge(), user.getSex());
+            double tdee = nutritionService.calculateTDEE(bmr, user.getActivityLevel());
+            double goalCalories = nutritionService.calculateGoalCalories(tdee, user.getCalorieGoal());
+            double proteinTarget = nutritionService.calculateProtein(user.getCalorieGoal(), user.getWeight());
+            double fatTarget = nutritionService.calculateFat(user.getWeight());
+            double carbTarget = nutritionService.calculateCarbs(goalCalories, proteinTarget, fatTarget);
+            
+            targets.calories = goalCalories;
+            targets.protein = proteinTarget;
+            targets.fats = fatTarget;
+            targets.carbs = carbTarget;
+        }
+        
+        return targets;
+    }
+    
+    private MealPlanEntry createPersonalizedEntry(
+            MealPlan mealPlan,
+            LocalDate date,
+            String mealType,
+            MacroTargets targets,
+            double ratio,
+            String dietaryPreference,
+            Set<String> preferredFoods,
+            Set<String> dislikedFoods,
+            Set<String> cuisineKeywords,
+            Set<String> usedMeals,
+            int rotationIndex) {
+        
+        List<MealOption> options = getMealOptions(mealType, dietaryPreference, dislikedFoods);
+        if (options.isEmpty()) {
+            options = getOmnivoreMeals(mealType);
+        }
+        
+        MealOption selected = selectMealOption(options, preferredFoods, cuisineKeywords, usedMeals, rotationIndex);
+        
+        int calories = scaleMacro(selected.calories, targets.calories * ratio);
+        int protein = scaleMacro(selected.protein, targets.protein * ratio);
+        int carbs = scaleMacro(selected.carbs, targets.carbs * ratio);
+        int fats = scaleMacro(selected.fats, targets.fats * ratio);
+        
+        return new MealPlanEntry(
+            mealPlan,
+            date,
+            mealType,
+            selected.name,
+            calories,
+            protein,
+            carbs,
+            fats,
+            selected.ingredientsJson != null ? selected.ingredientsJson : "[]"
+        );
+    }
+    
+    private MealOption selectMealOption(
+            List<MealOption> options,
+            Set<String> preferredFoods,
+            Set<String> cuisineKeywords,
+            Set<String> usedMeals,
+            int rotationIndex) {
+        
+        if (options == null || options.isEmpty()) {
+            throw new IllegalArgumentException("No meal options available");
+        }
+        
+        MealOption best = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (MealOption option : options) {
+            int score = 0;
+            if (containsPreferredKeyword(option, preferredFoods)) {
+                score += 6;
+            }
+            if (matchesCuisineKeyword(option, cuisineKeywords)) {
+                score += 3;
+            }
+            if (usedMeals.contains(option.name)) {
+                score -= 4;
+            }
+            score += Math.abs(option.name.hashCode() + rotationIndex) % 3; // encourage variety
+            
+            if (score > bestScore) {
+                best = option;
+                bestScore = score;
+            }
+        }
+        
+        if (best == null) {
+            best = options.get(rotationIndex % options.size());
+        }
+        
+        usedMeals.add(best.name);
+        return best;
+    }
+    
+    private boolean containsPreferredKeyword(MealOption option, Set<String> preferredFoods) {
+        if (preferredFoods == null || preferredFoods.isEmpty()) {
+            return false;
+        }
+        String haystack = (option.name + " " + option.ingredientsJson).toLowerCase();
+        return preferredFoods.stream().anyMatch(haystack::contains);
+    }
+    
+    private boolean matchesCuisineKeyword(MealOption option, Set<String> cuisineKeywords) {
+        if (cuisineKeywords == null || cuisineKeywords.isEmpty()) {
+            return false;
+        }
+        String text = (option.name + " " + option.ingredientsJson).toLowerCase();
+        return cuisineKeywords.stream().anyMatch(text::contains);
+    }
+    
+    private int scaleMacro(int baseValue, double targetValue) {
+        if (targetValue <= 0 && baseValue > 0) {
+            return baseValue;
+        }
+        if (baseValue <= 0) {
+            return Math.max(50, (int)Math.round(targetValue));
+        }
+        double scale = clamp(targetValue / baseValue, 0.7, 1.3);
+        return (int)Math.max(50, Math.round(baseValue * scale));
+    }
+    
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
+    
+    private Set<String> parsePreferredFoods(String preferredFoods) {
+        return parseCommaSeparatedValues(preferredFoods);
+    }
+    
+    private Set<String> buildCuisineKeywords(String favoriteCuisines) {
+        Set<String> baseKeywords = parseCommaSeparatedValues(favoriteCuisines);
+        Set<String> expanded = new HashSet<>(baseKeywords);
+        
+        for (String keyword : baseKeywords) {
+            if (keyword.contains("viet")) {
+                expanded.add("pho");
+                expanded.add("vermicelli");
+                expanded.add("lemongrass");
+            } else if (keyword.contains("thai")) {
+                expanded.add("thai");
+                expanded.add("basil");
+                expanded.add("curry");
+            } else if (keyword.contains("japan")) {
+                expanded.add("teriyaki");
+                expanded.add("miso");
+                expanded.add("soba");
+            } else if (keyword.contains("korean")) {
+                expanded.add("kimchi");
+                expanded.add("bulgogi");
+            } else if (keyword.contains("mediterranean") || keyword.contains("greek")) {
+                expanded.add("hummus");
+                expanded.add("feta");
+                expanded.add("shawarma");
+            } else if (keyword.contains("italian")) {
+                expanded.add("pasta");
+                expanded.add("risotto");
+                expanded.add("marinara");
+            } else if (keyword.contains("mexican") || keyword.contains("latin")) {
+                expanded.add("taco");
+                expanded.add("burrito");
+                expanded.add("enchilada");
+            } else if (keyword.contains("indian")) {
+                expanded.add("masala");
+                expanded.add("tikka");
+                expanded.add("dal");
+            } else if (keyword.contains("asian")) {
+                expanded.add("stir-fry");
+                expanded.add("noodles");
+                expanded.add("rice");
+            }
+        }
+        
+        return expanded;
+    }
+    
+    private Set<String> parseCommaSeparatedValues(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return new HashSet<>();
+        }
+        return Arrays.stream(input.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+    }
+    
+    private static class MacroTargets {
+        double calories;
+        double protein;
+        double carbs;
+        double fats;
     }
     
     /**

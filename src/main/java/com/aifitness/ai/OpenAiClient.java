@@ -7,6 +7,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,7 +108,84 @@ public class OpenAiClient {
             throw new RuntimeException("Failed to call OpenAI API: " + e.getMessage(), e);
         }
     }
+    
+    /**
+     * Calls OpenAI API to generate a natural language coach response.
+     * 
+     * @param systemPrompt Behavior + policy instructions
+     * @param conversation Ordered list of chat messages (role/content)
+     * @param temperature Optional override for response creativity
+     * @param maxTokens Optional override for max tokens
+     * @return Assistant response text
+     */
+    public String generateChatResponse(
+            String systemPrompt,
+            List<Map<String, String>> conversation,
+            Double temperature,
+            Integer maxTokens) {
+        
+        if (!aiConfig.isApiKeyConfigured()) {
+            throw new RuntimeException("AI_API_KEY is not configured. Cannot generate chat response.");
+        }
+        
+        try {
+            List<Map<String, String>> messages = new ArrayList<>();
+            if (systemPrompt != null && !systemPrompt.trim().isEmpty()) {
+                messages.add(Map.of("role", "system", "content", systemPrompt));
+            }
+            if (conversation != null) {
+                messages.addAll(conversation);
+            }
+            if (messages.isEmpty()) {
+                throw new IllegalArgumentException("Conversation cannot be empty");
+            }
+            
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", aiConfig.getModel());
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", temperature != null ? temperature : aiConfig.getTemperature());
+            requestBody.put("max_tokens", maxTokens != null ? maxTokens : aiConfig.getMaxTokens());
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(aiConfig.getApiKey());
+            
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                OPENAI_API_URL,
+                HttpMethod.POST,
+                request,
+                String.class
+            );
+            
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new RuntimeException("OpenAI API returned error: " + response.getStatusCode());
+            }
+            
+            JsonNode responseJson = objectMapper.readTree(response.getBody());
+            JsonNode choices = responseJson.get("choices");
+            if (choices == null || !choices.isArray() || choices.size() == 0) {
+                throw new RuntimeException("OpenAI API returned invalid response format");
+            }
+            
+            JsonNode message = choices.get(0).get("message");
+            
+            if (message == null || message.get("content") == null) {
+                throw new RuntimeException("OpenAI API returned invalid response format");
+            }
+            
+            return message.get("content").asText();
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to call OpenAI API: " + e.getMessage(), e);
+        }
+    }
 }
+
+
+
+
 
 
 

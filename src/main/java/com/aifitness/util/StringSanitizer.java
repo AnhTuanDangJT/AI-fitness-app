@@ -17,29 +17,21 @@ import java.util.regex.Pattern;
  */
 public class StringSanitizer {
     
-    // Patterns for dangerous SQL injection attempts
+    // Guard rails for obviously malicious payloads while still allowing rich text feedback.
     private static final Pattern SQL_INJECTION_PATTERN = Pattern.compile(
-        "(?i)(union|select|insert|update|delete|drop|create|alter|exec|execute|script|javascript|onerror|onload|onclick)" +
-        "|('|(\\-\\-)|(;)|(\\|)|(\\*)|(%)|(xp_)|(sp_))",
-        Pattern.CASE_INSENSITIVE
+        "(?i)(;\\s*(drop|truncate)\\s+table|;\\s*delete\\s+from|--|/\\*)"
     );
     
-    // Patterns for XSS attempts
     private static final Pattern XSS_PATTERN = Pattern.compile(
-        "(?i)(<script|</script>|<iframe|</iframe>|<object|</object>|<embed|javascript:|onerror=|onload=|onclick=|onmouseover=|onfocus=)",
-        Pattern.CASE_INSENSITIVE
+        "(?i)(<\\s*/?\\s*(script|iframe|object|embed)[^>]*>|javascript:|onerror\\s*=|onload\\s*=|onclick\\s*=)"
     );
     
-    // Patterns for command injection attempts
     private static final Pattern COMMAND_INJECTION_PATTERN = Pattern.compile(
-        "(?i)(\\||&|;|`|\\$|\\(|\\)|<|>|\\n|\\r)",
-        Pattern.CASE_INSENSITIVE
+        "(?i)((\\|\\|)|(\\&\\&)|(`)|\\$\\()"
     );
     
-    // Pattern for detecting suspicious encoding attempts
     private static final Pattern ENCODING_PATTERN = Pattern.compile(
-        "(?i)(%[0-9a-f]{2}|\\\\x[0-9a-f]{2}|&#x[0-9a-f]+;|&#[0-9]+;)",
-        Pattern.CASE_INSENSITIVE
+        "(?i)(%3C|%3E|&#x)|\\\\x[0-9a-f]{2}"
     );
     
     /**
