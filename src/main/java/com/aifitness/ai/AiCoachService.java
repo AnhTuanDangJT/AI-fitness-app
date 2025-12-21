@@ -1235,7 +1235,39 @@ public class AiCoachService {
                 }
             }
         }
-        
+
+        // INTENT: Recovery + sleep routine after heavy sessions
+        boolean asksRecoveryPlan =
+                lowerMessage.contains("recovery plan") ||
+                (lowerMessage.contains("sleep") && lowerMessage.contains("recovery")) ||
+                (lowerMessage.contains("sleep") && lowerMessage.contains("soreness")) ||
+                (lowerMessage.contains("sleep quality") || lowerMessage.contains("reduce soreness")) ||
+                (lowerMessage.contains("rest day") && lowerMessage.contains("recovery")) ||
+                (lowerMessage.contains("leg day") && lowerMessage.contains("recovery"));
+        if (asksRecoveryPlan) {
+            return buildSleepRecoveryPlan(context, language);
+        }
+
+        // INTENT: Mobility routine for tight hips/lower back
+        boolean asksMobility =
+                lowerMessage.contains("mobility") ||
+                (lowerMessage.contains("hip") && lowerMessage.contains("tight")) ||
+                (lowerMessage.contains("lower back") && (lowerMessage.contains("tight") || lowerMessage.contains("stiff"))) ||
+                lowerMessage.contains("mobility routine");
+        if (asksMobility) {
+            return buildMobilityRoutine(context, language);
+        }
+
+        // INTENT: Fat-loss plateau reset
+        boolean plateauIntent =
+                lowerMessage.contains("plateau") ||
+                (lowerMessage.contains("stuck") && lowerMessage.contains("weight")) ||
+                (lowerMessage.contains("same weight") && lowerMessage.contains("weeks")) ||
+                (lowerMessage.contains("fat loss") && (lowerMessage.contains("stalled") || lowerMessage.contains("stall") || lowerMessage.contains("stuck")));
+        if (plateauIntent) {
+            return buildFatLossPlateauPlan(user, context, language);
+        }
+
         // INTENT: Workout plan requests - automatically generate 7-day plan
         // Comprehensive list of workout-related phrases that should trigger plan generation
         String[] workoutPhrases = {
@@ -1375,6 +1407,10 @@ public class AiCoachService {
                 actions.add("Generate meal plan");
             }
             actions.add("View meal plan");
+        }
+
+        if (actions.isEmpty()) {
+            actions.addAll(generateActionsFromChat(context, language));
         }
         
         return actions;
@@ -2363,6 +2399,259 @@ public class AiCoachService {
         } else {
             return "I can help with workouts, nutrition, meal planning, and tracking your progress. What specific question can I answer?";
         }
+    }
+    
+    /**
+     * Builds a structured recovery plan focusing on sleep and soreness relief.
+     */
+    private String buildSleepRecoveryPlan(CoachContext context, String language) {
+        double avgSleep = calculateAverageSleepHours(context);
+        Double proteinTarget = context != null ? context.getProteinTarget() : null;
+        Double goalCalories = context != null ? context.getGoalCalories() : null;
+        
+        String sleepLineEn = avgSleep > 0
+                ? String.format("Current baseline: roughly %.1f h/night from your recent weekly logs.", avgSleep)
+                : "No recent sleep logs yet—start logging weekly sleep so I can spot trends.";
+        String sleepLineVi = avgSleep > 0
+                ? String.format("Mức hiện tại: khoảng %.1f giờ/đêm theo các bản ghi gần đây.", avgSleep)
+                : "Chưa có dữ liệu giấc ngủ gần đây—hãy ghi lại hằng tuần để tôi theo dõi.";
+        
+        String proteinLineEn = proteinTarget != null
+                ? String.format("- Keep post-leg-day protein near %.0f g to support tissue repair.", proteinTarget)
+                : "- Keep protein at 1.6-2.2 g/kg bodyweight so muscle recovery stays on track.";
+        String proteinLineVi = proteinTarget != null
+                ? String.format("- Duy trì lượng đạm khoảng %.0f g sau ngày tập chân để phục hồi cơ.", proteinTarget)
+                : "- Giữ đạm 1,6-2,2 g/kg thể trọng để cơ bắp phục hồi.";
+        
+        String calorieLineEn = goalCalories != null
+                ? String.format("- Hold recovery-day calories close to %.0f kcal; add 20-30 g carbs at dinner to boost serotonin.", goalCalories)
+                : "- Giữ tổng năng lượng sát mục tiêu hiện tại và thêm 20-30 g carb vào bữa tối để ngủ sâu hơn.";
+        String calorieLineVi = goalCalories != null
+                ? String.format("- Giữ mức calo ngày phục hồi quanh %.0f kcal; thêm 20-30 g carb ở bữa tối để ngủ sâu hơn.", goalCalories)
+                : "- Giữ tổng calo sát mục tiêu hiện tại và thêm 20-30 g carb vào bữa tối để hỗ trợ giấc ngủ.";
+        
+        if ("vi".equals(language)) {
+            StringBuilder plan = new StringBuilder();
+            plan.append("LỘ TRÌNH PHỤC HỒI – ngủ sâu & giảm đau\n");
+            plan.append(sleepLineVi).append("\n\n");
+            plan.append("1. Thư giãn 60 phút trước khi ngủ\n");
+            plan.append("- Giảm ánh sáng, tránh màn hình; thay bằng đọc sách hoặc lăn foam.\n");
+            plan.append("- Tắm nước ấm rồi thở bằng mũi (3 hiệp x 5 nhịp) để nhịp tim hạ xuống.\n");
+            plan.append("- Đi ngủ cùng giờ mỗi ngày, giữ phòng <20°C nếu có thể.\n\n");
+            plan.append("2. Xả mỏi sau ngày tập chân (10 phút)\n");
+            plan.append("- 2 phút nằm gác chân lên tường + thở cơ hoành.\n");
+            plan.append("- 3 vòng: 30 giây squat nhón gót + 30 giây kéo căng couch stretch mỗi bên.\n");
+            plan.append("- Kết thúc với 90/90 hip switch trong 2 phút để giải phóng khớp hông.\n\n");
+            plan.append("3. Dinh dưỡng & nước\n");
+            plan.append(proteinLineVi).append("\n");
+            plan.append(calorieLineVi).append("\n");
+            plan.append("- Dùng 5 g creatine + 1-2 g omega-3 sau tập, uống 1 lít nước điện giải trong buổi tối.\n\n");
+            plan.append("4. Checklist phục hồi\n");
+            plan.append("- Ghi nhật ký giấc ngủ và độ đau trong Daily Check-in để tôi điều chỉnh tải bài.\n");
+            plan.append("- Đi bộ 5-10 phút mỗi 60-90 phút ngồi lâu để tăng tuần hoàn.\n");
+            plan.append("- Lên lịch tập chân nặng tiếp theo sau ít nhất 48 giờ, khi độ đau <3/10.\n");
+            return plan.toString();
+        }
+        
+        StringBuilder plan = new StringBuilder();
+        plan.append("RECOVERY PLAYBOOK – better sleep + less soreness\n");
+        plan.append(sleepLineEn).append("\n\n");
+        plan.append("1. 60-min wind-down\n");
+        plan.append("- Dim lights, go screen-free; swap in reading or light foam rolling.\n");
+        plan.append("- Hot shower + nasal breathing (3 rounds x 5 breaths) to drop heart rate.\n");
+        plan.append("- In bed at the same time nightly; keep the room <68°F if possible.\n\n");
+        plan.append("2. Post-leg flush (10 min)\n");
+        plan.append("- 2 min legs-up-the-wall with diaphragmatic breathing.\n");
+        plan.append("- 3 rounds: 30s heel-elevated squat pulses + 30s couch stretch per leg.\n");
+        plan.append("- Finish with 90/90 hip switches (2 min) to clear residual tension.\n\n");
+        plan.append("3. Nutrition & hydration\n");
+        plan.append(proteinLineEn).append("\n");
+        plan.append(calorieLineEn).append("\n");
+        plan.append("- Take 5 g creatine + 1-2 g omega-3 post-training; sip 1 L electrolyte water through the evening.\n\n");
+        plan.append("4. Recovery checklist\n");
+        plan.append("- Log sleep + soreness inside Daily Check-ins so I can adjust loads.\n");
+        plan.append("- Walk 5-10 min every 60-90 min of sitting to keep blood moving.\n");
+        plan.append("- Schedule the next heavy leg day ≥48 h after soreness drops below 3/10.\n");
+        return plan.toString();
+    }
+    
+    /**
+     * Builds a 15-minute mobility routine for hips and lower back.
+     */
+    private String buildMobilityRoutine(CoachContext context, String language) {
+        double avgSteps = calculateAverageSteps(context != null ? context.getRecentCheckIns() : null);
+        String stepsLineEn = avgSteps > 0
+                ? String.format("Recent activity: ~%.0f steps/day. Pair this reset with an easy walk afterwards.", avgSteps)
+                : "Pair this reset with a light walk afterwards to keep blood moving.";
+        String stepsLineVi = avgSteps > 0
+                ? String.format("Hoạt động gần đây: ~%.0f bước/ngày. Hãy đi bộ nhẹ sau bài reset.", avgSteps)
+                : "Hãy đi bộ nhẹ sau bài reset này để tăng tuần hoàn.";
+        
+        if ("vi".equals(language)) {
+            StringBuilder routine = new StringBuilder();
+            routine.append("15 PHÚT MOBILITY CHO HÔNG + THẮT LƯNG\n");
+            routine.append("Cấu trúc: 5 khối x 3 phút, thở bằng mũi, giữ nhịp chậm.\n");
+            routine.append(stepsLineVi).append("\n\n");
+            routine.append("1. Điều khiển khung chậu (0-3')\n");
+            routine.append("- 90/90 breathing: 6 lần, mỗi lần 5 nhịp, ép lưng áp sát sàn.\n");
+            routine.append("- 1 phút pelvic tilt đứng dựa tường, tập trung vào cơ bụng dưới.\n\n");
+            routine.append("2. Mở bao khớp hông (3-6')\n");
+            routine.append("- 90/90 hip switch: 2 phút, giữ thẳng lưng.\n");
+            routine.append("- PAIL/RAIL couch stretch: 30s căng + 15s gồng nhẹ mỗi bên.\n\n");
+            routine.append("3. Chuỗi sau & cột sống (6-9')\n");
+            routine.append("- World's greatest stretch: 5 lần mỗi bên.\n");
+            routine.append("- Hamstring floss với dây: 45s mỗi chân.\n\n");
+            routine.append("4. Ổn định hông + lưng (9-12')\n");
+            routine.append("- Banded hip airplane hoặc hỗ trợ tay: 3 hiệp x 20s mỗi bên.\n");
+            routine.append("- Cat-Cow chậm: 10 lần, khóa cơ bụng cuối mỗi nhịp.\n\n");
+            routine.append("5. Khoá core (12-15')\n");
+            routine.append("- Dead bug hoặc bird-dog: 3 hiệp x 8-10 lần mỗi bên.\n");
+            routine.append("- Kết thúc bằng 1 phút breathing ở tư thế nằm ôm gối.\n\n");
+            routine.append("Chạy chuỗi này vào ngày nghỉ hoặc trước buổi đi bộ; ghi lại cảm giác lưng/hông trong Daily Check-in.");
+            return routine.toString();
+        }
+        
+        StringBuilder routine = new StringBuilder();
+        routine.append("15-MIN HIP + LOW-BACK RESET\n");
+        routine.append("Format: 5 blocks x 3 minutes. Breathe through your nose and stay controlled.\n");
+        routine.append(stepsLineEn).append("\n\n");
+        routine.append("1. Pelvic control (0-3 min)\n");
+        routine.append("- 90/90 breathing: 6 rounds of 5 slow breaths, ribs down.\n");
+        routine.append("- Wall pelvic tilts: 1 min, focus on lower abs creating posterior tilt.\n\n");
+        routine.append("2. Hip capsule (3-6 min)\n");
+        routine.append("- 90/90 hip switches: 2 min, keep spine tall.\n");
+        routine.append("- Couch stretch PAIL/RAIL: 30s stretch + 15s gentle contraction per side.\n\n");
+        routine.append("3. Posterior chain (6-9 min)\n");
+        routine.append("- World's greatest stretch: 5 reps/side with thoracic rotation.\n");
+        routine.append("- Banded hamstring floss: 45s/side.\n\n");
+        routine.append("4. Dynamic glutes + spine (9-12 min)\n");
+        routine.append("- Hip airplanes (use support if needed): 3 sets x 20s/side.\n");
+        routine.append("- Slow cat-cow: 10 reps, brace abs at the end of each flexion.\n\n");
+        routine.append("5. Core lock-in (12-15 min)\n");
+        routine.append("- Dead bug or bird-dog: 3 sets x 8-10/side.\n");
+        routine.append("- Finish with 1 min knees-to-chest breathing.\n\n");
+        routine.append("Run this on rest days or before easy walks; log how your hips/back feel inside the Daily Check-in.");
+        return routine.toString();
+    }
+    
+    /**
+     * Builds a plan to break through a fat-loss plateau.
+     */
+    private String buildFatLossPlateauPlan(User user, CoachContext context, String language) {
+        Double goalCalories = context != null ? context.getGoalCalories() : null;
+        Double tdee = context != null ? context.getTdee() : null;
+        double baseCalories = goalCalories != null ? goalCalories : (tdee != null ? tdee - 400 : 0);
+        double adjustedCalories = baseCalories > 0 ? Math.max(baseCalories - 180, baseCalories * 0.9) : 0;
+        double proteinTarget = context != null && context.getProteinTarget() != null
+                ? context.getProteinTarget()
+                : (user.getWeight() != null ? user.getWeight() * 1.8 : 130);
+        double carbs = adjustedCalories > 0 ? adjustedCalories * 0.35 / 4 : 0;
+        double fats = adjustedCalories > 0 ? adjustedCalories * 0.25 / 9 : 0;
+        
+        List<DailyCheckInResponse> checkIns = context != null ? context.getRecentCheckIns() : null;
+        int daysLogged = checkIns != null ? checkIns.size() : 0;
+        int workouts = countRecentWorkouts(checkIns);
+        double avgSteps = calculateAverageSteps(checkIns);
+        int estWeeklyWorkouts = daysLogged > 0 ? (int) Math.round((double) workouts / daysLogged * 7) : workouts;
+        
+        String calorieLineEn = adjustedCalories > 0
+                ? String.format("- Tighten calories from %.0f → ~%.0f kcal (10-12%% drop) for the next 10-14 days.\n", baseCalories, adjustedCalories)
+                : "- Trim an additional 150-200 kcal from your current intake for the next 10-14 days.\n";
+        String macroLineEn = adjustedCalories > 0
+                ? String.format("- Macros example: Protein %.0f g | Carbs ~%.0f g | Fats ~%.0f g.\n", proteinTarget, carbs, fats)
+                : String.format("- Keep protein near %.0f g/day; split remaining calories 40%% carbs / 25%% fats.\n", proteinTarget);
+        
+        String calorieLineVi = adjustedCalories > 0
+                ? String.format("- Giảm calo từ %.0f → ~%.0f kcal (10-12%%) trong 10-14 ngày tới.\n", baseCalories, adjustedCalories)
+                : "- Giảm thêm 150-200 kcal mỗi ngày trong 10-14 ngày tới.\n";
+        String macroLineVi = adjustedCalories > 0
+                ? String.format("- Gợi ý macro: Đạm %.0f g | Carb ~%.0f g | Chất béo ~%.0f g.\n", proteinTarget, carbs, fats)
+                : String.format("- Giữ đạm quanh %.0f g/ngày; carb 40%% và chất béo 25%% lượng calo còn lại.\n", proteinTarget);
+        
+        if ("vi".equals(language)) {
+            StringBuilder plan = new StringBuilder();
+            plan.append("KẾ HOẠCH PHÁ VỮNG PLATEAU GIẢM MỠ\n");
+            plan.append(String.format("Nhật ký gần đây: %d buổi tập/tuần ước tính, bước trung bình ~%.0f bước/ngày.\n\n",
+                    estWeeklyWorkouts, avgSteps));
+            plan.append("1. Điều chỉnh dinh dưỡng\n");
+            plan.append(calorieLineVi);
+            plan.append(macroLineVi);
+            plan.append("- Giữ 2 bữa ăn giống nhau mỗi ngày để dễ tracking; cân thực phẩm vào cuối tuần meal-prep.\n");
+            plan.append("- Thêm 1 bữa refeed nhỏ (tăng 250-300 kcal từ carb) sau 6 ngày deficit để hỗ trợ hormone.\n\n");
+            plan.append("2. Cập nhật tập luyện\n");
+            plan.append(String.format("- Hiện đang hoàn thành ~%d buổi/tuần; thêm 1 phiên cardio cường độ vừa (bike intervals 6 x 40\"/20\").\n", estWeeklyWorkouts));
+            plan.append("- Kết thúc buổi chân bằng sled push hoặc leg press drop-set 6 phút để nâng NEAT.\n");
+            plan.append(String.format("- Đặt mục tiêu ≥8.000 bước/ngày (hiện ~%.0f). Chia thành 10' đi bộ sau mỗi bữa chính.\n", avgSteps));
+            plan.append("- Ghi lại tải tạ chính mỗi tuần; nếu sức mạnh giảm >5%%, thêm 100 kcal trong ngày tập nặng.\n\n");
+            plan.append("3. Theo dõi & phục hồi\n");
+            plan.append("- Cân 3 buổi/tuần cùng giờ; nhập vào Weekly Progress để tôi đọc trend.\n");
+            plan.append("- Ngủ 7-9 giờ, chạy bài phục hồi ở trên nếu chân vẫn căng.\n");
+            plan.append("- Tự đánh giá stress/hunger 1-5 điểm trong Weekly Progress; nếu stress >4 hai tuần liên tiếp, giữ calo hiện tại thêm 3 ngày trước khi giảm tiếp.\n");
+            return plan.toString();
+        }
+        
+        StringBuilder plan = new StringBuilder();
+        plan.append("FAT-LOSS RESET PLAN\n");
+        plan.append(String.format("Recent data: about %d workouts/week and ~%.0f steps/day logged.\n\n",
+                estWeeklyWorkouts, avgSteps));
+        plan.append("1. Nutrition tune-up\n");
+        plan.append(calorieLineEn);
+        plan.append(macroLineEn);
+        plan.append("- Keep two anchor meals identical each day so tracking stays tight; weigh meal-prep portions on Sunday.\n");
+        plan.append("- Add one small refeed ( +250-300 kcal from carbs ) after six deficit days to keep hormones happy.\n\n");
+        plan.append("2. Training adjustments\n");
+        plan.append(String.format("- You're averaging ~%d sessions/week; add one moderate-intensity cardio finisher (bike or row 6 x 40\" fast / 20\" easy).\n", estWeeklyWorkouts));
+        plan.append("- End leg day with sled pushes or a 6-min leg-press drop set to elevate NEAT.\n");
+        plan.append(String.format("- Push daily steps to ≥8,000 (currently ~%.0f). Take a 10-min walk after each main meal.\n", avgSteps));
+        plan.append("- Track top-set loads weekly; if strength drops >5%%, feed an extra 100 kcal on heavy days.\n\n");
+        plan.append("3. Recovery + tracking\n");
+        plan.append("- Weigh in 3x/week at the same time; enter it in Weekly Progress so I can spot the trend.\n");
+        plan.append("- Sleep 7-9 h and run the recovery routine above if legs stay cranky.\n");
+        plan.append("- Rate stress/hunger (1-5) in Weekly Progress; if stress >4 for 2 weeks, hold calories steady for 3 days before another cut.\n");
+        return plan.toString();
+    }
+    
+    private double calculateAverageSleepHours(CoachContext context) {
+        if (context == null || context.getRecentWeeklyProgress() == null) {
+            return 0.0;
+        }
+        double total = 0.0;
+        int count = 0;
+        for (WeeklyProgressResponse entry : context.getRecentWeeklyProgress()) {
+            if (entry.getSleepHoursPerNightAverage() != null) {
+                total += entry.getSleepHoursPerNightAverage();
+                count++;
+            }
+        }
+        return count > 0 ? total / count : 0.0;
+    }
+    
+    private double calculateAverageSteps(List<DailyCheckInResponse> checkIns) {
+        if (checkIns == null || checkIns.isEmpty()) {
+            return 0.0;
+        }
+        double total = 0.0;
+        int count = 0;
+        for (DailyCheckInResponse entry : checkIns) {
+            if (entry.getSteps() != null && entry.getSteps() > 0) {
+                total += entry.getSteps();
+                count++;
+            }
+        }
+        return count > 0 ? total / count : 0.0;
+    }
+    
+    private int countRecentWorkouts(List<DailyCheckInResponse> checkIns) {
+        if (checkIns == null || checkIns.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (DailyCheckInResponse entry : checkIns) {
+            if (Boolean.TRUE.equals(entry.getWorkoutDone())) {
+                count++;
+            }
+        }
+        return count;
     }
     
     /**
