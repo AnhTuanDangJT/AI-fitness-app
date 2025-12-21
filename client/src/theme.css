@@ -58,10 +58,10 @@
                            -4px -4px 8px var(--neumorphism-light);
   
   /* Glassmorphism Shadows */
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.5),
-                  0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-glass-elevated: 0 16px 48px rgba(0, 0, 0, 0.6),
-                           0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-glass: 0 6px 18px rgba(0, 0, 0, 0.45),
+                  0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-glass-elevated: 0 12px 28px rgba(0, 0, 0, 0.5),
+                           0 4px 10px rgba(0, 0, 0, 0.35);
   
   /* Neon Glow Effects */
   --glow-neon-blue: 0 0 15px rgba(96, 175, 255, 0.6),
@@ -115,10 +115,10 @@
   --radius-full: 9999px;
   
   /* Blur Values */
-  --blur-sm: 10px;
-  --blur-md: 20px;
-  --blur-lg: 30px;
-  --blur-xl: 40px;
+  --blur-sm: 6px;
+  --blur-md: 12px;
+  --blur-lg: 18px;
+  --blur-xl: 26px;
 }
 
 /* Modern Font Import */
@@ -143,6 +143,30 @@
   -webkit-backdrop-filter: blur(var(--blur-lg));
   border: 1px solid var(--glass-border-medium);
   box-shadow: var(--shadow-glass-elevated);
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --blur-sm: 4px;
+    --blur-md: 8px;
+    --blur-lg: 12px;
+    --shadow-glass: 0 4px 12px rgba(0, 0, 0, 0.4),
+                    0 2px 4px rgba(0, 0, 0, 0.25);
+    --shadow-glass-elevated: 0 8px 20px rgba(0, 0, 0, 0.45),
+                             0 3px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --blur-sm: 2px;
+    --blur-md: 4px;
+    --blur-lg: 6px;
+    --shadow-glass: 0 3px 10px rgba(0, 0, 0, 0.35),
+                    0 1px 3px rgba(0, 0, 0, 0.25);
+    --shadow-glass-elevated: 0 6px 16px rgba(0, 0, 0, 0.4),
+                             0 2px 6px rgba(0, 0, 0, 0.3);
+  }
 }
 
 /* Neumorphism Utilities */

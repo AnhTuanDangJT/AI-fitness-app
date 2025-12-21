@@ -415,7 +415,35 @@
     "title": "Huấn luyện viên AI",
     "subtitle": "Trò chuyện với huấn luyện viên AI thể dục cá nhân của bạn",
     "clearChat": "Xóa cuộc trò chuyện",
-    "loading": "Đang tải..."
+    "loading": "Đang tải...",
+    "suggestions": {
+      "title": "Cần ý tưởng? Hãy thử các gợi ý dùng đúng từ khóa mà bot hiểu nhất:",
+      "workout": {
+        "label": "Kế hoạch tập gym 7 ngày",
+        "keywords": "Từ khóa: kế hoạch tập, push pull legs, gym",
+        "prompt": "Hãy tạo kế hoạch tập luyện 7 ngày theo split push/pull/legs. Tôi có thể tập 5 buổi mỗi tuần và có đầy đủ dụng cụ phòng gym."
+      },
+      "nutrition": {
+        "label": "Calo & macro mỗi ngày",
+        "keywords": "Từ khóa: calo, macro, mục tiêu protein",
+        "prompt": "Tôi nên ăn bao nhiêu calo và macro để giảm mỡ chậm? Tôi nặng 78 kg, tập 4 buổi/tuần và muốn ưu tiên lượng protein cao."
+      },
+      "recovery": {
+        "label": "Thói quen ngủ & phục hồi",
+        "keywords": "Từ khóa: phục hồi, ngủ, stress",
+        "prompt": "Gợi ý một kế hoạch phục hồi giúp cải thiện chất lượng giấc ngủ và giảm đau mỏi sau những buổi tập chân nặng."
+      },
+      "meal": {
+        "label": "Gợi ý bữa ăn cho ngày mai",
+        "keywords": "Từ khóa: meal plan, bữa sáng trưa tối",
+        "prompt": "Đưa cho tôi các ý tưởng bữa ăn lành mạnh cho ngày mai theo hướng low-carb và mỗi bữa đều có protein."
+      },
+      "app": {
+        "label": "Cách dùng ứng dụng",
+        "keywords": "Từ khóa: tạo kế hoạch bữa ăn, cập nhật hồ sơ, grocery list",
+        "prompt": "Làm thế nào để tạo kế hoạch bữa ăn hàng tuần, xem danh sách mua sắm và cập nhật thông tin hồ sơ trong ứng dụng?"
+      }
+    }
   },
   "gamification": {
     "level": "Cấp {{level}}",

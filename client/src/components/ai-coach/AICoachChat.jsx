@@ -32,6 +32,39 @@ function AICoachChat({ userId, onClearChat }) {
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
   const hasInitializedRef = useRef(false)
+  const inputRef = useRef(null)
+  const suggestionPresets = React.useMemo(() => ([
+    {
+      id: 'workout',
+      label: t('aiCoach.suggestions.workout.label'),
+      hint: t('aiCoach.suggestions.workout.keywords'),
+      prompt: t('aiCoach.suggestions.workout.prompt')
+    },
+    {
+      id: 'nutrition',
+      label: t('aiCoach.suggestions.nutrition.label'),
+      hint: t('aiCoach.suggestions.nutrition.keywords'),
+      prompt: t('aiCoach.suggestions.nutrition.prompt')
+    },
+    {
+      id: 'recovery',
+      label: t('aiCoach.suggestions.recovery.label'),
+      hint: t('aiCoach.suggestions.recovery.keywords'),
+      prompt: t('aiCoach.suggestions.recovery.prompt')
+    },
+    {
+      id: 'meal',
+      label: t('aiCoach.suggestions.meal.label'),
+      hint: t('aiCoach.suggestions.meal.keywords'),
+      prompt: t('aiCoach.suggestions.meal.prompt')
+    },
+    {
+      id: 'app',
+      label: t('aiCoach.suggestions.app.label'),
+      hint: t('aiCoach.suggestions.app.keywords'),
+      prompt: t('aiCoach.suggestions.app.prompt')
+    }
+  ]), [t])
 
   // Load chat history and gamification status on mount
   useEffect(() => {
@@ -315,6 +348,12 @@ function AICoachChat({ userId, onClearChat }) {
     }
   }
 
+  const handleSuggestionClick = (prompt) => {
+    if (loading) return
+    setInputMessage(prompt)
+    inputRef.current?.focus()
+  }
+
   return (
     <div className="ai-coach-chat">
       {/* Messages Container */}
@@ -365,6 +404,27 @@ function AICoachChat({ userId, onClearChat }) {
         </div>
       )}
 
+      {/* Suggested prompts */}
+      {!error && (
+        <div className="chat-suggestions">
+          <div className="suggestions-title">{t('aiCoach.suggestions.title')}</div>
+          <div className="suggestion-chip-grid">
+            {suggestionPresets.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="suggestion-chip"
+                onClick={() => handleSuggestionClick(item.prompt)}
+                disabled={loading}
+              >
+                <span className="chip-label">{item.label}</span>
+                <span className="chip-hint">{item.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
       <form className="chat-input-form" onSubmit={handleSend}>
         <input
@@ -375,6 +435,7 @@ function AICoachChat({ userId, onClearChat }) {
           onChange={(e) => setInputMessage(e.target.value)}
           onKeyPress={handleKeyPress}
           disabled={loading}
+          ref={inputRef}
         />
         <button
           type="submit"

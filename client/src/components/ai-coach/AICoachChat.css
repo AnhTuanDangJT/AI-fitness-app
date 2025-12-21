@@ -220,6 +220,73 @@
   font-size: 13px;
 }
 
+/* Suggestions */
+.chat-suggestions {
+  padding: 12px 16px 8px;
+  border-top: 1px solid rgba(96, 175, 255, 0.15);
+  border-bottom: 1px solid rgba(96, 175, 255, 0.1);
+  background: rgba(9, 12, 16, 0.35);
+}
+
+.suggestions-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(232, 234, 241, 0.7);
+  margin-bottom: 8px;
+}
+
+.suggestion-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-chip {
+  flex: 1 1 180px;
+  min-width: 160px;
+  max-width: 220px;
+  padding: 10px 12px;
+  background: rgba(110, 231, 255, 0.08);
+  border: 1px solid rgba(110, 231, 255, 0.2);
+  border-radius: 10px;
+  text-align: left;
+  color: #e8eaf1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.suggestion-chip:hover:not(:disabled) {
+  background: rgba(110, 231, 255, 0.15);
+  border-color: rgba(110, 231, 255, 0.4);
+  box-shadow: 0 6px 14px rgba(18, 194, 233, 0.2);
+}
+
+.suggestion-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chip-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chip-hint {
+  font-size: 11px;
+  color: rgba(232, 234, 241, 0.7);
+}
+
+@media (max-width: 768px) {
+  .suggestion-chip {
+    flex: 1 1 100%;
+  }
+}
+
 .retry-button {
   padding: 6px 12px;
   background: rgba(255, 87, 87, 0.2);

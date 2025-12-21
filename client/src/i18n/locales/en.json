@@ -415,7 +415,35 @@
     "title": "AI Coach",
     "subtitle": "Chat with your personal AI fitness coach",
     "clearChat": "Clear Chat",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "suggestions": {
+      "title": "Need ideas? These prompts use keywords the coach understands best:",
+      "workout": {
+        "label": "7-day gym workout plan",
+        "keywords": "Keywords: workout plan, push pull legs, strength",
+        "prompt": "Create a 7-day gym workout plan using push/pull/legs split. I can train 5 times per week and I have access to a full gym."
+      },
+      "nutrition": {
+        "label": "Daily calorie & macro target",
+        "keywords": "Keywords: calories, macros, protein goal",
+        "prompt": "How many calories and macros should I eat to lose fat slowly? I weigh 78 kg, train 4x/week, and want a high-protein target."
+      },
+      "recovery": {
+        "label": "Sleep & recovery routine",
+        "keywords": "Keywords: recovery, sleep, stress",
+        "prompt": "Suggest a recovery plan to improve sleep quality and reduce soreness after heavy leg days."
+      },
+      "meal": {
+        "label": "Tomorrow's meal ideas",
+        "keywords": "Keywords: meal plan, breakfast lunch dinner",
+        "prompt": "Give me healthy meal ideas for tomorrow that match a low-carb preference and include protein with every meal."
+      },
+      "app": {
+        "label": "How to use the app",
+        "keywords": "Keywords: generate meal plan, update profile, grocery list",
+        "prompt": "How do I generate a weekly meal plan, view the grocery list, and update my profile information in the app?"
+      }
+    }
   },
   "gamification": {
     "level": "Level {{level}}",
