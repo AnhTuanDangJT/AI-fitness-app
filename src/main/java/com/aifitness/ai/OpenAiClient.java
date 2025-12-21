@@ -181,6 +181,13 @@ public class OpenAiClient {
             throw new RuntimeException("Failed to call OpenAI API: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Indicates if the AI client can be used (API key configured).
+     */
+    public boolean isEnabled() {
+        return aiConfig.isApiKeyConfigured();
+    }
 }
 
 

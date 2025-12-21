@@ -120,6 +120,12 @@ public class MealPlanService {
         // Create meal plan (save first to get ID)
         MealPlan mealPlan = new MealPlan(user, startDate);
         mealPlan = mealPlanRepository.save(mealPlan);
+
+        // Skip AI generation entirely if the API key isn't configured.
+        if (!openAiClient.isEnabled()) {
+            System.out.println("AI API key not configured — using rule-based meal plan fallback.");
+            return generateWeeklyMealPlanForUserFallback(user, startDate);
+        }
         
         try {
             // Calculate nutrition targets
