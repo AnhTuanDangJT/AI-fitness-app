@@ -29,6 +29,7 @@ function AICoachChat({ userId, onClearChat }) {
   const [gamificationStatus, setGamificationStatus] = useState(null)
   const [previousStreak, setPreviousStreak] = useState(null)
   const [previousBadges, setPreviousBadges] = useState(null)
+  const [suggestionsOpen, setSuggestionsOpen] = useState(true)
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
   const hasInitializedRef = useRef(false)
@@ -442,22 +443,34 @@ function AICoachChat({ userId, onClearChat }) {
 
       {/* Suggested prompts */}
       {!error && (
-        <div className="chat-suggestions">
-          <div className="suggestions-title">{t('aiCoach.suggestions.title')}</div>
-          <div className="suggestion-chip-grid">
-            {suggestionPresets.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="suggestion-chip"
-                onClick={() => handleSuggestionClick(item.prompt)}
-                disabled={loading}
-              >
-                <span className="chip-label">{item.label}</span>
-                <span className="chip-hint">{item.hint}</span>
-              </button>
-            ))}
+        <div className={`chat-suggestions ${suggestionsOpen ? 'expanded' : 'collapsed'}`}>
+          <div className="suggestions-header">
+            <div className="suggestions-title">{t('aiCoach.suggestions.title')}</div>
+            <button
+              type="button"
+              className="suggestions-toggle"
+              onClick={() => setSuggestionsOpen((prev) => !prev)}
+              aria-expanded={suggestionsOpen}
+            >
+              {suggestionsOpen ? t('aiCoach.suggestions.toggleHide') : t('aiCoach.suggestions.toggleShow')}
+            </button>
           </div>
+          {suggestionsOpen && (
+            <div className="suggestion-chip-row">
+              {suggestionPresets.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="suggestion-chip"
+                  onClick={() => handleSuggestionClick(item.prompt)}
+                  disabled={loading}
+                >
+                  <span className="chip-label">{item.label}</span>
+                  <span className="chip-hint">{item.hint}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

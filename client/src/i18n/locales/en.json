@@ -472,6 +472,8 @@
     "loading": "Loading...",
     "suggestions": {
       "title": "Need ideas? These prompts use keywords the coach understands best:",
+      "toggleShow": "Show suggestions",
+      "toggleHide": "Hide suggestions",
       "workout": {
         "label": "7-day gym workout plan",
         "keywords": "Keywords: workout plan, push pull legs, strength",

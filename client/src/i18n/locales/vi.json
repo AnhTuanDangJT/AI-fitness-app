@@ -472,6 +472,8 @@
     "loading": "Đang tải...",
     "suggestions": {
       "title": "Cần ý tưởng? Hãy thử các gợi ý dùng đúng từ khóa mà bot hiểu nhất:",
+      "toggleShow": "Hiện gợi ý",
+      "toggleHide": "Ẩn gợi ý",
       "workout": {
         "label": "Kế hoạch tập gym 7 ngày",
         "keywords": "Từ khóa: kế hoạch tập, push pull legs, gym",
