@@ -14,6 +14,20 @@ import AchievementsModal from '../components/AchievementsModal'
 import MealPreferencesModal from '../components/MealPreferencesModal'
 import './Dashboard.css'
 
+const BMI_CATEGORY_TRANSLATIONS = {
+  'Underweight': 'dashboard.underweight',
+  'Normal': 'dashboard.normal',
+  'Overweight': 'dashboard.overweight',
+  'Obese (Class I)': 'dashboard.obeseClassI',
+  'Obese (Class II)': 'dashboard.obeseClassII',
+  'Obese (Class III)': 'dashboard.obeseClassIII'
+}
+
+const WHR_RISK_TRANSLATIONS = {
+  'Good condition': 'dashboard.goodCondition',
+  'At risk': 'dashboard.atRisk'
+}
+
 function Dashboard() {
   const { t, i18n } = useTranslation()
   const [analysis, setAnalysis] = useState(null)
@@ -318,6 +332,16 @@ function Dashboard() {
     )
   }
 
+  const notAvailableLabel = t('dashboard.notAvailable')
+  const getLocalizedCategoricalValue = (value, map) => {
+    if (!value) return notAvailableLabel
+    const translationKey = map[value]
+    return translationKey ? t(translationKey) : value
+  }
+  const bmiCategoryLabel = getLocalizedCategoricalValue(analysis.bmiCategory, BMI_CATEGORY_TRANSLATIONS)
+  const whrRiskLabel = getLocalizedCategoricalValue(analysis.whrRisk, WHR_RISK_TRANSLATIONS)
+  const isWhrGoodCondition = analysis.whrRisk === 'Good condition'
+
   const bmiValue = (() => {
     if (analysis?.bmi === null || analysis?.bmi === undefined) return null
     if (typeof analysis.bmi === 'number' && Number.isFinite(analysis.bmi)) {
@@ -509,16 +533,16 @@ function Dashboard() {
               <div className="stats-tab-content">
                 {activeStatTab === 'BMI' && (
                   <div className="stat-card primary">
-                    <div className="stat-label">BMI</div>
-                    <div className="stat-value">{analysis.bmi ? analysis.bmi.toFixed(1) : 'N/A'}</div>
-                    <div className="stat-category">{analysis.bmiCategory || 'N/A'}</div>
+                    <div className="stat-label">{t('dashboard.bmiValue')}</div>
+                    <div className="stat-value">{analysis.bmi ? analysis.bmi.toFixed(1) : notAvailableLabel}</div>
+                    <div className="stat-category">{bmiCategoryLabel}</div>
                   </div>
                 )}
                 {activeStatTab === 'WHR' && (
                   <div className="stat-card secondary">
-                    <div className="stat-label">WHR</div>
-                    <div className="stat-value">{analysis.whr ? analysis.whr.toFixed(2) : 'N/A'}</div>
-                    <div className="stat-category">{analysis.whrRisk || 'N/A'}</div>
+                    <div className="stat-label">{t('dashboard.whrValue')}</div>
+                    <div className="stat-value">{analysis.whr ? analysis.whr.toFixed(2) : notAvailableLabel}</div>
+                    <div className="stat-category">{whrRiskLabel}</div>
                   </div>
                 )}
               </div>
@@ -561,10 +585,10 @@ function Dashboard() {
             <div className="metric-card bmi">
               <div className="metric-header">
                 <h3>{t('dashboard.yourBMI')}</h3>
-                <div className="bmi-value">{analysis.bmi ? analysis.bmi.toFixed(1) : 'N/A'}</div>
+                <div className="bmi-value">{analysis.bmi ? analysis.bmi.toFixed(1) : notAvailableLabel}</div>
               </div>
               <div className="metric-body">
-                <div className="category-badge">{analysis.bmiCategory || 'N/A'}</div>
+                <div className="category-badge">{bmiCategoryLabel}</div>
                 <div className="bmi-bar">
                   <div className="bmi-bar-track">
                     {BMI_SEGMENTS.map((segment) => (
@@ -602,14 +626,14 @@ function Dashboard() {
             <div className="metric-card whr">
               <div className="metric-header">
                 <h3>{t('dashboard.yourWHR')}</h3>
-                <div className="whr-value">{analysis.whr ? analysis.whr.toFixed(2) : 'N/A'}</div>
+                <div className="whr-value">{analysis.whr ? analysis.whr.toFixed(2) : notAvailableLabel}</div>
               </div>
               <div className="metric-body">
-                <div className={`risk-badge ${analysis.whrRisk === 'Good condition' ? 'good' : 'risk'}`}>
-                  {analysis.whrRisk || 'N/A'}
+                <div className={`risk-badge ${isWhrGoodCondition ? 'good' : 'risk'}`}>
+                  {whrRiskLabel}
                 </div>
                 <p className="risk-interpretation">
-                  {analysis.whrRisk === 'Good condition' 
+                  {isWhrGoodCondition 
                     ? t('dashboard.whrGoodCondition')
                     : t('dashboard.whrAtRisk')}
                 </p>
@@ -628,19 +652,19 @@ function Dashboard() {
               <div className="energy-grid">
                 <div className="energy-card">
                   <div className="energy-label">{t('dashboard.bmr')}</div>
-                  <div className="energy-value">{analysis.bmr ? Math.round(analysis.bmr) : 'N/A'}</div>
+                  <div className="energy-value">{analysis.bmr ? Math.round(analysis.bmr) : notAvailableLabel}</div>
                   <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
                   <div className="energy-description">{t('dashboard.bmrDescription')}</div>
                 </div>
                 <div className="energy-card">
                   <div className="energy-label">{t('dashboard.tdee')}</div>
-                  <div className="energy-value">{analysis.tdee ? Math.round(analysis.tdee) : 'N/A'}</div>
+                  <div className="energy-value">{analysis.tdee ? Math.round(analysis.tdee) : notAvailableLabel}</div>
                   <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
                   <div className="energy-description">{t('dashboard.tdeeDescription')}</div>
                 </div>
                 <div className="energy-card highlight">
                   <div className="energy-label">{t('dashboard.goalCalories')}</div>
-                  <div className="energy-value">{analysis.goalCalories ? Math.round(analysis.goalCalories) : 'N/A'}</div>
+                  <div className="energy-value">{analysis.goalCalories ? Math.round(analysis.goalCalories) : notAvailableLabel}</div>
                   <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
                   <div className="energy-description">{t('dashboard.goalCaloriesDescription')}</div>
                 </div>
@@ -653,7 +677,7 @@ function Dashboard() {
               <div className="protein-card">
                 <div className="protein-header">
                   <h3>{t('dashboard.dailyProteinTarget')}</h3>
-                  <div className="protein-value">{analysis.proteinTarget ? Math.round(analysis.proteinTarget) : 'N/A'}</div>
+                  <div className="protein-value">{analysis.proteinTarget ? Math.round(analysis.proteinTarget) : notAvailableLabel}</div>
                   <div className="protein-unit">{t('dashboard.gramsPerDay')}</div>
                 </div>
                 <div className="protein-body">

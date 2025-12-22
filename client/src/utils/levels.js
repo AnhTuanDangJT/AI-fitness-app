@@ -20,17 +20,17 @@ export function calculateLevel(xp) {
  * Get title based on level
  * 
  * @param {number} level - Current level
- * @returns {string} Title
+ * @returns {string} Title translation key
  */
 export function getTitle(level) {
   if (level <= 1) {
-    return 'Beginner'
+    return 'beginner'
   } else if (level >= 2 && level <= 4) {
-    return 'Consistent'
+    return 'consistent'
   } else if (level >= 5 && level <= 9) {
-    return 'Disciplined'
+    return 'disciplined'
   } else {
-    return 'Elite'
+    return 'elite'
   }
 }
 
@@ -38,7 +38,7 @@ export function getTitle(level) {
  * Get title from XP (convenience function)
  * 
  * @param {number} xp - Current XP value
- * @returns {string} Title
+ * @returns {string} Title translation key
  */
 export function getTitleFromXP(xp) {
   const level = calculateLevel(xp)

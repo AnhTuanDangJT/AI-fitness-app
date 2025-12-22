@@ -227,6 +227,14 @@
     "years": "years",
     "gramsPerMeal": "g/meal",
     "kcalShort": "kcal",
+    "notAvailable": "N/A",
+    "levelLabel": "Level {{level}}",
+    "xpUnit": "XP",
+    "streakLabel": "Streak",
+    "daySingular": "day",
+    "dayPlural": "days",
+    "caloriesLabel": "Calories",
+    "proteinLabel": "Protein",
     "fitnessProfile": "Your Fitness Profile",
     "fitnessProfileName": "{{name}}'s Fitness Profile",
     "generatedOn": "Generated on {{date}}",
@@ -242,6 +250,9 @@
     "macroDataMissing": "Log your weight to unlock a personalized macro chart.",
     "lifestyleSummary": "{{activity}} habits support your {{goal}} goal.",
     "lifestyleSummaryFallback": "Add more metrics to unlock personalized lifestyle coaching.",
+    "obeseClassI": "Obese (Class I)",
+    "obeseClassII": "Obese (Class II)",
+    "obeseClassIII": "Obese (Class III)",
     "activityLevels": {
       "sedentary": "Sedentary (little exercise)",
       "lightlyActive": "Lightly active (1-2 workouts/week)",
@@ -254,6 +265,14 @@
       "maintain": "Maintain weight",
       "gainMuscle": "Gain muscle",
       "recomp": "Gain muscle & lose fat"
+    }
+  },
+  "levels": {
+    "titles": {
+      "beginner": "Beginner",
+      "consistent": "Consistent",
+      "disciplined": "Disciplined",
+      "elite": "Elite"
     }
   },
   "auth": {

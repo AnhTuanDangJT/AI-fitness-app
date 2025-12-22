@@ -227,6 +227,14 @@
     "years": "tuổi",
     "gramsPerMeal": "g/bữa",
     "kcalShort": "kcal",
+    "notAvailable": "Không có",
+    "levelLabel": "Cấp {{level}}",
+    "xpUnit": "XP",
+    "streakLabel": "Chuỗi ngày",
+    "daySingular": "ngày",
+    "dayPlural": "ngày",
+    "caloriesLabel": "Calo",
+    "proteinLabel": "Protein",
     "fitnessProfile": "Hồ sơ thể dục của bạn",
     "fitnessProfileName": "Hồ sơ thể dục của {{name}}",
     "generatedOn": "Được tạo vào {{date}}",
@@ -242,6 +250,9 @@
     "macroDataMissing": "Hãy nhập cân nặng để xem biểu đồ macro cá nhân hóa.",
     "lifestyleSummary": "Thói quen {{activity}} đang hỗ trợ mục tiêu {{goal}} của bạn.",
     "lifestyleSummaryFallback": "Thêm dữ liệu để nhận hướng dẫn lối sống cá nhân hóa.",
+    "obeseClassI": "Béo phì (Độ I)",
+    "obeseClassII": "Béo phì (Độ II)",
+    "obeseClassIII": "Béo phì (Độ III)",
     "activityLevels": {
       "sedentary": "Ít vận động (hiếm khi tập)",
       "lightlyActive": "Hoạt động nhẹ (1-2 buổi/tuần)",
@@ -254,6 +265,14 @@
       "maintain": "Duy trì cân nặng",
       "gainMuscle": "Tăng cơ",
       "recomp": "Tăng cơ & giảm mỡ"
+    }
+  },
+  "levels": {
+    "titles": {
+      "beginner": "Người mới",
+      "consistent": "Ổn định",
+      "disciplined": "Kỷ luật",
+      "elite": "Tinh nhuệ"
     }
   },
   "auth": {

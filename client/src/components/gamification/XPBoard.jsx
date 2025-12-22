@@ -19,7 +19,8 @@ import '@/styles/gamification/xpBoard.css'
 function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails }) {
   const { t } = useTranslation()
   const level = calculateLevel(xp)
-  const title = getTitle(level)
+  const titleKey = getTitle(level)
+  const levelTitle = t(`levels.titles.${titleKey}`, { defaultValue: titleKey })
   const xpInLevel = xp % 100
   const progressPercent = (xpInLevel / 100) * 100
 
@@ -34,7 +35,7 @@ function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails }) {
       <div className="xp-header">
         <div>
           <span className="xp-level">{t('gamification.level', { level })}</span>
-          <span className="xp-title">{title}</span>
+          <span className="xp-title">{levelTitle}</span>
         </div>
         <div className="xp-streak">
           🔥 {currentStreakDays || 0}
