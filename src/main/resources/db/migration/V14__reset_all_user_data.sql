@@ -27,3 +27,8 @@ DELETE FROM users;
 -- Update the JWT_SECRET environment variable or application.properties to a new value
 
 
+
+
+
+
+

@@ -6,3 +6,8 @@ ALTER TABLE users ADD COLUMN verification_attempts INTEGER NOT NULL DEFAULT 0;
 
 
 
+
+
+
+
+

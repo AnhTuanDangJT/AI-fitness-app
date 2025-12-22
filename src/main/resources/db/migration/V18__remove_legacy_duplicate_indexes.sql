@@ -23,3 +23,8 @@ CREATE INDEX IF NOT EXISTS idx_daily_checkins_user_created
 CREATE INDEX IF NOT EXISTS idx_gamification_events_user_created
     ON gamification_events (user_id, created_at);
 
+
+
+
+
+

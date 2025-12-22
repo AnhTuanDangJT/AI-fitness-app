@@ -38,7 +38,7 @@ function ProfilePage() {
     try {
       setDownloading(true)
       setError(null)
-
+      
       // Use central API client so relative /api proxy + auth headers are handled automatically
       const { data: apiResponse } = await api.get('/profile/export')
       if (!apiResponse?.success || !apiResponse?.data) {

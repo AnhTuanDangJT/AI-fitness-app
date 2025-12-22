@@ -37,3 +37,8 @@ CREATE INDEX IF NOT EXISTS idx_meal_plans_user_created ON meal_plans(user_id, cr
 CREATE INDEX IF NOT EXISTS idx_daily_checkins_user_created ON daily_checkins(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_gamification_events_user_created ON gamification_events(user_id, created_at);
 
+
+
+
+
+

@@ -197,6 +197,112 @@ public class AiCoachService {
     }
     
     private static final Logger logger = LoggerFactory.getLogger(AiCoachService.class);
+
+    private static final class KeywordIntentAnswer {
+        private final String name;
+        private final List<String> keywords;
+        private final String answerEn;
+        private final String answerVi;
+
+        private KeywordIntentAnswer(String name, List<String> keywords, String answerEn, String answerVi) {
+            this.name = name;
+            this.keywords = keywords;
+            this.answerEn = answerEn;
+            this.answerVi = answerVi;
+        }
+
+        private boolean matches(String message) {
+            int matches = 0;
+            for (String keyword : keywords) {
+                if (message.contains(keyword)) {
+                    matches++;
+                }
+            }
+            if (keywords.size() <= 2) {
+                return matches >= 1;
+            }
+            return matches >= Math.min(2, keywords.size());
+        }
+
+        private String getAnswer(String language) {
+            return "vi".equals(language) ? answerVi : answerEn;
+        }
+    }
+
+    private static final List<KeywordIntentAnswer> KEYWORD_QA_LIBRARY = List.of(
+        new KeywordIntentAnswer(
+            "fat_loss",
+            List.of("fat loss", "lose fat", "burn fat", "cut calories", "giảm mỡ", "giảm cân"),
+            "For fat loss, focus on high-protein and low-calorie meals. A simple day is eggs with oats at breakfast, grilled chicken salad at lunch, and fish with vegetables at dinner. Mediterranean and Japanese cuisine templates keep the calories clean while protecting muscle.",
+            "Để giảm mỡ, hãy ưu tiên bữa ăn giàu protein nhưng ít calo. Một ngày lý tưởng là trứng và yến mạch buổi sáng, salad gà nướng buổi trưa và cá với rau củ buổi tối. Ẩm thực Địa Trung Hải và Nhật Bản giúp ăn sạch, giữ cơ và tạo thâm hụt calo ổn định."
+        ),
+        new KeywordIntentAnswer(
+            "muscle_gain",
+            List.of("muscle gain", "bulking", "build muscle", "gym meals", "tăng cơ", "tăng cân"),
+            "A muscle-building plan prioritizes protein plus quality carbohydrates. Start with eggs and oats for breakfast, move to chicken with rice for lunch, and finish with salmon or lean beef with vegetables at dinner. Portion-controlled Italian or Mexican meals fit perfectly.",
+            "Kế hoạch tăng cơ cần nhiều protein kèm carb chất lượng. Hãy ăn trứng và yến mạch buổi sáng, gà với cơm buổi trưa và cá hồi hoặc thịt nạc với rau buổi tối. Ẩm thực Ý hoặc Mexico khi kiểm soát khẩu phần sẽ hỗ trợ mục tiêu tăng cơ rất tốt."
+        ),
+        new KeywordIntentAnswer(
+            "vegetarian",
+            List.of("vegetarian", "plant protein", "eat plant", "ăn chay", "thuần chay", "vegan"),
+            "Vegetarian protein is easy to hit with lentils, tofu, chickpeas, beans, dairy, and eggs. Build meals such as lentil curry, tofu stir-fries, chickpea salads, and oatmeal with fruits to cover both protein and fiber.",
+            "Bạn hoàn toàn có thể đủ protein khi ăn chay nhờ đậu lăng, đậu hũ, đậu gà, các loại đậu, sữa hoặc trứng. Hãy xoay vòng các món như cà ri đậu lăng, đậu hũ xào rau, salad đậu gà và cháo yến mạch với trái cây để vừa đủ đạm vừa giàu chất xơ."
+        ),
+        new KeywordIntentAnswer(
+            "home_workout",
+            List.of("home workout", "workout at home", "no gym", "bodyweight", "tập tại nhà", "không gym"),
+            "Home workouts still need balanced meals. Eat protein for recovery and moderate carbs for energy: think eggs, rice, lentils, fish, and vegetables. Consistency matters more than special recipes.",
+            "Tập tại nhà vẫn cần dinh dưỡng cân bằng. Hãy ăn đủ protein để phục hồi và carb vừa phải để có năng lượng—ví dụ trứng, cơm, đậu lăng, cá và rau củ. Không cần món phức tạp, sự đều đặn mới là chìa khóa."
+        ),
+        new KeywordIntentAnswer(
+            "budget",
+            List.of("budget", "cheap meals", "student", "low budget", "tiết kiệm", "học sinh"),
+            "Stretch your budget with eggs, oats, rice, lentils, beans, frozen vegetables, and chicken thighs. They are affordable, filling, and hit every macro you need.",
+            "Để tiết kiệm chi phí, hãy ưu tiên trứng, yến mạch, cơm, đậu lăng, các loại đậu, rau đông lạnh và đùi gà. Tất cả đều rẻ, no lâu và đủ dinh dưỡng cho cả giảm mỡ lẫn tăng cơ."
+        ),
+        new KeywordIntentAnswer(
+            "cuisine_preference",
+            List.of("which cuisine", "best cuisine", "healthy cuisine", "ẩm thực nào", "nên ăn ẩm thực"),
+            "Mediterranean and Japanese cuisines rank best for long-term health because they emphasize whole foods, lean proteins, healthy fats, and minimal processing.",
+            "Ẩm thực Địa Trung Hải và Nhật Bản là lựa chọn lành mạnh nhất: nhiều thực phẩm nguyên chất, giàu protein nạc, chất béo tốt và rất ít chế biến."
+        ),
+        new KeywordIntentAnswer(
+            "daily_plan",
+            List.of("daily meal plan", "eat today", "what should i eat", "hôm nay ăn gì", "suất ăn hôm nay"),
+            "Here is a balanced template for today: Breakfast - eggs with oats. Lunch - chicken with rice and vegetables. Dinner - fish with vegetables. It keeps calories organized while fueling training.",
+            "Lịch ăn gợi ý cho hôm nay: Bữa sáng trứng với yến mạch, bữa trưa gà cùng cơm và rau, bữa tối cá với rau củ. Công thức này giúp quản lý calo, đủ năng lượng tập luyện và phục hồi."
+        ),
+        new KeywordIntentAnswer(
+            "busy",
+            List.of("busy", "no time", "quick meals", "bận rộn", "ít thời gian"),
+            "When time is tight, rely on fast staples: boiled eggs, oatmeal, grilled chicken, ready-to-heat rice, yogurt, fruit, and frozen vegetables. Each takes minutes yet keeps macros on target.",
+            "Khi quá bận rộn, hãy dùng các món siêu nhanh: trứng luộc, yến mạch, gà nướng sẵn, cơm hâm nóng, sữa chua, trái cây và rau đông lạnh. Chuẩn bị vài phút nhưng vẫn đủ dinh dưỡng."
+        ),
+        new KeywordIntentAnswer(
+            "plateau",
+            List.of("plateau", "stuck weight", "not losing weight", "đứng cân", "không giảm cân"),
+            "Plateaus usually come from hidden calories, loose tracking, or low protein. Increase protein, tighten portions, and stay consistent for 2–3 more weeks before changing calories.",
+            "Việc đứng cân thường do calo ẩn, ghi chép chưa chuẩn hoặc thiếu protein. Hãy tăng lượng đạm, kiểm soát khẩu phần chặt chẽ và giữ thói quen thêm 2–3 tuần trước khi giảm calo sâu hơn."
+        ),
+        new KeywordIntentAnswer(
+            "substitution",
+            List.of("replace", "substitute", "đổi món", "không thích gà", "thay gà"),
+            "Swap chicken for fish, eggs, tofu, lentils, lean beef, or Greek yogurt—any protein that helps you hit your target works.",
+            "Bạn có thể thay gà bằng cá, trứng, đậu hũ, đậu lăng, thịt bò nạc hoặc sữa chua Hy Lạp. Quan trọng là tổng lượng đạm đạt mục tiêu chứ không phải một thực phẩm cố định."
+        ),
+        new KeywordIntentAnswer(
+            "late_night",
+            List.of("late night", "eat at night", "before bed", "ăn đêm", "ăn khuya"),
+            "Yes, you can eat at night. Keep it light and protein-focused—Greek yogurt, eggs, or tofu—to avoid excess calories while still supporting recovery.",
+            "Bạn có thể ăn khuya, chỉ cần chọn món nhẹ và giàu protein như sữa chua Hy Lạp, trứng hoặc đậu hũ để không dư calo mà vẫn phục hồi tốt."
+        ),
+        new KeywordIntentAnswer(
+            "reassurance",
+            List.of("is this healthy", "is this good", "ổn không", "được không"),
+            "Yes—this meal supports your goal because it delivers enough protein, balanced carbohydrates, and healthy fats for performance and recovery.",
+            "Có. Bữa ăn này phù hợp mục tiêu vì cung cấp đủ protein, carb cân đối và chất béo lành mạnh để hỗ trợ hiệu suất cũng như phục hồi."
+        )
+    );
     
     private final WeeklyProgressService weeklyProgressService;
     private final DailyCheckInService dailyCheckInService;
@@ -1112,6 +1218,11 @@ public class AiCoachService {
      */
     private String processIntentBasedRouting(User user, String message, CoachContext context, String language) {
         String lowerMessage = message.toLowerCase().trim();
+
+        String qaAnswer = respondWithKeywordQa(lowerMessage, language);
+        if (qaAnswer != null) {
+            return qaAnswer;
+        }
         
         // INTENT: "how many protein" or similar protein queries
         if ((lowerMessage.contains("how many") || lowerMessage.contains("how much") || 
@@ -1376,6 +1487,15 @@ public class AiCoachService {
         }
         
         // No specific intent matched
+        return null;
+    }
+
+    private String respondWithKeywordQa(String lowerMessage, String language) {
+        for (KeywordIntentAnswer qa : KEYWORD_QA_LIBRARY) {
+            if (qa.matches(lowerMessage)) {
+                return qa.getAnswer(language);
+            }
+        }
         return null;
     }
     

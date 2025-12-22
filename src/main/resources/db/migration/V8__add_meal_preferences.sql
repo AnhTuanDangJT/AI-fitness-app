@@ -11,3 +11,8 @@ ALTER TABLE users ADD COLUMN favorite_cuisines VARCHAR(500);
 
 
 
+
+
+
+
+

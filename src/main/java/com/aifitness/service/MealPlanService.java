@@ -1,6 +1,9 @@
 package com.aifitness.service;
 
 import com.aifitness.ai.OpenAiClient;
+import com.aifitness.ai.data.GlobalCuisineKnowledgeBase;
+import com.aifitness.ai.data.GlobalCuisineKnowledgeBase.CuisineProfile;
+import com.aifitness.ai.data.GlobalCuisineKnowledgeBase.MealBlueprint;
 import com.aifitness.dto.DailyMacrosDTO;
 import com.aifitness.dto.DailyMealPlanDTO;
 import com.aifitness.dto.GroceryItem;
@@ -306,6 +309,18 @@ public class MealPlanService {
         
         prompt.append("\n");
         prompt.append("If you violate any rule, the output is INVALID.\n\n");
+
+        List<CuisineProfile> matchedProfiles = GlobalCuisineKnowledgeBase.matchCuisines(user.getFavoriteCuisines());
+        if (!matchedProfiles.isEmpty()) {
+            prompt.append("CURATED CUISINE BLUEPRINTS (STRICTLY FOLLOW WHEN USER REQUESTS THESE STYLES):\n");
+            prompt.append(GlobalCuisineKnowledgeBase.buildCuisinePromptSection(matchedProfiles));
+        } else {
+            prompt.append("GLOBAL CUISINE BLUEPRINTS YOU CAN DRAW FROM:\n");
+            prompt.append(GlobalCuisineKnowledgeBase.buildCuisinePromptSection(GlobalCuisineKnowledgeBase.getDefaultProfiles()));
+        }
+
+        prompt.append("INGREDIENT REASONING CHEAT SHEET:\n");
+        prompt.append(GlobalCuisineKnowledgeBase.buildIngredientLogicPrompt("en")).append("\n");
         
         prompt.append("OUTPUT FORMAT:\n");
         prompt.append("Return a JSON array with 7 days (Monday to Sunday), each day with 3 meals (BREAKFAST, LUNCH, DINNER).\n");
@@ -563,15 +578,15 @@ public class MealPlanService {
             LocalDate date = startDate.plusDays(day);
             mealPlan.addEntry(createPersonalizedEntry(
                 mealPlan, date, MealPlanEntry.BREAKFAST, macroTargets, mealSplit.get(MealPlanEntry.BREAKFAST),
-                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day));
+                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day, user.getFavoriteCuisines()));
             
             mealPlan.addEntry(createPersonalizedEntry(
                 mealPlan, date, MealPlanEntry.LUNCH, macroTargets, mealSplit.get(MealPlanEntry.LUNCH),
-                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day + 7));
+                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day + 7, user.getFavoriteCuisines()));
             
             mealPlan.addEntry(createPersonalizedEntry(
                 mealPlan, date, MealPlanEntry.DINNER, macroTargets, mealSplit.get(MealPlanEntry.DINNER),
-                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day + 14));
+                dietaryPreference, preferredFoods, dislikedFoods, cuisineKeywords, usedMeals, day + 14, user.getFavoriteCuisines()));
         }
         
         mealPlan = mealPlanRepository.save(mealPlan);
@@ -614,9 +629,18 @@ public class MealPlanService {
             Set<String> dislikedFoods,
             Set<String> cuisineKeywords,
             Set<String> usedMeals,
-            int rotationIndex) {
+            int rotationIndex,
+            String favoriteCuisinesRaw) {
         
+        List<MealOption> knowledgeMeals = getKnowledgeBaseMeals(mealType, favoriteCuisinesRaw, dietaryPreference);
         List<MealOption> options = getMealOptions(mealType, dietaryPreference, dislikedFoods, cuisineKeywords);
+        if (!knowledgeMeals.isEmpty()) {
+            // Knowledge-base meals always take priority while keeping duplicates out.
+            Map<String, MealOption> deduped = new LinkedHashMap<>();
+            knowledgeMeals.forEach(meal -> deduped.putIfAbsent(meal.name, meal));
+            options.forEach(meal -> deduped.putIfAbsent(meal.name, meal));
+            options = new ArrayList<>(deduped.values());
+        }
         if (options.isEmpty()) {
             options = getOmnivoreMeals(mealType);
         }
@@ -968,6 +992,28 @@ public class MealPlanService {
         return allOptions.stream()
                 .filter(meal -> !containsDislikedFood(meal.name, dislikedFoods))
                 .collect(Collectors.toList());
+    }
+
+    private List<MealOption> getKnowledgeBaseMeals(String mealType, String favoriteCuisinesRaw, String dietaryPreference) {
+        List<MealBlueprint> blueprints = GlobalCuisineKnowledgeBase.getMealsForKeywords(favoriteCuisinesRaw, mealType);
+        if ((blueprints == null || blueprints.isEmpty()) && dietaryPreference != null) {
+            blueprints = GlobalCuisineKnowledgeBase.getMealsForKeywords(dietaryPreference, mealType);
+        }
+        if (blueprints == null || blueprints.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<MealOption> options = new ArrayList<>();
+        for (MealBlueprint blueprint : blueprints) {
+            options.add(new MealOption(
+                    blueprint.getEnglishName(),
+                    blueprint.getCalories(),
+                    blueprint.getProtein(),
+                    blueprint.getCarbs(),
+                    blueprint.getFats(),
+                    blueprint.toIngredientsJson()
+            ));
+        }
+        return options;
     }
     
     /**
