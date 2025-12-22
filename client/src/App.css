@@ -10,3 +10,46 @@
   z-index: 1;
 }
 
+.page-back-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+
+.page-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border-medium, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-md, 12px);
+  color: var(--text-primary, #f8fafc);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all var(--transition-normal, 0.2s ease);
+  box-shadow: var(--shadow-neumorphic-outer, 0 6px 20px rgba(0, 0, 0, 0.25));
+}
+
+.page-back-button span {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.page-back-button:hover {
+  border-color: var(--glass-border-neon, rgba(96, 175, 255, 0.4));
+  background: linear-gradient(135deg, rgba(96, 175, 255, 0.12), rgba(110, 231, 255, 0.12));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-neumorphic-inner, inset 0 2px 6px rgba(255, 255, 255, 0.06)),
+              var(--glow-neon-blue, 0 0 12px rgba(96, 175, 255, 0.45));
+}
+
+.page-back-button:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-neumorphic-inner, inset 0 2px 6px rgba(0, 0, 0, 0.4));
+}
+

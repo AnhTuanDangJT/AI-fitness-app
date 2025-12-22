@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../services/api'
 import { invalidateGamificationCache } from '../services/gamificationApi'
 import { FORM_LABELS, FORM_PLACEHOLDERS, ACTIVITY_LEVELS, FITNESS_GOALS, GENDER_OPTIONS, DIETARY_PREFERENCES } from '../config/profileFormConfig'
@@ -8,6 +9,7 @@ import './EditProfile.css'
 
 function EditProfile() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -183,9 +185,23 @@ function EditProfile() {
     }
   }
 
+  const renderBackButton = () => (
+    <div className="page-back-row">
+      <button
+        type="button"
+        className="page-back-button"
+        onClick={() => navigate('/dashboard')}
+      >
+        <span>←</span>
+        {t('common.backToDashboard')}
+      </button>
+    </div>
+  )
+
   if (loadingProfile) {
     return (
       <div className="edit-profile-page">
+        {renderBackButton()}
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>{STATUS_MESSAGES.LOADING_PROFILE}</p>
@@ -197,6 +213,7 @@ function EditProfile() {
   if (!currentProfile) {
     return (
       <div className="edit-profile-page">
+        {renderBackButton()}
         <div className="error-container">
           <h2>{STATUS_MESSAGES.PROFILE_NOT_FOUND}</h2>
           <p>{STATUS_MESSAGES.PROFILE_SETUP_REQUIRED}</p>
@@ -210,6 +227,7 @@ function EditProfile() {
 
   return (
     <div className="edit-profile-page">
+      {renderBackButton()}
       <div className="edit-profile-container">
         <div className="edit-profile-header">
           <h1>{PAGE_TITLES.EDIT_PROFILE}</h1>

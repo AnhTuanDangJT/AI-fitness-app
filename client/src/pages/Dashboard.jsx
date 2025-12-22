@@ -525,6 +525,62 @@ function Dashboard() {
     )
   }
 
+  const bmiValue = (() => {
+    if (analysis?.bmi === null || analysis?.bmi === undefined) return null
+    if (typeof analysis.bmi === 'number' && Number.isFinite(analysis.bmi)) {
+      return analysis.bmi
+    }
+    const parsed = parseFloat(analysis.bmi)
+    return Number.isFinite(parsed) ? parsed : null
+  })()
+
+  const BMI_SEGMENTS = [
+    {
+      key: 'underweight',
+      label: t('dashboard.underweight'),
+      min: 14,
+      max: 18.5,
+      rangeLabel: t('dashboard.bmiRangeUnderweight')
+    },
+    {
+      key: 'normal',
+      label: t('dashboard.normal'),
+      min: 18.5,
+      max: 25,
+      rangeLabel: t('dashboard.bmiRangeNormal')
+    },
+    {
+      key: 'overweight',
+      label: t('dashboard.overweight'),
+      min: 25,
+      max: 30,
+      rangeLabel: t('dashboard.bmiRangeOverweight')
+    },
+    {
+      key: 'obese',
+      label: t('dashboard.obese'),
+      min: 30,
+      max: 45,
+      rangeLabel: t('dashboard.bmiRangeObese')
+    }
+  ]
+
+  const BMI_MIN = BMI_SEGMENTS[0].min
+  const BMI_MAX = BMI_SEGMENTS[BMI_SEGMENTS.length - 1].max
+  const clampBmi = (value) => Math.min(BMI_MAX, Math.max(BMI_MIN, value))
+  const bmiIndicatorPosition = bmiValue === null
+    ? '0%'
+    : `${((clampBmi(bmiValue) - BMI_MIN) / (BMI_MAX - BMI_MIN)) * 100}%`
+  const activeBmiSegmentKey = bmiValue === null
+    ? null
+    : (BMI_SEGMENTS.find((segment, index) => {
+        if (index === BMI_SEGMENTS.length - 1) {
+          return bmiValue >= segment.min
+        }
+        return bmiValue < segment.max
+      })?.key ?? BMI_SEGMENTS[BMI_SEGMENTS.length - 1].key)
+  const bmiIndicatorDisplay = bmiValue === null ? '—' : bmiValue.toFixed(1)
+  const getSegmentWidth = (segment) => ((segment.max - segment.min) / (BMI_MAX - BMI_MIN)) * 100
 
   return (
     <div className="dashboard-root">
@@ -717,18 +773,30 @@ function Dashboard() {
               <div className="metric-body">
                 <div className="category-badge">{analysis.bmiCategory || 'N/A'}</div>
                 <div className="bmi-bar">
+                  <div className="bmi-bar-track">
+                    {BMI_SEGMENTS.map((segment) => (
+                      <div
+                        key={segment.key}
+                        className={`bmi-segment ${segment.key} ${activeBmiSegmentKey === segment.key ? 'active' : ''}`}
+                        style={{ width: `${getSegmentWidth(segment)}%` }}
+                      ></div>
+                    ))}
+                  </div>
                   <div 
                     className="bmi-indicator"
-                    style={{
-                      left: `${Math.min(100, Math.max(0, ((analysis.bmi || 0) - 15) / 30 * 100))}%`
-                    }}
-                  ></div>
+                    style={{ left: bmiIndicatorPosition }}
+                    aria-label={t('dashboard.yourBMI')}
+                  >
+                    <span>{bmiIndicatorDisplay}</span>
+                  </div>
                 </div>
                 <div className="bmi-labels">
-                  <span>{t('dashboard.underweight')}</span>
-                  <span>{t('dashboard.normal')}</span>
-                  <span>{t('dashboard.overweight')}</span>
-                  <span>{t('dashboard.obese')}</span>
+                  {BMI_SEGMENTS.map((segment) => (
+                    <div key={segment.key} className="bmi-label">
+                      <span>{segment.label}</span>
+                      <small>{segment.rangeLabel}</small>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

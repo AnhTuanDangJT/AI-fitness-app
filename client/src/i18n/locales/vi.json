@@ -1,6 +1,7 @@
 {
   "common": {
-    "loading": "Đang tải..."
+    "loading": "Đang tải...",
+    "backToDashboard": "Quay về bảng điều khiển"
   },
   "nav": {
     "logIn": "Đăng nhập",
@@ -177,6 +178,10 @@
     "normal": "Bình thường",
     "overweight": "Thừa cân",
     "obese": "Béo phì",
+    "bmiRangeUnderweight": "< 18.5",
+    "bmiRangeNormal": "18.5 - 24.9",
+    "bmiRangeOverweight": "25.0 - 29.9",
+    "bmiRangeObese": "30.0+",
     "goodCondition": "Tình trạng tốt",
     "atRisk": "Có nguy cơ",
     "error": "Lỗi",

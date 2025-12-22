@@ -1,6 +1,7 @@
 {
   "common": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "backToDashboard": "Back to Dashboard"
   },
   "nav": {
     "logIn": "Log in",
@@ -177,6 +178,10 @@
     "normal": "Normal",
     "overweight": "Overweight",
     "obese": "Obese",
+    "bmiRangeUnderweight": "< 18.5",
+    "bmiRangeNormal": "18.5 - 24.9",
+    "bmiRangeOverweight": "25.0 - 29.9",
+    "bmiRangeObese": "30.0+",
     "goodCondition": "Good condition",
     "atRisk": "At risk",
     "error": "Error",

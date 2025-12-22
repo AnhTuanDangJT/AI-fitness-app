@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { mealPlanAPI } from '../services/api'
 import { invalidateGamificationCache } from '../services/gamificationApi'
 import { 
@@ -13,6 +14,7 @@ import './MealPlan.css'
 
 function MealPlan() {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   // Explicit status state: "loading" | "empty" | "success" | "error"
   // This replaces the ambiguous combination of mealPlan/error/loading states
   const [status, setStatus] = useState('loading') // 'loading' | 'empty' | 'success' | 'error'
@@ -242,6 +244,18 @@ function MealPlan() {
 
   console.log('[MealPlan.jsx] RENDER - Current status:', status)
 
+  const renderBackButton = () => (
+    <div className="page-back-row">
+      <button
+        className="page-back-button"
+        onClick={() => navigate('/dashboard')}
+      >
+        <span>←</span>
+        {t('common.backToDashboard')}
+      </button>
+    </div>
+  )
+
   // Render based on explicit status state
   // This replaces ambiguous checks like "if (!mealPlan)" or "if (error && !mealPlan)"
   
@@ -250,6 +264,7 @@ function MealPlan() {
     console.log('[MealPlan.jsx] RENDER - Showing LOADING state')
     return (
       <div className="meal-plan-page">
+        {renderBackButton()}
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>{t('mealPlan.loading')}</p>
@@ -264,6 +279,7 @@ function MealPlan() {
     console.log('[MealPlan.jsx] RENDER - Showing EMPTY state (no meal plan exists)')
     return (
       <div className="meal-plan-page">
+        {renderBackButton()}
         <div className="no-meal-plan-container">
           <h2>{t('mealPlan.noMealPlanYet')}</h2>
           <p>{t('mealPlan.generateFirstPlan')}</p>
@@ -281,6 +297,7 @@ function MealPlan() {
     console.log('[MealPlan.jsx] RENDER - Showing ERROR state:', error)
     return (
       <div className="meal-plan-page">
+        {renderBackButton()}
         <div className="error-container">
           <h2>{t('mealPlan.errorLoading')}</h2>
           <p>{error}</p>
@@ -299,6 +316,7 @@ function MealPlan() {
     console.warn('[MealPlan.jsx] Unexpected state: status=' + status + ', mealPlan=' + mealPlan)
     return (
       <div className="meal-plan-page">
+        {renderBackButton()}
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>{t('common.loading')}</p>
@@ -320,6 +338,7 @@ function MealPlan() {
 
   return (
     <div className="meal-plan-page">
+      {renderBackButton()}
       <div className="meal-plan-header">
         <div>
           <h1>{t('mealPlan.title')}</h1>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import AICoachChat from '../components/ai-coach/AICoachChat'
 import api from '../services/api'
 import './AICoach.css'
@@ -13,6 +14,7 @@ import './AICoach.css'
  */
 function AICoach() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [aiContext, setAiContext] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -53,10 +55,23 @@ function AICoach() {
     }
   }
 
+  const renderBackButton = () => (
+    <div className="page-back-row">
+      <button
+        className="page-back-button"
+        onClick={() => navigate('/dashboard')}
+      >
+        <span>←</span>
+        {t('common.backToDashboard')}
+      </button>
+    </div>
+  )
+
   // Show loading state while getting user info
   if (loading) {
     return (
       <div className="ai-coach-page">
+        {renderBackButton()}
         <div className="ai-coach-container">
           <div className="loading-container">
             <div className="loading-spinner"></div>
@@ -84,6 +99,7 @@ function AICoach() {
 
   return (
     <div className="ai-coach-page">
+      {renderBackButton()}
       <div className="ai-coach-container">
         <div className="ai-coach-header">
           <div className="ai-coach-header-content">

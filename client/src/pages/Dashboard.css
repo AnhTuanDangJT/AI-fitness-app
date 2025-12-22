@@ -978,21 +978,62 @@ body.header-align-right .app-header-inner {
 
 .bmi-bar {
   position: relative;
-  height: 36px;
+  height: 40px;
   background: var(--color-deep-space);
-  border-radius: 18px;
-  margin: 28px 0;
-  overflow: hidden;
+  border-radius: 20px;
+  margin: 28px 0 18px;
+  overflow: visible;
   border: 1px solid var(--glass-border-dark);
   box-shadow: var(--shadow-neumorphic-inner);
+}
+
+.bmi-bar-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.bmi-segment {
+  height: 100%;
+  opacity: 0.65;
+  transition: opacity var(--transition-normal), filter var(--transition-normal);
+}
+
+.bmi-segment.underweight {
+  background: linear-gradient(135deg, rgba(125, 211, 252, 0.6), rgba(59, 130, 246, 0.7));
+}
+
+.bmi-segment.normal {
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.7), rgba(34, 197, 94, 0.85));
+}
+
+.bmi-segment.overweight {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.75), rgba(249, 115, 22, 0.85));
+}
+
+.bmi-segment.obese {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.8), rgba(239, 68, 68, 0.9));
+}
+
+.bmi-segment.active {
+  opacity: 1;
+  filter: saturate(1.1);
 }
 
 .bmi-indicator {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0d1117;
   background: linear-gradient(135deg, var(--color-neon-ice-blue), var(--color-electric-aqua));
   border-radius: 50%;
   border: 3px solid var(--color-deep-space);
@@ -1001,14 +1042,28 @@ body.header-align-right .app-header-inner {
 }
 
 .bmi-labels {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
   font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 12px;
-  font-weight: 500;
+  color: var(--text-secondary);
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.bmi-label {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bmi-label small {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 /* WHR Card */
