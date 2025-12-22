@@ -1,8 +1,16 @@
 import jsPDF from 'jspdf'
 import { ensureVietnameseFonts, PDF_FONT_FAMILY } from './pdfFonts'
 
-const MACRO_BAR_HEIGHT = 6
-const MACRO_GAP = 5
+const PAGE_WIDTH = 210
+const PAGE_HEIGHT = 297
+const PAGE_MARGIN_X = 20
+const PAGE_BOTTOM_LIMIT = PAGE_HEIGHT - 22
+
+const MACRO_BAR_HEIGHT = 5
+const MACRO_GAP = 4
+
+const LINE_HEIGHT = 6
+const SECTION_SPACING = 6
 
 const hexToRgb = (hex) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
@@ -74,41 +82,41 @@ const getHydrationTargetLiters = (weight) => {
   return (weightValue * 0.035).toFixed(1)
 }
 
-const drawKeyValueRows = (doc, items, startX, startY, lineHeight) => {
+const drawKeyValueRows = (doc, items, startX, startY) => {
   let offsetY = 0
   items.forEach(({ label, value }) => {
     doc.setFont(PDF_FONT_FAMILY, 'normal')
     doc.text(`${label}:`, startX, startY + offsetY)
     doc.setFont(PDF_FONT_FAMILY, 'bold')
-    doc.text(value, startX + 60, startY + offsetY)
-    offsetY += lineHeight
+    doc.text(value, startX + 55, startY + offsetY)
+    offsetY += LINE_HEIGHT
   })
   return offsetY
 }
 
-const drawTwoColumnRows = (doc, left, right, startX, startY, lineHeight) => {
+const drawTwoColumnRows = (doc, left, right, startX, startY) => {
   const rows = Math.max(left.length, right.length)
   for (let i = 0; i < rows; i += 1) {
     const leftRow = left[i]
     const rightRow = right[i]
-    const currentY = startY + i * lineHeight
+    const currentY = startY + i * LINE_HEIGHT
 
     if (leftRow) {
       doc.setFont(PDF_FONT_FAMILY, 'normal')
       doc.text(`${leftRow.label}:`, startX, currentY)
       doc.setFont(PDF_FONT_FAMILY, 'bold')
-      doc.text(leftRow.value, startX + 60, currentY)
+      doc.text(leftRow.value, startX + 55, currentY)
     }
 
     if (rightRow) {
       doc.setFont(PDF_FONT_FAMILY, 'normal')
-      doc.text(`${rightRow.label}:`, startX + 90, currentY)
+      doc.text(`${rightRow.label}:`, startX + 95, currentY)
       doc.setFont(PDF_FONT_FAMILY, 'bold')
-      doc.text(rightRow.value, startX + 150, currentY, { align: 'right' })
+      doc.text(rightRow.value, startX + 165, currentY, { align: 'right' })
     }
   }
 
-  return rows * lineHeight
+  return rows * LINE_HEIGHT
 }
 
 const drawMacroChart = (doc, macros, startX, startY, width, options = {}) => {
@@ -162,36 +170,60 @@ export const generateFitnessProfilePdf = async ({ profileData, t }) => {
     b: Math.min(255, bgColor.b + 10)
   }
 
-  doc.setFillColor(bgColor.r, bgColor.g, bgColor.b)
-  doc.rect(0, 0, 210, 297, 'F')
-
-  doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b)
-  doc.setLineWidth(1.5)
-  doc.rect(5, 5, 200, 287)
-
-  doc.setFont(PDF_FONT_FAMILY, 'bold')
-  doc.setTextColor(accentColor.r, accentColor.g, accentColor.b)
-  doc.setFontSize(30)
   const pdfTitle = data.name
     ? translate('dashboard.fitnessProfileName', { name: data.name })
     : translate('dashboard.fitnessProfile')
-  doc.text(pdfTitle, 105, 25, { align: 'center' })
 
-  doc.setLineWidth(0.5)
-  doc.line(35, 30, 175, 30)
+  const drawPageChrome = (isFirstPage) => {
+    doc.setFillColor(bgColor.r, bgColor.g, bgColor.b)
+    doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, 'F')
 
-  doc.setFontSize(10)
-  doc.setFont(PDF_FONT_FAMILY, 'normal')
-  doc.setTextColor(textColor.r, textColor.g, textColor.b)
-  doc.text(translate('dashboard.generatedOn', { date: today }), 105, 36, { align: 'center' })
+    doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b)
+    doc.setLineWidth(1.5)
+    doc.rect(5, 5, PAGE_WIDTH - 10, PAGE_HEIGHT - 10)
 
-  const sectionX = 20
-  const sectionWidth = 170
-  const sectionSpacing = 8
-  const lineHeight = 7
+    doc.setFont(PDF_FONT_FAMILY, 'bold')
+    doc.setTextColor(accentColor.r, accentColor.g, accentColor.b)
+
+    if (isFirstPage) {
+      doc.setFontSize(30)
+      doc.text(pdfTitle, PAGE_WIDTH / 2, 25, { align: 'center' })
+      doc.setLineWidth(0.5)
+      doc.line(35, 30, 175, 30)
+      doc.setFontSize(10)
+      doc.setFont(PDF_FONT_FAMILY, 'normal')
+      doc.setTextColor(textColor.r, textColor.g, textColor.b)
+      doc.text(translate('dashboard.generatedOn', { date: today }), PAGE_WIDTH / 2, 36, { align: 'center' })
+    } else {
+      doc.setFontSize(18)
+      doc.text(pdfTitle, PAGE_WIDTH / 2, 24, { align: 'center' })
+      doc.setFontSize(9)
+      doc.setFont(PDF_FONT_FAMILY, 'normal')
+      doc.setTextColor(textColor.r, textColor.g, textColor.b)
+      doc.text(translate('dashboard.generatedOn', { date: today }), PAGE_WIDTH / 2, 32, { align: 'center' })
+    }
+
+    doc.setTextColor(textColor.r, textColor.g, textColor.b)
+    doc.setFont(PDF_FONT_FAMILY, 'normal')
+  }
+
+  drawPageChrome(true)
+
+  const sectionX = PAGE_MARGIN_X
+  const sectionWidth = PAGE_WIDTH - PAGE_MARGIN_X * 2
   let currentY = 46
 
+  const ensurePageSpace = (heightNeeded) => {
+    if (currentY + heightNeeded > PAGE_BOTTOM_LIMIT) {
+      doc.addPage()
+      drawPageChrome(false)
+      currentY = 42
+    }
+  }
+
   const drawSection = (title, height, drawContent) => {
+    ensurePageSpace(height + SECTION_SPACING)
+
     doc.setFillColor(sectionBgColor.r, sectionBgColor.g, sectionBgColor.b)
     doc.roundedRect(sectionX, currentY, sectionWidth, height, 2, 2, 'F')
 
@@ -202,10 +234,10 @@ export const generateFitnessProfilePdf = async ({ profileData, t }) => {
 
     doc.setTextColor(textColor.r, textColor.g, textColor.b)
     doc.setFont(PDF_FONT_FAMILY, 'normal')
-    doc.setFontSize(10.5)
+    doc.setFontSize(10)
 
-    drawContent(currentY + 20)
-    currentY += height + sectionSpacing
+    drawContent(currentY + 18)
+    currentY += height + SECTION_SPACING
   }
 
   const personalItems = [
@@ -215,9 +247,9 @@ export const generateFitnessProfilePdf = async ({ profileData, t }) => {
     { label: translate('dashboard.age'), value: formatNumber(data.age, 0, translate('dashboard.years')) }
   ]
 
-  const personalHeight = 18 + personalItems.length * lineHeight + 6
+  const personalHeight = 16 + personalItems.length * LINE_HEIGHT + 10
   drawSection(translate('dashboard.personalInformation'), personalHeight, (startY) => {
-    drawKeyValueRows(doc, personalItems, sectionX + 5, startY, lineHeight)
+    drawKeyValueRows(doc, personalItems, sectionX + 5, startY)
   })
 
   const bodyLeft = [
@@ -236,9 +268,9 @@ export const generateFitnessProfilePdf = async ({ profileData, t }) => {
   ]
 
   const bodyRows = Math.max(bodyLeft.length, bodyRight.length)
-  const bodyHeight = 20 + bodyRows * lineHeight + 10
+  const bodyHeight = 18 + bodyRows * LINE_HEIGHT + 10
   drawSection(translate('dashboard.bodyMetrics'), bodyHeight, (startY) => {
-    drawTwoColumnRows(doc, bodyLeft, bodyRight, sectionX + 5, startY, lineHeight)
+    drawTwoColumnRows(doc, bodyLeft, bodyRight, sectionX + 5, startY)
   })
 
   const goalLabel = getGoalLabel(data.calorieGoal, data.fitnessGoal, translate)
@@ -252,29 +284,26 @@ export const generateFitnessProfilePdf = async ({ profileData, t }) => {
   )
   const hydrationTarget = getHydrationTargetLiters(data.weight)
 
-  const lifestyleLeft = [
+  const lifestyleItems = [
     { label: translate('dashboard.fitnessGoalLabel'), value: goalLabel },
     { label: translate('dashboard.activityLevel'), value: activityLabel },
-    { label: translate('dashboard.hydrationTarget'), value: hydrationTarget ? `~${hydrationTarget} L` : 'N/A' }
-  ]
-
-  const lifestyleRight = [
+    { label: translate('dashboard.hydrationTarget'), value: hydrationTarget ? `~${hydrationTarget} L` : 'N/A' },
     { label: translate('dashboard.caloriesNeeded'), value: caloriesNeeded },
     { label: translate('dashboard.mealsPerDay'), value: `${mealsPerDay}` },
     { label: translate('dashboard.perMeal'), value: caloriesPerMeal }
   ]
+  const summaryText = goalLabel && activityLabel
+    ? translate('dashboard.lifestyleSummary', { goal: goalLabel, activity: activityLabel })
+    : translate('dashboard.lifestyleSummaryFallback')
+  const summaryLines = doc.splitTextToSize(summaryText, sectionWidth - 10)
 
-  const lifestyleRows = Math.max(lifestyleLeft.length, lifestyleRight.length)
-  const lifestyleHeight = 32 + lifestyleRows * lineHeight
+  const lifestyleHeight = 20 + lifestyleItems.length * LINE_HEIGHT + 6 + summaryLines.length * LINE_HEIGHT
   drawSection(translate('dashboard.goalAndLifestyle'), lifestyleHeight, (startY) => {
-    const usedHeight = drawTwoColumnRows(doc, lifestyleLeft, lifestyleRight, sectionX + 5, startY, lineHeight)
+    const usedHeight = drawKeyValueRows(doc, lifestyleItems, sectionX + 5, startY)
     const summaryY = startY + usedHeight + 6
-    doc.setFont(PDF_FONT_FAMILY, 'normal')
-    doc.setFontSize(9.5)
-    const summaryText = goalLabel && activityLabel
-      ? translate('dashboard.lifestyleSummary', { goal: goalLabel, activity: activityLabel })
-      : translate('dashboard.lifestyleSummaryFallback')
-    doc.text(summaryText, sectionX + 5, summaryY, { maxWidth: sectionWidth - 10 })
+    summaryLines.forEach((line, idx) => {
+      doc.text(line, sectionX + 5, summaryY + idx * LINE_HEIGHT)
+    })
   })
 
   const macros = [
@@ -313,8 +342,8 @@ export const generateFitnessProfilePdf = async ({ profileData, t }) => {
   ]
 
   const macroEntries = Math.max(macros.filter((macro) => macro.value !== null).length, 1)
-  const tableHeight = (nutritionRows.length + 1) * lineHeight
-  const chartSectionHeight = 18 + macroEntries * (MACRO_BAR_HEIGHT + MACRO_GAP)
+  const tableHeight = (nutritionRows.length + 1) * LINE_HEIGHT
+  const chartSectionHeight = 12 + macroEntries * (MACRO_BAR_HEIGHT + MACRO_GAP)
   const nutritionHeight = 20 + tableHeight + chartSectionHeight
 
   drawSection(translate('dashboard.dailyNutritionTargets'), nutritionHeight, (startY) => {
@@ -324,19 +353,19 @@ export const generateFitnessProfilePdf = async ({ profileData, t }) => {
     doc.text(translate('dashboard.daily'), sectionX + 85, headerY)
     doc.text(translate('dashboard.perMeal'), sectionX + 130, headerY)
 
-    doc.setFontSize(10.5)
+    doc.setFontSize(10)
     doc.setFont(PDF_FONT_FAMILY, 'normal')
-    let currentRowY = headerY + lineHeight
+    let currentRowY = headerY + LINE_HEIGHT
     nutritionRows.forEach((row) => {
       doc.text(row.label, sectionX + 5, currentRowY)
       doc.setFont(PDF_FONT_FAMILY, 'bold')
       doc.text(row.daily, sectionX + 85, currentRowY)
       doc.text(row.perMeal, sectionX + 130, currentRowY)
       doc.setFont(PDF_FONT_FAMILY, 'normal')
-      currentRowY += lineHeight
+      currentRowY += LINE_HEIGHT
     })
 
-    const chartY = currentRowY + 8
+    const chartY = currentRowY + 6
     doc.setFont(PDF_FONT_FAMILY, 'bold')
     doc.setFontSize(11)
     doc.text(translate('dashboard.macroBreakdown'), sectionX + 5, chartY)
@@ -344,9 +373,9 @@ export const generateFitnessProfilePdf = async ({ profileData, t }) => {
     doc.setFontSize(9.5)
     doc.setFont(PDF_FONT_FAMILY, 'normal')
     const macroSummary = translate('dashboard.macroSummary')
-    doc.text(macroSummary, sectionX + 5, chartY + 7, { maxWidth: sectionWidth - 10 })
+    doc.text(macroSummary, sectionX + 5, chartY + 6, { maxWidth: sectionWidth - 10 })
 
-    const chartStartY = chartY + 16
+    const chartStartY = chartY + 14
     drawMacroChart(doc, macros, sectionX + 5, chartStartY, sectionWidth - 50, {
       emptyMessage: translate('dashboard.macroDataMissing'),
       textColor
