@@ -505,9 +505,14 @@ public class ProfileController {
             profileData.put("gender", gender);
             profileData.put("sex", sex);
             profileData.put("birthday", birthday);
+            profileData.put("age", age);
             profileData.put("height", height);
             profileData.put("weight", weight);
+            profileData.put("waist", waist);
+            profileData.put("hip", hip);
             profileData.put("fitnessGoal", fitnessGoal);
+            profileData.put("activityLevel", activityLevel);
+            profileData.put("calorieGoal", calorieGoal);
             
             // Add all calculated metrics
             profileData.put("bmi", bmi);

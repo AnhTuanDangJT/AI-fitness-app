@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../services/api'
 import { ERROR_MESSAGES, UI_LABELS, BUTTON_TEXT, STATUS_MESSAGES, PAGE_TITLES } from '../config/constants'
-import jsPDF from 'jspdf'
+import { generateFitnessProfilePdf } from '../utils/pdfProfile'
 import './ProfilePage.css'
 
 function ProfilePage() {
@@ -11,6 +12,7 @@ function ProfilePage() {
   const [error, setError] = useState(null)
   const [downloading, setDownloading] = useState(false)
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   useEffect(() => {
     fetchProfile()
@@ -38,226 +40,18 @@ function ProfilePage() {
     try {
       setDownloading(true)
       setError(null)
-      
-      // Use central API client so relative /api proxy + auth headers are handled automatically
+
       const { data: apiResponse } = await api.get('/profile/export')
       if (!apiResponse?.success || !apiResponse?.data) {
         throw new Error(apiResponse?.message || ERROR_MESSAGES.EXPORT_FAILED)
       }
 
-      const data = apiResponse.data
-      
-      // Always generate PDF, even if data is incomplete - show N/A for missing fields
-      const doc = new jsPDF("p", "mm", "a4")
-      const today = new Date().toLocaleDateString()
-      
-      const bg = "#0D1117"
-      const accent = "#55C0FF"
-      const textColor = "#E8EAF1"
-      
-      // Convert hex colors to RGB for jsPDF
-      const hexToRgb = (hex) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-        return result ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16)
-        } : null
-      }
-      
-      const bgRgb = hexToRgb(bg)
-      const accentRgb = hexToRgb(accent)
-      const textRgb = hexToRgb(textColor)
-      
-      // Helper function to format numbers
-      const formatNumber = (value, decimals) => {
-        if (value === null || value === undefined || value === "N/A") return "N/A"
-        const num = typeof value === 'string' ? parseFloat(value) : value
-        if (isNaN(num)) return "N/A"
-        return num.toFixed(decimals)
-      }
-
-      // Lighter background shade for sections (slightly lighter than main bg)
-      const sectionBgRgb = {
-        r: Math.min(255, bgRgb.r + 8),
-        g: Math.min(255, bgRgb.g + 8),
-        b: Math.min(255, bgRgb.b + 8)
-      }
-
-      // Background
-      doc.setFillColor(bgRgb.r, bgRgb.g, bgRgb.b)
-      doc.rect(0, 0, 210, 297, "F")
-      
-      // Neon border
-      doc.setDrawColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.setLineWidth(1.5)
-      doc.rect(5, 5, 200, 287)
-      
-      // Centered Title (larger font)
-      doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.setFontSize(32)
-      doc.setFont("helvetica", "bold")
-      const pdfTitle = data.name ? `${data.name}'s Fitness Profile` : "Your Fitness Profile"
-      const pageCenter = 105 // A4 width is 210mm, center is 105mm
-      doc.text(pdfTitle, pageCenter, 25, { align: "center" })
-      
-      // Horizontal divider line under title
-      doc.setDrawColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.setLineWidth(0.5)
-      doc.line(30, 30, 180, 30)
-      
-      // Date (centered, smaller)
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(textRgb.r, textRgb.g, textRgb.b)
-      doc.text(`Generated on ${today}`, pageCenter, 36, { align: "center" })
-      
-      let y = 50
-
-      // PERSONAL INFORMATION Section
-      const sectionPadding = 3
-      const sectionHeight = 25
-      const sectionWidth = 170
-      const sectionX = 20
-      
-      // Section background (rounded rectangle effect)
-      doc.setFillColor(sectionBgRgb.r, sectionBgRgb.g, sectionBgRgb.b)
-      doc.roundedRect(sectionX, y, sectionWidth, sectionHeight, 2, 2, "F")
-      
-      // Section title
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.text("PERSONAL INFORMATION", sectionX + 5, y + 8)
-      
-      // Section content
-      y += 15
-      doc.setFontSize(11)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(textRgb.r, textRgb.g, textRgb.b)
-      doc.text(`Name: ${data.name || "N/A"}`, sectionX + 5, y)
-      y += 8
-      doc.text(`Email: ${data.email || "N/A"}`, sectionX + 5, y)
-      y += 8
-      doc.text(`Gender: ${data.sex !== null && data.sex !== undefined ? (data.sex ? "Male" : "Female") : "N/A"}`, sectionX + 5, y)
-      y += 12 // Bottom padding
-
-      // BODY METRICS Section
-      // Section background
-      doc.setFillColor(sectionBgRgb.r, sectionBgRgb.g, sectionBgRgb.b)
-      doc.roundedRect(sectionX, y, sectionWidth, 50, 2, 2, "F")
-      
-      // Section title
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.text("BODY METRICS", sectionX + 5, y + 8)
-      
-      // Section content
-      y += 15
-      doc.setFontSize(11)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(textRgb.r, textRgb.g, textRgb.b)
-      
-      // Height
-      doc.text(`Height: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${data.height ? formatNumber(data.height, 0) : "N/A"} cm`, sectionX + 35, y)
-      y += 8
-      
-      // Weight
-      doc.setFont("helvetica", "normal")
-      doc.text(`Weight: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${data.weight ? formatNumber(data.weight, 0) : "N/A"} kg`, sectionX + 35, y)
-      y += 8
-      
-      // BMI
-      doc.setFont("helvetica", "normal")
-      doc.text(`BMI: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.bmi, 1)}`, sectionX + 35, y)
-      y += 8
-      
-      // WHR
-      doc.setFont("helvetica", "normal")
-      doc.text(`WHR: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.whr, 3)}`, sectionX + 35, y)
-      y += 8
-      
-      // Body Fat
-      doc.setFont("helvetica", "normal")
-      doc.text(`Body Fat: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.bodyFat, 1)}%`, sectionX + 40, y)
-      y += 8
-      
-      // BMR
-      doc.setFont("helvetica", "normal")
-      doc.text(`BMR: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.bmr, 0)} kcal/day`, sectionX + 35, y)
-      y += 8
-      
-      // TDEE
-      doc.setFont("helvetica", "normal")
-      doc.text(`TDEE: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.tdee, 0)} kcal/day`, sectionX + 35, y)
-      y += 12 // Bottom padding
-
-      // DAILY NUTRITION TARGETS Section
-      // Section background
-      doc.setFillColor(sectionBgRgb.r, sectionBgRgb.g, sectionBgRgb.b)
-      doc.roundedRect(sectionX, y, sectionWidth, 35, 2, 2, "F")
-      
-      // Section title
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b)
-      doc.text("DAILY NUTRITION TARGETS", sectionX + 5, y + 8)
-      
-      // Section content
-      y += 15
-      doc.setFontSize(11)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(textRgb.r, textRgb.g, textRgb.b)
-      
-      // Calories Needed
-      doc.text(`Calories Needed: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.caloriesNeeded, 0)} kcal/day`, sectionX + 50, y)
-      y += 8
-      
-      // Protein
-      doc.setFont("helvetica", "normal")
-      doc.text(`Protein: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.protein, 0)} g/day`, sectionX + 35, y)
-      y += 8
-      
-      // Carbs
-      doc.setFont("helvetica", "normal")
-      doc.text(`Carbs: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.carbs, 0)} g/day`, sectionX + 35, y)
-      y += 8
-      
-      // Fat
-      doc.setFont("helvetica", "normal")
-      doc.text(`Fat: `, sectionX + 5, y)
-      doc.setFont("helvetica", "bold")
-      doc.text(`${formatNumber(data.fat, 0)} g/day`, sectionX + 35, y)
-      
-      const filename = `profile-${today.replace(/\//g, "-")}.pdf`
-      doc.save(filename)
+      await generateFitnessProfilePdf({
+        profileData: apiResponse.data,
+        t
+      })
     } catch (err) {
-      console.error("EXPORT ERROR:", err);
-      console.error("EXPORT ERROR MESSAGE:", err.message);
-      console.error("EXPORT ERROR STACK:", err.stack);
-      console.error("EXPORT ERROR FULL:", JSON.stringify(err, null, 2));
-      // Temporarily show raw error instead of generic message
+      console.error('EXPORT ERROR:', err)
       setError(err.message || err.toString() || ERROR_MESSAGES.EXPORT_FAILED)
     } finally {
       setDownloading(false)
