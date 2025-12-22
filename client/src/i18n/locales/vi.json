@@ -608,6 +608,64 @@
     "gainMuscleContent": "Thông tin dưới đây được đề xuất cho mục tiêu bạn đã chọn! Để tăng cơ, hãy ăn ở mức thặng dư calo nhẹ với đủ protein. Ưu tiên tăng tải tiến bộ trong tập luyện sức mạnh - tăng dần trọng lượng, số lần lặp hoặc số hiệp theo thời gian. Tập trung vào các bài tập phức hợp và đảm bảo nghỉ ngơi và phục hồi đầy đủ.",
     "bodyRecompTitle": "Tái cấu trúc cơ thể - Khuyến nghị dựa trên mục tiêu",
     "bodyRecompContent": "Thông tin dưới đây được đề xuất cho mục tiêu bạn đã chọn! Tái cấu trúc cơ thể (giảm mỡ đồng thời tăng cơ) đòi hỏi dinh dưỡng và tập luyện chính xác. Ăn ở mức calo duy trì hoặc thặng dư nhẹ, với lượng protein cao. Kết hợp tập luyện sức mạnh nặng với cardio vừa phải.",
+    "activityList": {
+      "1": [
+        "Đi bộ mỗi ngày (20-30 phút)",
+        "Giãn cơ nhẹ hoặc yoga",
+        "Làm vườn hoặc việc nhà nhẹ",
+        "Bơi thư giãn"
+      ],
+      "2": [
+        "Đi bộ nhanh hoặc chạy bộ vừa (30-45 phút)",
+        "Tập sức mạnh 2 lần/tuần",
+        "Đạp xe hoặc bơi",
+        "Tham gia lớp thể dục nhóm"
+      ],
+      "3": [
+        "Tập cardio 3 lần/tuần",
+        "Tập sức mạnh 2 lần/tuần",
+        "HIIT cường độ cao",
+        "Ngày phục hồi chủ động (yoga, đi bộ)"
+      ],
+      "4": [
+        "Kết hợp cardio và tập sức mạnh",
+        "Luyện tập chuyên cho môn thể thao",
+        "Bài tập linh hoạt và mobility",
+        "Nghỉ ngơi và phục hồi đầy đủ"
+      ],
+      "5": [
+        "Chương trình tập chu kỳ hóa",
+        "Điều kiện chuyên biệt cho môn thể thao",
+        "Phục hồi và mobility",
+        "Dinh dưỡng và bổ sung nước hợp lý"
+      ]
+    },
+    "goalTips": {
+      "1": [
+        "Tạo thâm hụt 500-750 calo mỗi ngày",
+        "Ưu tiên protein (2g mỗi kg cân nặng)",
+        "Tập sức mạnh 2-3 lần/tuần",
+        "Theo dõi lượng ăn và giữ kỷ luật"
+      ],
+      "2": [
+        "Ăn đúng TDEE (calo duy trì)",
+        "Giữ cân bằng các nhóm chất",
+        "Duy trì lịch tập hiện tại",
+        "Cân mỗi tuần và điều chỉnh khi cần"
+      ],
+      "3": [
+        "Ăn dư 300-500 calo so với TDEE",
+        "Ưu tiên protein (1.6-2.2g mỗi kg)",
+        "Tăng tiến trong tập sức mạnh",
+        "Ngủ đủ và phục hồi chủ động"
+      ],
+      "4": [
+        "Ăn ở mức duy trì hoặc tăng nhẹ",
+        "Protein cao (2.2-2.5g mỗi kg)",
+        "Tập sức mạnh nặng 3-4 lần/tuần",
+        "Cardio vừa phải 2-3 lần/tuần"
+      ]
+    },
     "loadingRecommendations": "Đang tải khuyến nghị..."
   },
   "healthTips": {

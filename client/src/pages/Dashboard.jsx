@@ -858,33 +858,40 @@ function HealthRecommendations({
     }
   }
 
+  const getTranslatedList = (key) => {
+    const list = t(key, { returnObjects: true })
+    return Array.isArray(list) ? list : []
+  }
+
   const getActivitySuggestions = () => {
     const activityLevel = profile?.activityLevel || 3
+    const buildActivities = (levelKey) => getTranslatedList(`healthRecommendations.activityList.${levelKey}`)
+
     const suggestions = {
       1: {
         title: t('healthRecommendations.sedentaryTitle'),
         content: t('healthRecommendations.sedentaryContent'),
-        activities: ['Daily walking (20-30 min)', 'Light stretching or yoga', 'Gardening or household chores', 'Gentle swimming']
+        activities: buildActivities(1)
       },
       2: {
         title: t('healthRecommendations.lightlyActiveTitle'),
         content: t('healthRecommendations.lightlyActiveContent'),
-        activities: ['Moderate walking or jogging (30-45 min)', 'Strength training 2×/week', 'Cycling or swimming', 'Group fitness classes']
+        activities: buildActivities(2)
       },
       3: {
         title: t('healthRecommendations.moderatelyActiveTitle'),
         content: t('healthRecommendations.moderatelyActiveContent'),
-        activities: ['Cardiovascular exercise 3×/week', 'Strength training 2×/week', 'High-intensity intervals (HIIT)', 'Active recovery days (yoga, walking)']
+        activities: buildActivities(3)
       },
       4: {
         title: t('healthRecommendations.veryActiveTitle'),
         content: t('healthRecommendations.veryActiveContent'),
-        activities: ['Mixed cardio and strength training', 'Sport-specific training', 'Flexibility and mobility work', 'Adequate rest and recovery']
+        activities: buildActivities(4)
       },
       5: {
         title: t('healthRecommendations.extraActiveTitle'),
         content: t('healthRecommendations.extraActiveContent'),
-        activities: ['Periodized training program', 'Sport-specific conditioning', 'Recovery and mobility work', 'Proper nutrition and hydration']
+        activities: buildActivities(5)
       }
     }
 
@@ -893,26 +900,28 @@ function HealthRecommendations({
 
   const getGoalBasedTips = () => {
     const goal = profile?.calorieGoal || 2
+    const buildGoalTips = (goalKey) => getTranslatedList(`healthRecommendations.goalTips.${goalKey}`)
+
     const tips = {
       1: {
         title: t('healthRecommendations.loseWeightTitle'),
         content: t('healthRecommendations.loseWeightContent'),
-        tips: ['Create a 500-750 calorie deficit daily', 'Prioritize protein (2g per kg body weight)', 'Include strength training 2-3×/week', 'Track food intake and stay consistent']
+        tips: buildGoalTips(1)
       },
       2: {
         title: t('healthRecommendations.maintainWeightTitle'),
         content: t('healthRecommendations.maintainWeightContent'),
-        tips: ['Eat at your TDEE (maintenance calories)', 'Maintain balanced macronutrient intake', 'Continue regular exercise routine', 'Monitor weight weekly and adjust if needed']
+        tips: buildGoalTips(2)
       },
       3: {
         title: t('healthRecommendations.gainMuscleTitle'),
         content: t('healthRecommendations.gainMuscleContent'),
-        tips: ['Eat 300-500 calories above TDEE', 'Prioritize protein (1.6-2.2g per kg)', 'Progressive overload in strength training', 'Ensure adequate rest and recovery']
+        tips: buildGoalTips(3)
       },
       4: {
         title: t('healthRecommendations.bodyRecompTitle'),
         content: t('healthRecommendations.bodyRecompContent'),
-        tips: ['Eat at maintenance or slight surplus', 'High protein intake (2.2-2.5g per kg)', 'Heavy strength training 3-4×/week', 'Moderate cardio 2-3×/week']
+        tips: buildGoalTips(4)
       }
     }
 

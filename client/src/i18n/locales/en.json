@@ -608,6 +608,64 @@
     "gainMuscleContent": "The information below is suggested for your selected goal! To gain muscle, eat in a slight calorie surplus with adequate protein. Prioritize progressive overload in strength training - gradually increase weight, reps, or sets over time. Focus on compound exercises and ensure sufficient rest and recovery.",
     "bodyRecompTitle": "Body Recomposition - Goal-Based Recommendations",
     "bodyRecompContent": "The information below is suggested for your selected goal! Body recomposition (losing fat while gaining muscle) requires precise nutrition and training. Eat at maintenance calories or slight surplus, with high protein intake. Combine heavy strength training with moderate cardio.",
+    "activityList": {
+      "1": [
+        "Daily walking (20-30 min)",
+        "Light stretching or yoga",
+        "Gardening or household chores",
+        "Gentle swimming"
+      ],
+      "2": [
+        "Moderate walking or jogging (30-45 min)",
+        "Strength training 2×/week",
+        "Cycling or swimming",
+        "Group fitness classes"
+      ],
+      "3": [
+        "Cardiovascular exercise 3×/week",
+        "Strength training 2×/week",
+        "High-intensity intervals (HIIT)",
+        "Active recovery days (yoga, walking)"
+      ],
+      "4": [
+        "Mixed cardio and strength training",
+        "Sport-specific training",
+        "Flexibility and mobility work",
+        "Adequate rest and recovery"
+      ],
+      "5": [
+        "Periodized training program",
+        "Sport-specific conditioning",
+        "Recovery and mobility work",
+        "Proper nutrition and hydration"
+      ]
+    },
+    "goalTips": {
+      "1": [
+        "Create a 500-750 calorie deficit daily",
+        "Prioritize protein (2g per kg body weight)",
+        "Include strength training 2-3×/week",
+        "Track food intake and stay consistent"
+      ],
+      "2": [
+        "Eat at your TDEE (maintenance calories)",
+        "Maintain balanced macronutrient intake",
+        "Continue regular exercise routine",
+        "Monitor weight weekly and adjust if needed"
+      ],
+      "3": [
+        "Eat 300-500 calories above TDEE",
+        "Prioritize protein (1.6-2.2g per kg)",
+        "Progressive overload in strength training",
+        "Ensure adequate rest and recovery"
+      ],
+      "4": [
+        "Eat at maintenance or slight surplus",
+        "High protein intake (2.2-2.5g per kg)",
+        "Heavy strength training 3-4×/week",
+        "Moderate cardio 2-3×/week"
+      ]
+    },
     "loadingRecommendations": "Loading recommendations..."
   },
   "healthTips": {
