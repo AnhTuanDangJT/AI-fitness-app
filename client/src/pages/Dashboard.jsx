@@ -320,7 +320,7 @@ function Dashboard() {
     const translationKey = map[value]
     return translationKey ? t(translationKey) : value
   }
-  const bmiCategoryLabel = getLocalizedCategoricalValue(analysis.bmiCategory, BMI_CATEGORY_TRANSLATIONS)
+  const bmiCategoryLabel = getLocalizedCategoricalValue(analysis?.bmiCategory, BMI_CATEGORY_TRANSLATIONS)
   const whrValue = (() => {
     if (analysis?.whr === null || analysis?.whr === undefined) return null
     if (typeof analysis.whr === 'number' && Number.isFinite(analysis.whr)) {
@@ -329,8 +329,8 @@ function Dashboard() {
     const parsed = parseFloat(analysis.whr)
     return Number.isFinite(parsed) ? parsed : null
   })()
-  const whrRiskLabel = getLocalizedCategoricalValue(analysis.whrRisk, WHR_RISK_TRANSLATIONS)
-  const isWhrGoodCondition = analysis.whrRisk === 'Good condition'
+  const whrRiskLabel = getLocalizedCategoricalValue(analysis?.whrRisk, WHR_RISK_TRANSLATIONS)
+  const isWhrGoodCondition = analysis?.whrRisk === 'Good condition'
 
   const bmiValue = (() => {
     if (analysis?.bmi === null || analysis?.bmi === undefined) return null
