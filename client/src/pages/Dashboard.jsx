@@ -66,6 +66,29 @@ const segmentGradients = {
   obese: 'from-rose-500/80 to-rose-600/70',
 }
 
+const humanizeTranslationKey = (key = '') => {
+  if (!key || typeof key !== 'string') return ''
+  const raw = key.includes('.') ? key.split('.').pop() : key
+  return raw
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+const resolveTextWithFallback = (tFunction, key, fallback) => {
+  if (!key || typeof key !== 'string') {
+    return fallback ?? ''
+  }
+  const translated = tFunction(key)
+  if (translated && translated !== key) {
+    return translated
+  }
+  if (fallback) return fallback
+  return humanizeTranslationKey(key)
+}
+
 const SectionHeader = ({ label, title, description }) => (
   <div className="space-y-1 text-white">
     <p className="text-xs uppercase tracking-[0.4em] text-white/60">{label}</p>
@@ -92,6 +115,7 @@ const WHR_RISK_TRANSLATIONS = {
 
 function Dashboard() {
   const { t, i18n } = useTranslation()
+  const resolveDashboardText = (key, fallback) => resolveTextWithFallback(t, key, fallback)
   const [analysis, setAnalysis] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -349,7 +373,7 @@ function Dashboard() {
     return tips[Math.floor(Math.random() * tips.length)] || t('healthTips.defaultTip')
   }
 
-  const notAvailableLabel = t('dashboard.notAvailable')
+  const notAvailableLabel = resolveDashboardText('dashboard.notAvailable', 'Not available')
   const formatValueWithUnit = (value, unit) => {
     if (value === null || value === undefined || value === '') {
       return notAvailableLabel
@@ -415,7 +439,10 @@ function Dashboard() {
     window.open('/ai-coach', '_blank')
   }
 
-  const headerAlignmentLabel = `${headerAlignment === 'left' ? '⇤' : headerAlignment === 'center' ? '⇆' : '⇥'} ${t('dashboard.headerAlignToggle')}`
+  const headerAlignmentLabel = `${headerAlignment === 'left' ? '⇤' : headerAlignment === 'center' ? '⇆' : '⇥'} ${resolveDashboardText(
+    'dashboard.headerAlignToggle',
+    'Cycle header alignment'
+  )}`
   const greetingAlignment = alignmentClasses[headerAlignment] || alignmentClasses.center
   const sectionContainerClasses =
     'rounded-[40px] bg-white/5 p-6 sm:p-10 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl'
@@ -456,8 +483,8 @@ function Dashboard() {
   const insightPanels = [
     {
       id: 'targets',
-      title: t('dashboard.nutritionHub'),
-      description: t('dashboard.nutritionHubSubtitle'),
+      title: resolveDashboardText('dashboard.nutritionHub', 'Energy Targets'),
+      description: resolveDashboardText('dashboard.nutritionHubSubtitle', 'Daily calorie and macro focus.'),
       content: (
         <div className="space-y-7 text-white">
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -492,14 +519,17 @@ function Dashboard() {
     },
     {
       id: 'recommendations',
-      title: t('dashboard.healthRecommendations'),
-      description: t('dashboard.healthRecommendationsSubtitle'),
+      title: resolveDashboardText('dashboard.healthRecommendations', 'Health Recommendations'),
+      description: resolveDashboardText(
+        'dashboard.healthRecommendationsSubtitle',
+        'Clinical-style insights prioritized for you.'
+      ),
       content: <HealthRecommendations analysis={analysis} profile={profile} />,
     },
     {
       id: 'tips',
-      title: t('dashboard.healthTips'),
-      description: t('dashboard.healthTipsSubtitle'),
+      title: resolveDashboardText('dashboard.healthTips', 'Health Tips'),
+      description: resolveDashboardText('dashboard.healthTipsSubtitle', 'Quick prompts to keep momentum.'),
       content: (
         <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-white/12 via-white/6 to-transparent p-6 text-white shadow-[0_20px_45px_rgba(2,6,23,0.35)]">
           <div className="text-3xl">💡</div>
@@ -571,29 +601,33 @@ function Dashboard() {
         onFeedback={() => setIsFeedbackModalOpen(true)}
         onLogout={handleLogout}
         brandTitle="AI Fitness"
-        brandSubtitle={t('dashboard.overview')}
+        brandSubtitle={resolveDashboardText('dashboard.overview', 'Dashboard overview')}
         labels={{
-          feedback: t('dashboard.feedback'),
-          export: t('dashboard.downloadPdf'),
-          edit: t('dashboard.editProfile') || 'Edit Profile',
-          logout: t('dashboard.logOut'),
+          feedback: resolveDashboardText('dashboard.feedback', 'Feedback'),
+          export: resolveDashboardText('dashboard.downloadPdf', 'Download PDF'),
+          edit: resolveDashboardText('dashboard.editProfile', 'Edit profile'),
+          logout: resolveDashboardText('dashboard.logOut', 'Log out'),
         }}
       />
 
       <main className="mx-auto mt-8 flex w-full max-w-6xl flex-col gap-16">
         <section className="space-y-8">
           <SectionHeader
-            label={t('dashboard.overviewLabel')}
-            title={t('dashboard.overviewTitle')}
-            description={t('dashboard.overviewSubtitle')}
+            label={resolveDashboardText('dashboard.overviewLabel', 'Executive Summary')}
+            title={resolveDashboardText('dashboard.overviewTitle', "Today's Health Overview")}
+            description={resolveDashboardText('dashboard.overviewSubtitle', 'Your key vitals and guidance at a glance.')}
           />
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={clsx(sectionContainerClasses, 'space-y-6')}>
             <div className={clsx('flex flex-col gap-3 text-white', greetingAlignment)}>
-              <p className="text-xs uppercase tracking-[0.4em] text-white/60">{t('dashboard.overview')}</p>
+              <p className="text-xs uppercase tracking-[0.4em] text-white/60">
+                {resolveDashboardText('dashboard.overview', 'Overview')}
+              </p>
               <h1 className="text-4xl font-semibold leading-tight">
                 {profile?.name ? t('dashboard.greeting', { name: profile.name }) : t('dashboard.greetingDefault')}
               </h1>
-              <p className="max-w-2xl text-base text-white/70">{t('dashboard.healthTipsSubtitle')}</p>
+              <p className="max-w-2xl text-base text-white/70">
+                {resolveDashboardText('dashboard.healthTipsSubtitle', 'Proactive insights to stay on track.')}
+              </p>
             </div>
             <DailySummaryStrip
               gamificationStatus={gamificationStatus}
@@ -605,9 +639,12 @@ function Dashboard() {
 
         <section className="space-y-8">
           <SectionHeader
-            label={t('dashboard.aiGuidanceLabel')}
-            title={t('dashboard.aiGuidanceTitle')}
-            description={t('dashboard.aiGuidanceSubtitle')}
+            label={resolveDashboardText('dashboard.aiGuidanceLabel', 'Guided Support')}
+            title={resolveDashboardText('dashboard.aiGuidanceTitle', 'AI Guidance Center')}
+            description={resolveDashboardText(
+              'dashboard.aiGuidanceSubtitle',
+              'Personal coaching, streaks, and intelligent nudges.'
+            )}
           />
           <div className={clsx(sectionContainerClasses, 'space-y-6')}>
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-white/60">
@@ -668,9 +705,12 @@ function Dashboard() {
 
         <section className="space-y-8">
           <SectionHeader
-            label={t('dashboard.healthMetricsLabel')}
-            title={t('dashboard.healthMetricsTitle')}
-            description={t('dashboard.healthMetricsSubtitle')}
+            label={resolveDashboardText('dashboard.healthMetricsLabel', 'Core Metrics')}
+            title={resolveDashboardText('dashboard.healthMetricsTitle', 'Body Metrics & Ratios')}
+            description={resolveDashboardText(
+              'dashboard.healthMetricsSubtitle',
+              'BMI, WHR, and foundational measurements.'
+            )}
           />
           <div className={clsx(sectionContainerClasses, 'space-y-6')}>
             <div className="grid gap-6 md:grid-cols-2">
@@ -757,9 +797,12 @@ function Dashboard() {
 
         <section className="space-y-8">
           <SectionHeader
-            label={t('dashboard.nutritionInsightsLabel')}
-            title={t('dashboard.nutritionInsightsTitle')}
-            description={t('dashboard.nutritionInsightsSubtitle')}
+            label={resolveDashboardText('dashboard.nutritionInsightsLabel', 'Nutrition Insights')}
+            title={resolveDashboardText('dashboard.nutritionInsightsTitle', 'Nutrition Intelligence')}
+            description={resolveDashboardText(
+              'dashboard.nutritionInsightsSubtitle',
+              'Targets, recommendations, and quick guidance.'
+            )}
           />
           <div className={clsx(sectionContainerClasses, 'space-y-5')}>
             {insightPanels.map((panel) => {
@@ -775,7 +818,7 @@ function Dashboard() {
                     onClick={() => toggleInsightPanel(panel.id)}
                     aria-expanded={isOpen}
                     aria-controls={`insight-${panel.id}`}
-                    aria-label={`${isOpen ? t('dashboard.collapse') : t('dashboard.expand')} ${panel.title}`}
+                    aria-label={`${isOpen ? resolveDashboardText('dashboard.collapse', 'Collapse') : resolveDashboardText('dashboard.expand', 'Expand')} ${panel.title}`}
                   >
                     <div>
                       <p className="text-xs uppercase tracking-[0.3em] text-white/60">{panel.title}</p>
@@ -806,6 +849,10 @@ function Dashboard() {
 
 function HealthRecommendations({ analysis, profile }) {
   const { t } = useTranslation()
+  const [expandedSections, setExpandedSections] = useState([])
+  const PREVIEW_LIMIT = 180
+  const MAX_LIST_ITEMS = 3
+  const notAvailableText = resolveTextWithFallback(t, 'dashboard.notAvailable', 'Not available')
 
   if (!analysis) {
     return (
@@ -816,8 +863,75 @@ function HealthRecommendations({ analysis, profile }) {
     )
   }
 
+  const toggleSection = (sectionKey) => {
+    setExpandedSections((prev) =>
+      prev.includes(sectionKey) ? prev.filter((key) => key !== sectionKey) : [...prev, sectionKey]
+    )
+  }
+
+  const formatNumberValue = (value, digits = 1) => {
+    if (value === null || value === undefined) return notAvailableText
+    const numeric = Number(value)
+    if (Number.isFinite(numeric)) {
+      return numeric.toFixed(digits)
+    }
+    return value
+  }
+
+  const getMappedTranslation = (value, map) => {
+    if (!value) return notAvailableText
+    const key = map[value]
+    return key ? resolveTextWithFallback(t, key, humanizeTranslationKey(value)) : value
+  }
+
+  const getContentPreview = (text) => {
+    if (!text) return ''
+    if (text.length <= PREVIEW_LIMIT) return text
+    return `${text.slice(0, PREVIEW_LIMIT).trim()}…`
+  }
+
+  const renderListBlock = (items, heading, variant, prefix) => {
+    if (!Array.isArray(items) || items.length === 0) return null
+    const displayItems = items.slice(0, MAX_LIST_ITEMS)
+    return (
+      <div key={`${prefix}-list`}>
+        <p className="text-xs uppercase tracking-[0.3em] text-white/55">{heading}</p>
+        <ul className="mt-2 space-y-2 text-sm text-white/80">
+          {displayItems.map((item, index) => (
+            <li key={`${prefix}-${index}`} className="flex gap-3">
+              <span className={clsx('mt-2 h-1.5 w-1.5 rounded-full', variant.bullet)} />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  const renderHighlights = (items, variant, prefix) => {
+    if (!Array.isArray(items) || items.length === 0) return null
+    return (
+      <div className="flex flex-wrap gap-3" key={`${prefix}-highlights`}>
+        {items.map((highlight, index) => (
+          <div
+            key={`${prefix}-highlight-${index}`}
+            className={clsx(
+              'min-w-[120px] flex-1 rounded-2xl border px-4 py-3 text-sm',
+              variant.border,
+              'border-white/20 bg-white/5 backdrop-blur'
+            )}
+          >
+            <p className="text-[11px] uppercase tracking-[0.3em] text-white/55">{highlight.label}</p>
+            <p className="mt-1 text-base font-semibold text-white">{highlight.value}</p>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   const getWHRRecommendations = () => {
     const whrExplanation = t('healthRecommendations.whrExplanation')
+    const whrRiskLabel = getMappedTranslation(analysis?.whrRisk, WHR_RISK_TRANSLATIONS)
     const risks = [
       t('healthRecommendations.heartDisease'),
       t('healthRecommendations.type2Diabetes'),
@@ -833,6 +947,16 @@ function HealthRecommendations({ analysis, profile }) {
         content: profile?.sex === 'Male'
           ? t('healthRecommendations.whrAtRiskMale')
           : t('healthRecommendations.whrAtRiskFemale'),
+        highlights: [
+          {
+            label: resolveTextWithFallback(t, 'dashboard.whr', 'WHR'),
+            value: formatNumberValue(analysis?.whr, 2)
+          },
+          {
+            label: resolveTextWithFallback(t, 'dashboard.statusLabel', 'Status'),
+            value: whrRiskLabel
+          }
+        ],
         icon: '⚠️'
       }
     }
@@ -844,15 +968,41 @@ function HealthRecommendations({ analysis, profile }) {
       content: profile?.sex === 'Male'
         ? t('healthRecommendations.whrGoodMale')
         : t('healthRecommendations.whrGoodFemale'),
+      highlights: [
+        {
+          label: resolveTextWithFallback(t, 'dashboard.whr', 'WHR'),
+          value: formatNumberValue(analysis?.whr, 2)
+        },
+        {
+          label: resolveTextWithFallback(t, 'dashboard.statusLabel', 'Status'),
+          value: whrRiskLabel
+        }
+      ],
       icon: '✅'
     }
   }
 
-  const getHeartDiseaseInfo = () => ({
-    title: t('healthRecommendations.heartDiseasePrevention'),
-    content: t('healthRecommendations.heartDiseaseContent'),
-    icon: '❤️'
-  })
+  const getHeartDiseaseInfo = () => {
+    const bmiValue =
+      analysis?.bmi !== null && analysis?.bmi !== undefined ? formatNumberValue(analysis?.bmi, 1) : notAvailableText
+    const bmiCategory = getMappedTranslation(analysis?.bmiCategory, BMI_CATEGORY_TRANSLATIONS)
+
+    return {
+      title: t('healthRecommendations.heartDiseasePrevention'),
+      content: t('healthRecommendations.heartDiseaseContent'),
+      icon: '❤️',
+      highlights: [
+        {
+          label: resolveTextWithFallback(t, 'dashboard.bmi', 'BMI'),
+          value: bmiValue
+        },
+        {
+          label: resolveTextWithFallback(t, 'dashboard.categoryLabel', 'Category'),
+          value: bmiCategory
+        }
+      ]
+    }
+  }
 
   const getTranslatedList = (key) => {
     const list = t(key, { returnObjects: true })
@@ -891,7 +1041,20 @@ function HealthRecommendations({ analysis, profile }) {
       }
     }
 
-    return { ...suggestions[activityLevel || 3], icon: '🏃' }
+    return {
+      ...suggestions[activityLevel || 3],
+      icon: '🏃',
+      highlights: [
+        {
+          label: resolveTextWithFallback(t, 'dashboard.activityLevel', 'Activity profile'),
+          value: suggestions[activityLevel || 3]?.title ?? notAvailableText
+        },
+        {
+          label: resolveTextWithFallback(t, 'dashboard.frequencyLabel', 'Weekly rhythm'),
+          value: resolveTextWithFallback(t, 'dashboard.steadyProgress', 'Steady progress')
+        }
+      ]
+    }
   }
 
   const getGoalBasedTips = () => {
@@ -921,13 +1084,67 @@ function HealthRecommendations({ analysis, profile }) {
       }
     }
 
-    return { ...(tips[goal] || tips[2]), icon: '🎯' }
+    const selected = tips[goal] || tips[2]
+
+    return {
+      ...selected,
+      icon: '🎯',
+      highlights: [
+        {
+          label: resolveTextWithFallback(t, 'dashboard.primaryGoal', 'Primary goal'),
+          value: selected?.title ?? notAvailableText
+        },
+        {
+          label: resolveTextWithFallback(t, 'dashboard.energyPlan', 'Energy plan'),
+          value: resolveTextWithFallback(t, 'dashboard.guidedPlan', 'Guided plan')
+        }
+      ]
+    }
   }
 
   const whrRec = getWHRRecommendations()
   const heartInfo = getHeartDiseaseInfo()
   const activityRec = getActivitySuggestions()
   const goalTips = getGoalBasedTips()
+
+  const visualVariants = {
+    whr: {
+      tagline: 'Body composition',
+      border: 'border-sky-400/50',
+      background: 'from-sky-500/10 via-slate-900/50 to-slate-900/20',
+      iconWrapper: 'bg-sky-500/15 text-sky-100',
+      bullet: 'bg-sky-300/80'
+    },
+    heart: {
+      tagline: 'Cardiovascular health',
+      border: 'border-rose-400/40',
+      background: 'from-rose-500/10 via-slate-900/50 to-slate-900/20',
+      iconWrapper: 'bg-rose-500/15 text-rose-100',
+      bullet: 'bg-rose-300/80'
+    },
+    activity: {
+      tagline: 'Movement strategy',
+      border: 'border-amber-400/40',
+      background: 'from-amber-400/10 via-slate-900/50 to-slate-900/20',
+      iconWrapper: 'bg-amber-400/15 text-amber-100',
+      bullet: 'bg-amber-200/80'
+    },
+    goal: {
+      tagline: 'Nutrition focus',
+      border: 'border-emerald-400/40',
+      background: 'from-emerald-400/10 via-slate-900/50 to-slate-900/20',
+      iconWrapper: 'bg-emerald-400/15 text-emerald-100',
+      bullet: 'bg-emerald-200/80'
+    }
+  }
+
+  const defaultVariant = {
+    tagline: 'Health insight',
+    border: 'border-white/10',
+    background: 'from-white/12 via-white/6 to-transparent',
+    iconWrapper: 'bg-white/10 text-white',
+    bullet: 'bg-white/70'
+  }
 
   const recommendationSections = [
     { key: 'whr', ...whrRec },
@@ -937,43 +1154,96 @@ function HealthRecommendations({ analysis, profile }) {
   ]
 
   return (
-    <div className="space-y-5 text-white">
-      {recommendationSections.map((section) => (
-        <article
-          key={section.key}
-          className="rounded-3xl bg-gradient-to-br from-white/12 via-white/6 to-transparent p-6 shadow-[0_25px_60px_rgba(2,6,23,0.35)]"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">{section.title}</h3>
+    <div className="grid gap-6 md:grid-cols-2">
+      {recommendationSections.map((section) => {
+        const variant = visualVariants[section.key] || defaultVariant
+        const isExpanded = expandedSections.includes(section.key)
+        const preview = getContentPreview(section.content)
+        const showToggle = !!section.content && section.content.length > PREVIEW_LIMIT
+
+        return (
+          <article
+            key={section.key}
+            className={clsx(
+              'group relative flex h-full flex-col rounded-3xl border bg-gradient-to-br p-6 text-white shadow-[0_30px_70px_rgba(2,6,23,0.45)] transition-all hover:shadow-[0_40px_90px_rgba(2,6,23,0.55)]',
+              variant.border,
+              variant.background,
+              'overflow-hidden'
+            )}
+          >
+            <span
+              aria-hidden
+              className={clsx(
+                'pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100',
+                'bg-gradient-to-br from-white/10 via-transparent to-transparent blur-3xl'
+              )}
+            />
+            <div className="relative z-10 flex flex-col gap-5 lg:flex-row">
+              <div className="space-y-4 lg:w-2/5">
+                <div className="flex items-start gap-4">
+                  <div
+                    className={clsx(
+                      'flex h-12 w-12 items-center justify-center rounded-2xl text-2xl',
+                      variant.iconWrapper
+                    )}
+                  >
+                    {section.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/60">{variant.tagline}</p>
+                    <h3 className="mt-1 text-xl font-semibold">{section.title}</h3>
+                  </div>
+                </div>
+                {section.explanation && <p className="text-sm text-white/75">{section.explanation}</p>}
+                {renderHighlights(section.highlights, variant, section.key)}
+              </div>
+
+              <div className="flex-1 space-y-5 border-t border-white/10 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                {renderListBlock(
+                  section.risks,
+                  resolveTextWithFallback(t, 'dashboard.keyRisks', 'Key risks'),
+                  variant,
+                  `${section.key}-risks`
+                )}
+                {renderListBlock(
+                  section.activities,
+                  resolveTextWithFallback(t, 'dashboard.activities', 'Suggested activities'),
+                  variant,
+                  `${section.key}-activities`
+                )}
+                {renderListBlock(
+                  section.tips,
+                  resolveTextWithFallback(t, 'dashboard.goalTips', 'Goal-focused tips'),
+                  variant,
+                  `${section.key}-tips`
+                )}
+
+                {section.content && (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                      {resolveTextWithFallback(t, 'dashboard.focusArea', 'Focus')}
+                    </p>
+                    <p className="mt-2 text-sm text-white/85">{isExpanded || !showToggle ? section.content : preview}</p>
+                    {showToggle && (
+                      <button
+                        type="button"
+                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white/90"
+                        onClick={() => toggleSection(section.key)}
+                        aria-expanded={isExpanded}
+                      >
+                        {isExpanded
+                          ? resolveTextWithFallback(t, 'dashboard.collapse', 'Show less')
+                          : resolveTextWithFallback(t, 'dashboard.whyThisMatters', 'Why this matters')}
+                        <span className="text-base">{isExpanded ? '−' : '→'}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <span className="text-xl">{section.icon}</span>
-          </div>
-          {section.explanation && <p className="mt-3 text-sm text-white/70">{section.explanation}</p>}
-          {Array.isArray(section.risks) && section.risks.length > 0 && (
-            <ul className="mt-3 space-y-1 text-sm text-white/70">
-              {section.risks.map((risk, index) => (
-                <li key={index}>{risk}</li>
-              ))}
-            </ul>
-          )}
-          {section.content && <p className="mt-3 text-sm text-white/80">{section.content}</p>}
-          {Array.isArray(section.activities) && section.activities.length > 0 && (
-            <ul className="mt-3 space-y-1 text-sm text-white/70">
-              {section.activities.map((activity, index) => (
-                <li key={index}>{activity}</li>
-              ))}
-            </ul>
-          )}
-          {Array.isArray(section.tips) && section.tips.length > 0 && (
-            <ul className="mt-3 space-y-1 text-sm text-white/70">
-              {section.tips.map((tip, index) => (
-                <li key={index}>{tip}</li>
-              ))}
-            </ul>
-          )}
-        </article>
-      ))}
+          </article>
+        )
+      })}
     </div>
   )
 }
