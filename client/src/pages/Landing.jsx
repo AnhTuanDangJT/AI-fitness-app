@@ -118,88 +118,40 @@ function Landing() {
           <div className="landing-problem-column">
             <h2 className="landing-section-title">{t('challenge.title')}</h2>
             <div className="landing-problem-item" style={{ '--delay': '0ms' }}>
-              <div className="landing-problem-icon" aria-hidden>
-                <span className="landing-badge-emoji" aria-hidden>🧩</span>
-                <span className="landing-badge-label">P1</span>
-              </div>
-              <div>
-                <h3>{t('challenge.genericPlans.title')}</h3>
-                <p>{t('challenge.genericPlans.description')}</p>
-              </div>
+              <h3>{t('challenge.genericPlans.title')}</h3>
+              <p>{t('challenge.genericPlans.description')}</p>
             </div>
             <div className="landing-problem-item" style={{ '--delay': '100ms' }}>
-              <div className="landing-problem-icon" aria-hidden>
-                <span className="landing-badge-emoji" aria-hidden>📉</span>
-                <span className="landing-badge-label">P2</span>
-              </div>
-              <div>
-                <h3>{t('challenge.inconsistentTracking.title')}</h3>
-                <p>{t('challenge.inconsistentTracking.description')}</p>
-              </div>
+              <h3>{t('challenge.inconsistentTracking.title')}</h3>
+              <p>{t('challenge.inconsistentTracking.description')}</p>
             </div>
             <div className="landing-problem-item" style={{ '--delay': '200ms' }}>
-              <div className="landing-problem-icon" aria-hidden>
-                <span className="landing-badge-emoji" aria-hidden>🍔</span>
-                <span className="landing-badge-label">P3</span>
-              </div>
-              <div>
-                <h3>{t('challenge.nutritionConfusion.title')}</h3>
-                <p>{t('challenge.nutritionConfusion.description')}</p>
-              </div>
+              <h3>{t('challenge.nutritionConfusion.title')}</h3>
+              <p>{t('challenge.nutritionConfusion.description')}</p>
             </div>
             <div className="landing-problem-item" style={{ '--delay': '300ms' }}>
-              <div className="landing-problem-icon" aria-hidden>
-                <span className="landing-badge-emoji" aria-hidden>😴</span>
-                <span className="landing-badge-label">P4</span>
-              </div>
-              <div>
-                <h3>{t('challenge.motivationFades.title')}</h3>
-                <p>{t('challenge.motivationFades.description')}</p>
-              </div>
+              <h3>{t('challenge.motivationFades.title')}</h3>
+              <p>{t('challenge.motivationFades.description')}</p>
             </div>
           </div>
 
           <div className="landing-solution-column">
             <h2 className="landing-section-title">{t('solution.title')}</h2>
             <div className="landing-solution-item" style={{ '--delay': '0ms' }}>
-              <div className="landing-solution-icon" aria-hidden>
-                <span className="landing-badge-emoji" aria-hidden>🤖</span>
-                <span className="landing-badge-label">S1</span>
-              </div>
-              <div>
-                <h3>{t('solution.aiPersonalization.title')}</h3>
-                <p>{t('solution.aiPersonalization.description')}</p>
-              </div>
+              <h3>{t('solution.aiPersonalization.title')}</h3>
+              <p>{t('solution.aiPersonalization.description')}</p>
             </div>
             <div className="landing-solution-item" style={{ '--delay': '100ms' }}>
-              <div className="landing-solution-icon" aria-hidden>
-                <span className="landing-badge-emoji" aria-hidden>📊</span>
-                <span className="landing-badge-label">S2</span>
-              </div>
-              <div>
-                <h3>{t('solution.realTimeAnalytics.title')}</h3>
-                <p>{t('solution.realTimeAnalytics.description')}</p>
-              </div>
+              <h3>{t('solution.realTimeAnalytics.title')}</h3>
+              <p>{t('solution.realTimeAnalytics.description')}</p>
             </div>
             <div className="landing-solution-item" style={{ '--delay': '200ms' }}>
-              <div className="landing-solution-icon" aria-hidden>
-                <span className="landing-badge-emoji" aria-hidden>🥗</span>
-                <span className="landing-badge-label">S3</span>
-              </div>
-              <div>
-                <h3>{t('solution.smartMealPlanning.title')}</h3>
-                <p>{t('solution.smartMealPlanning.description')}</p>
-              </div>
+              <h3>{t('solution.smartMealPlanning.title')}</h3>
+              <p>{t('solution.smartMealPlanning.description')}</p>
             </div>
             <div className="landing-solution-item" style={{ '--delay': '300ms' }}>
-              <div className="landing-solution-icon" aria-hidden>
-                <span className="landing-badge-emoji" aria-hidden>🔥</span>
-                <span className="landing-badge-label">S4</span>
-              </div>
-              <div>
-                <h3>{t('solution.gamifiedConsistency.title')}</h3>
-                <p>{t('solution.gamifiedConsistency.description')}</p>
-              </div>
+              <h3>{t('solution.gamifiedConsistency.title')}</h3>
+              <p>{t('solution.gamifiedConsistency.description')}</p>
             </div>
           </div>
         </div>

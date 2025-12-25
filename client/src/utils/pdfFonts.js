@@ -54,3 +54,4 @@ export const ensureVietnameseFonts = async (doc) => {
 export const PDF_FONT_FAMILY = FONT_FAMILY
 
 
+
