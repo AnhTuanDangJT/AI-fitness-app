@@ -16,7 +16,6 @@ import AchievementsModal from '../components/AchievementsModal'
 import MealPreferencesModal from '../components/MealPreferencesModal'
 import AppNavbar from '@/components/layout/AppNavbar'
 import Button from '@/components/ui/Button'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 
@@ -67,6 +66,14 @@ const segmentGradients = {
   obese: 'from-rose-500/80 to-rose-600/70',
 }
 
+const SectionHeader = ({ label, title, description }) => (
+  <div className="space-y-1 text-white">
+    <p className="text-xs uppercase tracking-[0.4em] text-white/60">{label}</p>
+    <h2 className="text-2xl font-semibold">{title}</h2>
+    {description && <p className="text-sm text-white/60">{description}</p>}
+  </div>
+)
+
 // IMPORTANT: Keep translation maps declared ahead of their usage to avoid
 // Temporal Dead Zone errors that previously crashed the dashboard at runtime.
 const BMI_CATEGORY_TRANSLATIONS = {
@@ -90,11 +97,11 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [gamificationStatus, setGamificationStatus] = useState(null)
-  const [activeStatTab, setActiveStatTab] = useState('BMI') // Tab state for Your Stats section
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
   const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false)
   const [isMealPlannerOpen, setIsMealPlannerOpen] = useState(false)
   const [headerAlignment, setHeaderAlignment] = useState(() => localStorage.getItem('dashboardHeaderAlign') || 'center')
+  const [expandedInsights, setExpandedInsights] = useState(['targets'])
   const navigate = useNavigate()
   const loadingCompletedRef = useRef(false)
 
@@ -189,6 +196,12 @@ function Dashboard() {
     const currentIndex = order.indexOf(headerAlignment)
     const nextAlignment = order[(currentIndex + 1) % order.length]
     setHeaderAlignment(nextAlignment)
+  }
+
+  const toggleInsightPanel = (panelId) => {
+    setExpandedInsights((prev) =>
+      prev.includes(panelId) ? prev.filter((id) => id !== panelId) : [...prev, panelId]
+    )
   }
 
   const fetchFullAnalysis = async () => {
@@ -333,6 +346,14 @@ function Dashboard() {
   }
 
   const notAvailableLabel = t('dashboard.notAvailable')
+  const formatValueWithUnit = (value, unit) => {
+    if (value === null || value === undefined || value === '') {
+      return notAvailableLabel
+    }
+    const numericValue = typeof value === 'number' ? value : parseFloat(value)
+    const displayValue = Number.isFinite(numericValue) ? Math.round(numericValue * 10) / 10 : value
+    return unit ? `${displayValue} ${unit}` : displayValue
+  }
   const getLocalizedCategoricalValue = (value, map) => {
     if (!value) return notAvailableLabel
     const translationKey = map[value]
@@ -386,27 +407,14 @@ function Dashboard() {
     }
   }
 
+  const openAiCoach = () => {
+    window.open('/ai-coach', '_blank')
+  }
+
   const headerAlignmentLabel = `${headerAlignment === 'left' ? '⇤' : headerAlignment === 'center' ? '⇆' : '⇥'} ${t('dashboard.headerAlignToggle')}`
   const greetingAlignment = alignmentClasses[headerAlignment] || alignmentClasses.center
-
-  const aiFeatureCards = [
-    {
-      id: 'coach',
-      title: t('dashboard.aiCoach'),
-      description: t('dashboard.aiCoachDescription'),
-      icon: '🤖',
-      badge: t('dashboard.recommended'),
-      onClick: () => window.open('/ai-coach', '_blank'),
-    },
-    {
-      id: 'meal',
-      title: t('dashboard.aiMealPlanner'),
-      description: t('dashboard.aiMealPlannerDescription'),
-      icon: '🍽️',
-      badge: t('dashboard.aiMealPlanner'),
-      onClick: () => setIsMealPlannerOpen(true),
-    },
-  ]
+  const sectionContainerClasses =
+    'rounded-[40px] bg-white/5 p-6 sm:p-10 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl'
 
   const energyCards = [
     {
@@ -423,6 +431,80 @@ function Dashboard() {
       label: t('dashboard.goalCalories'),
       value: analysis?.goalCalories ? Math.round(analysis.goalCalories) : notAvailableLabel,
       description: t('dashboard.goalCaloriesDescription'),
+    },
+  ]
+
+  const bodyStatsItems = [
+    { label: t('dashboard.height'), value: formatValueWithUnit(profile?.height, t('dashboard.cm')) },
+    { label: t('dashboard.weight'), value: formatValueWithUnit(profile?.weight, t('dashboard.kg')) },
+    { label: t('dashboard.waist'), value: formatValueWithUnit(profile?.waist, t('dashboard.cm')) },
+    { label: t('dashboard.hip'), value: formatValueWithUnit(profile?.hip, t('dashboard.cm')) },
+    {
+      label: t('dashboard.bmrValue'),
+      value: analysis?.bmr ? `${Math.round(analysis.bmr)} ${t('dashboard.kcalPerDayShort')}` : notAvailableLabel,
+    },
+    {
+      label: t('dashboard.tdeeValue'),
+      value: analysis?.tdee ? `${Math.round(analysis.tdee)} ${t('dashboard.kcalPerDayShort')}` : notAvailableLabel,
+    },
+  ]
+
+  const insightPanels = [
+    {
+      id: 'targets',
+      title: t('dashboard.nutritionHub'),
+      description: t('dashboard.nutritionHubSubtitle'),
+      content: (
+        <div className="space-y-7 text-white">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {energyCards.map((card) => (
+              <div
+                key={card.label}
+                className="rounded-2xl bg-gradient-to-b from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_45px_rgba(2,6,23,0.35)]"
+              >
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">{card.label}</p>
+                <p className="mt-3 text-2xl font-semibold text-white">{card.value}</p>
+                <p className="text-xs text-white/50">{t('dashboard.kcalPerDay')}</p>
+                <p className="mt-3 text-sm text-white/65 whitespace-pre-line">{card.description}</p>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-3xl bg-gradient-to-br from-white/12 via-white/6 to-transparent p-7 text-white shadow-[0_25px_60px_rgba(2,6,23,0.4)]">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/60">{t('dashboard.dailyProteinTarget')}</p>
+            <p className="mt-3 text-3xl font-semibold">
+              {analysis.proteinTarget ? Math.round(analysis.proteinTarget) : notAvailableLabel}
+              <span className="ml-2 text-base text-white/60">{t('dashboard.gramsPerDay')}</span>
+            </p>
+            <div className="mt-6 h-2 w-full rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-accent/80"
+                style={{ width: `${Math.min(100, ((analysis.proteinTarget || 0) / 200) * 100)}%` }}
+              />
+            </div>
+            <p className="mt-4 text-sm text-white/70">{t('dashboard.proteinTip')}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'recommendations',
+      title: t('dashboard.healthRecommendations'),
+      description: t('dashboard.healthRecommendationsSubtitle'),
+      content: <HealthRecommendations analysis={analysis} profile={profile} />,
+    },
+    {
+      id: 'tips',
+      title: t('dashboard.healthTips'),
+      description: t('dashboard.healthTipsSubtitle'),
+      content: (
+        <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-white/12 via-white/6 to-transparent p-6 text-white shadow-[0_20px_45px_rgba(2,6,23,0.35)]">
+          <div className="text-3xl">💡</div>
+          <p className="text-lg font-semibold">{getHealthTip()}</p>
+          <Button variant="secondary" size="sm" onClick={() => setIsFeedbackModalOpen(true)}>
+            {t('dashboard.feedback')}
+          </Button>
+        </div>
+      ),
     },
   ]
 
@@ -494,270 +576,219 @@ function Dashboard() {
         }}
       />
 
-      <main className="mx-auto mt-8 flex w-full max-w-6xl flex-col gap-8">
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={clsx(
-            'flex flex-col gap-4 rounded-3xl border border-white/12 bg-base-900/70 p-10 text-white',
-            greetingAlignment
-          )}
-        >
-          <p className="text-xs uppercase tracking-[0.4em] text-muted">{t('dashboard.overview')}</p>
-          <h1 className="text-4xl font-semibold leading-tight">
-            {profile?.name ? t('dashboard.greeting', { name: profile.name }) : t('dashboard.greetingDefault')}
-          </h1>
-          <p className="max-w-2xl text-base text-white/70">{t('dashboard.healthTipsSubtitle')}</p>
-        </motion.section>
-
-        <DailySummaryStrip
-          gamificationStatus={gamificationStatus}
-          calorieTarget={analysis?.goalCalories}
-          proteinTarget={analysis?.proteinTarget}
-        />
-
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="flex flex-col gap-6">
-            <section className="space-y-5">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-muted">{t('dashboard.aiFeatures')}</p>
-                  <p className="text-sm text-white/60">{t('dashboard.aiFeaturesSubtitle')}</p>
-                </div>
-                <span className="rounded-full border border-white/15 px-4 py-1 text-xs text-white/60">
-                  AI Generated
-                </span>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                {aiFeatureCards.map((card, index) => (
-                  <motion.button
-                    key={card.id}
-                    onClick={card.onClick}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="group rounded-3xl border border-white/12 bg-transparent p-6 text-left transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                  >
-                    <span className="text-2xl">{card.icon}</span>
-                    <p className="mt-4 text-lg font-semibold text-white">{card.title}</p>
-                    <p className="mt-2 text-sm text-white/65">{card.description}</p>
-                    <span className="mt-6 inline-flex text-xs uppercase tracking-[0.4em] text-white/50">
-                      {card.badge}
-                    </span>
-                  </motion.button>
-                ))}
-              </div>
-            </section>
-
-            <Card className="bg-base-900/60">
-              <CardHeader className="flex flex-col gap-2">
-                <CardTitle>{t('dashboard.yourStats')}</CardTitle>
-                <CardDescription>{t('dashboard.trackMetrics')}</CardDescription>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 p-1">
-                  {[
-                    { id: 'BMI', label: t('dashboard.bmiValue') },
-                    { id: 'WHR', label: t('dashboard.whrValue') },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      className={clsx(
-                        'rounded-full px-4 py-2 text-sm transition',
-                        activeStatTab === tab.id ? 'bg-white/15 text-white' : 'text-white/60'
-                      )}
-                      onClick={() => setActiveStatTab(tab.id)}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {activeStatTab === 'BMI' ? (
-                  <motion.div initial={{ opacity: 0.5 }} animate={{ opacity: 1 }}>
-                    <p className="text-sm text-muted">{t('dashboard.bmiSubtitle')}</p>
-                    <div className="mt-4 flex items-baseline gap-3">
-                      <span className="text-4xl font-semibold text-white">
-                        {bmiValue !== null ? bmiValue.toFixed(1) : notAvailableLabel}
-                      </span>
-                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-wide text-white/80">
-                        {bmiCategoryLabel}
-                      </span>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div initial={{ opacity: 0.5 }} animate={{ opacity: 1 }}>
-                    <p className="text-sm text-muted">{t('dashboard.whrSubtitle')}</p>
-                    <div className="mt-4 flex items-baseline gap-3">
-                      <span className="text-4xl font-semibold text-white">
-                        {whrValue !== null ? whrValue.toFixed(2) : notAvailableLabel}
-                      </span>
-                      <span
-                        className={clsx(
-                          'rounded-full px-3 py-1 text-xs uppercase tracking-wide',
-                          isWhrGoodCondition ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
-                        )}
-                      >
-                        {whrRiskLabel}
-                      </span>
-                    </div>
-                  </motion.div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card className="bg-base-900/60">
-                <CardHeader>
-                  <CardTitle>{t('dashboard.bmi')}</CardTitle>
-                  <CardDescription>{t('dashboard.bmiSubtitle')}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-baseline gap-4">
-                    <span className="text-5xl font-semibold text-white">
-                      {bmiValue !== null ? bmiValue.toFixed(1) : notAvailableLabel}
-                    </span>
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-wide text-white/70">
-                      {bmiCategoryLabel}
-                    </span>
-                  </div>
-                  <div className="relative h-4 w-full overflow-hidden rounded-full bg-white/5">
-                    <div className="flex h-full w-full">
-                      {BMI_SEGMENTS.map((segment) => (
-                        <div
-                          key={segment.key}
-                          className={clsx(
-                            'h-full bg-gradient-to-r',
-                            segmentGradients[segment.key],
-                            activeBmiSegmentKey === segment.key ? 'opacity-100' : 'opacity-60'
-                          )}
-                          style={{ width: `${getSegmentWidth(segment)}%` }}
-                        />
-                      ))}
-                    </div>
-                    <div
-                      className="absolute top-1/2 flex -translate-y-1/2 flex-col items-center"
-                      style={{ left: bmiIndicatorPosition }}
-                    >
-                      <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-base-800 shadow-card">
-                        {bmiIndicatorDisplay}
-                      </span>
-                      <span className="mt-1 h-6 w-px bg-white/60" />
-                    </div>
-                  </div>
-                  <div className="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
-                    {BMI_SEGMENTS.map((segment) => (
-                      <div key={segment.key} className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-2">
-                        <span>{t(segment.labelKey)}</span>
-                        <span className="text-white/60">{t(segment.rangeKey)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-base-900/60">
-                <CardHeader>
-                  <CardTitle>{t('dashboard.whr')}</CardTitle>
-                  <CardDescription>{t('dashboard.whrSubtitle')}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-baseline gap-4">
-                    <span className="text-5xl font-semibold text-white">
-                      {whrValue !== null ? whrValue.toFixed(2) : notAvailableLabel}
-                    </span>
-                    <span
-                      className={clsx(
-                        'rounded-full px-3 py-1 text-xs uppercase tracking-wide',
-                        isWhrGoodCondition ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
-                      )}
-                    >
-                      {whrRiskLabel}
-                    </span>
-                  </div>
-                  <p className="text-white/70">
-                    {isWhrGoodCondition ? t('dashboard.whrGoodCondition') : t('dashboard.whrAtRisk')}
-                  </p>
-                </CardContent>
-              </Card>
+      <main className="mx-auto mt-8 flex w-full max-w-6xl flex-col gap-16">
+        <section className="space-y-8">
+          <SectionHeader
+            label={t('dashboard.overviewLabel')}
+            title={t('dashboard.overviewTitle')}
+            description={t('dashboard.overviewSubtitle')}
+          />
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={clsx(sectionContainerClasses, 'space-y-6')}>
+            <div className={clsx('flex flex-col gap-3 text-white', greetingAlignment)}>
+              <p className="text-xs uppercase tracking-[0.4em] text-white/60">{t('dashboard.overview')}</p>
+              <h1 className="text-4xl font-semibold leading-tight">
+                {profile?.name ? t('dashboard.greeting', { name: profile.name }) : t('dashboard.greetingDefault')}
+              </h1>
+              <p className="max-w-2xl text-base text-white/70">{t('dashboard.healthTipsSubtitle')}</p>
             </div>
+            <DailySummaryStrip
+              gamificationStatus={gamificationStatus}
+              calorieTarget={analysis?.goalCalories}
+              proteinTarget={analysis?.proteinTarget}
+            />
+          </motion.div>
+        </section>
 
-            <Card className="bg-base-900/60">
-              <CardHeader>
-                <CardTitle>{t('dashboard.nutritionHub')}</CardTitle>
-                <CardDescription>{t('dashboard.nutritionHubSubtitle')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <div className="grid gap-4 md:grid-cols-3">
-                  {energyCards.map((card) => (
-                    <div key={card.label} className="rounded-3xl border border-white/12 bg-transparent p-5">
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted">{card.label}</p>
-                      <p className="mt-3 text-2xl font-semibold text-white">{card.value}</p>
-                      <p className="text-xs text-white/50">{t('dashboard.kcalPerDay')}</p>
-                      <p className="mt-4 text-sm text-white/60 whitespace-pre-line">{card.description}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="rounded-3xl border border-white/12 bg-transparent p-6">
-                  <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <section className="space-y-8">
+          <SectionHeader
+            label={t('dashboard.aiGuidanceLabel')}
+            title={t('dashboard.aiGuidanceTitle')}
+            description={t('dashboard.aiGuidanceSubtitle')}
+          />
+          <div className={clsx(sectionContainerClasses, 'space-y-6')}>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-white/60">
+              <span>{t('dashboard.aiPoweredLabel')}</span>
+              <span className="rounded-full bg-white/10 px-4 py-1 text-[11px] text-white">{t('dashboard.aiPoweredTag')}</span>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="flex flex-col gap-6">
+                <div className="rounded-3xl bg-white/5 p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm uppercase tracking-[0.3em] text-muted">{t('dashboard.nutritionTarget')}</p>
-                      <p className="text-3xl font-semibold text-white">
-                        {analysis.proteinTarget ? Math.round(analysis.proteinTarget) : notAvailableLabel}
-                        <span className="ml-2 text-base text-white/60">{t('dashboard.gramsPerDay')}</span>
-                      </p>
+                      <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t('dashboard.aiCoach')}</p>
+                      <h3 className="mt-2 text-2xl font-semibold">{t('dashboard.aiCoachHeadline')}</h3>
+                      <p className="mt-3 text-sm text-white/70">{t('dashboard.aiCoachDescription')}</p>
                     </div>
+                    <span className="text-3xl">🤖</span>
                   </div>
-                  <div className="mt-6 h-2 w-full rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-accent/80" style={{ width: `${Math.min(100, ((analysis.proteinTarget || 0) / 200) * 100)}%` }} />
+                  <p className="mt-4 text-sm text-white/65">{t('dashboard.aiFeaturesSubtitle')}</p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Button onClick={openAiCoach}>{t('dashboard.aiCoach')}</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setIsFeedbackModalOpen(true)}>
+                      {t('dashboard.feedback')}
+                    </Button>
                   </div>
-                  <p className="mt-4 text-sm text-white/70">{t('dashboard.proteinTip')}</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-base-900/60">
-              <CardHeader>
-                <CardTitle>{t('dashboard.healthRecommendations')}</CardTitle>
-                <CardDescription>{t('dashboard.healthRecommendationsSubtitle')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <HealthRecommendations analysis={analysis} profile={profile} />
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            {gamificationStatus && (
-              <XPBoard
-                xp={gamificationStatus.xp ?? 0}
-                currentStreakDays={gamificationStatus.currentStreakDays ?? 0}
-                onOpenDetails={() => setIsAchievementsModalOpen(true)}
-              />
-            )}
-
-            <Card className="bg-base-900/60">
-              <CardContent className="px-0 pb-0">
-                <DailyChallenges />
-              </CardContent>
-            </Card>
-
-            <Card className="bg-base-900/60">
-              <CardHeader>
-                <CardTitle>{t('dashboard.healthTips')}</CardTitle>
-                <CardDescription>{t('dashboard.healthTipsSubtitle')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-3xl border border-white/15 bg-transparent p-6 text-white">
-                  <div className="text-2xl">💡</div>
-                  <p className="mt-4 text-lg font-semibold">{getHealthTip()}</p>
-                  <Button className="mt-6" variant="secondary" size="sm" onClick={() => setIsFeedbackModalOpen(true)}>
-                    {t('dashboard.feedback')}
+                {gamificationStatus && (
+                  <XPBoard
+                    xp={gamificationStatus.xp ?? 0}
+                    currentStreakDays={gamificationStatus.currentStreakDays ?? 0}
+                    onOpenDetails={() => setIsAchievementsModalOpen(true)}
+                  />
+                )}
+              </div>
+              <div className="flex flex-col gap-6">
+                <div className="rounded-3xl bg-white/5 p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t('dashboard.aiMealPlanner')}</p>
+                      <h3 className="mt-2 text-xl font-semibold">{t('dashboard.aiMealPlannerDescription')}</h3>
+                      <p className="mt-3 text-sm text-white/70">{t('dashboard.nutritionHubSubtitle')}</p>
+                    </div>
+                    <span className="text-3xl">🍽️</span>
+                  </div>
+                  <Button className="mt-6" variant="secondary" onClick={() => setIsMealPlannerOpen(true)}>
+                    {t('dashboard.aiMealPlanner')}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="rounded-3xl bg-gradient-to-b from-white/12 to-white/5 p-6 text-white shadow-[0_20px_45px_rgba(2,6,23,0.35)]">
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/60">{t('gamification.dailyChallenges')}</p>
+                  <div className="mt-4">
+                    <DailyChallenges />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
+
+        <section className="space-y-8">
+          <SectionHeader
+            label={t('dashboard.healthMetricsLabel')}
+            title={t('dashboard.healthMetricsTitle')}
+            description={t('dashboard.healthMetricsSubtitle')}
+          />
+          <div className={clsx(sectionContainerClasses, 'space-y-6')}>
+            <div className="grid gap-6 md:grid-cols-2">
+              <article className="rounded-3xl bg-white/5 p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">{t('dashboard.bmi')}</p>
+                <p className="mt-1 text-sm text-white/60">{t('dashboard.bmiSubtitle')}</p>
+                <div className="mt-6 flex items-baseline gap-4">
+                  <span className="text-5xl font-semibold text-white">
+                    {bmiValue !== null ? bmiValue.toFixed(1) : notAvailableLabel}
+                  </span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-wide text-white/70">
+                    {bmiCategoryLabel}
+                  </span>
+                </div>
+                <div className="mt-6 relative h-4 w-full overflow-hidden rounded-full bg-white/5">
+                  <div className="flex h-full w-full">
+                    {BMI_SEGMENTS.map((segment) => (
+                      <div
+                        key={segment.key}
+                        className={clsx(
+                          'h-full bg-gradient-to-r transition-opacity',
+                          segmentGradients[segment.key],
+                          activeBmiSegmentKey === segment.key ? 'opacity-100' : 'opacity-60'
+                        )}
+                        style={{ width: `${getSegmentWidth(segment)}%` }}
+                      />
+                    ))}
+                  </div>
+                  <div
+                    className="absolute top-1/2 flex -translate-y-1/2 flex-col items-center"
+                    style={{ left: bmiIndicatorPosition }}
+                  >
+                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-base-800 shadow-card">
+                      {bmiIndicatorDisplay}
+                    </span>
+                    <span className="mt-1 h-6 w-px bg-white/60" />
+                  </div>
+                </div>
+                <div className="mt-6 grid gap-2 text-sm text-white/70 sm:grid-cols-2">
+                  {BMI_SEGMENTS.map((segment) => (
+                    <div key={segment.key} className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-2">
+                      <span>{t(segment.labelKey)}</span>
+                      <span className="text-white/60">{t(segment.rangeKey)}</span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+              <article className="rounded-3xl bg-white/5 p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">{t('dashboard.whr')}</p>
+                <p className="mt-1 text-sm text-white/60">{t('dashboard.whrSubtitle')}</p>
+                <div className="mt-6 flex items-baseline gap-4">
+                  <span className="text-5xl font-semibold text-white">
+                    {whrValue !== null ? whrValue.toFixed(2) : notAvailableLabel}
+                  </span>
+                  <span
+                    className={clsx(
+                      'rounded-full px-3 py-1 text-xs uppercase tracking-wide',
+                      isWhrGoodCondition ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
+                    )}
+                  >
+                    {whrRiskLabel}
+                  </span>
+                </div>
+                <p className="mt-4 text-sm text-white/70">
+                  {isWhrGoodCondition ? t('dashboard.whrGoodCondition') : t('dashboard.whrAtRisk')}
+                </p>
+              </article>
+            </div>
+            <div className="rounded-3xl bg-white/5 p-6 text-white shadow-[0_25px_60px_rgba(2,6,23,0.35)]">
+              <div className="flex items-center justify-between gap-4">
+                <h3 className="text-lg font-semibold">{t('dashboard.bodyMetrics')}</h3>
+              </div>
+              <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                {bodyStatsItems.map((item) => (
+                  <div key={item.label} className="rounded-2xl bg-gradient-to-b from-white/10 to-transparent p-5">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/60">{item.label}</p>
+                    <p className="mt-2 text-xl font-semibold text-white">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-8">
+          <SectionHeader
+            label={t('dashboard.nutritionInsightsLabel')}
+            title={t('dashboard.nutritionInsightsTitle')}
+            description={t('dashboard.nutritionInsightsSubtitle')}
+          />
+          <div className={clsx(sectionContainerClasses, 'space-y-5')}>
+            {insightPanels.map((panel) => {
+              const isOpen = expandedInsights.includes(panel.id)
+              return (
+                <div
+                  key={panel.id}
+                  className="rounded-3xl bg-gradient-to-b from-white/12 to-white/5 p-6 text-white shadow-[0_25px_60px_rgba(2,6,23,0.35)]"
+                >
+                  <button
+                    type="button"
+                    className="flex w-full items-start justify-between gap-4 text-left"
+                    onClick={() => toggleInsightPanel(panel.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={`insight-${panel.id}`}
+                    aria-label={`${isOpen ? t('dashboard.collapse') : t('dashboard.expand')} ${panel.title}`}
+                  >
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-white/60">{panel.title}</p>
+                      <p className="mt-2 text-sm text-white/70">{panel.description}</p>
+                    </div>
+                    <span className="text-xl">{isOpen ? '−' : '+'}</span>
+                  </button>
+                  {isOpen && (
+                    <div id={`insight-${panel.id}`} className="mt-4">
+                      {panel.content}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
       </main>
 
       {isFeedbackModalOpen && <FeedbackModal onClose={() => setIsFeedbackModalOpen(false)} />}
@@ -775,14 +806,13 @@ function HealthRecommendations({ analysis, profile }) {
   if (!analysis) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
       </div>
     )
   }
 
   const getWHRRecommendations = () => {
-    // Based on Java code (mainOne.java lines 252-274)
     const whrExplanation = t('healthRecommendations.whrExplanation')
     const risks = [
       t('healthRecommendations.heartDisease'),
@@ -790,37 +820,35 @@ function HealthRecommendations({ analysis, profile }) {
       t('healthRecommendations.stroke'),
       t('healthRecommendations.metabolicSyndrome')
     ]
-    
+
     if (analysis.whrRisk === 'At risk') {
       return {
         title: t('healthRecommendations.whrHealthRisk'),
         explanation: whrExplanation,
-        risks: risks,
-        content: profile?.sex === 'Male' 
+        risks,
+        content: profile?.sex === 'Male'
           ? t('healthRecommendations.whrAtRiskMale')
           : t('healthRecommendations.whrAtRiskFemale'),
-        severity: 'warning'
+        icon: '⚠️'
       }
-    } else {
-      return {
-        title: t('healthRecommendations.whrHealthStatus'),
-        explanation: whrExplanation,
-        risks: risks,
-        content: profile?.sex === 'Male'
-          ? t('healthRecommendations.whrGoodMale')
-          : t('healthRecommendations.whrGoodFemale'),
-        severity: 'good'
-      }
+    }
+
+    return {
+      title: t('healthRecommendations.whrHealthStatus'),
+      explanation: whrExplanation,
+      risks,
+      content: profile?.sex === 'Male'
+        ? t('healthRecommendations.whrGoodMale')
+        : t('healthRecommendations.whrGoodFemale'),
+      icon: '✅'
     }
   }
 
-  const getHeartDiseaseInfo = () => {
-    return {
-      title: t('healthRecommendations.heartDiseasePrevention'),
-      content: t('healthRecommendations.heartDiseaseContent'),
-      severity: 'info'
-    }
-  }
+  const getHeartDiseaseInfo = () => ({
+    title: t('healthRecommendations.heartDiseasePrevention'),
+    content: t('healthRecommendations.heartDiseaseContent'),
+    icon: '❤️'
+  })
 
   const getTranslatedList = (key) => {
     const list = t(key, { returnObjects: true })
@@ -859,7 +887,7 @@ function HealthRecommendations({ analysis, profile }) {
       }
     }
 
-    return suggestions[activityLevel] || suggestions[3]
+    return { ...suggestions[activityLevel || 3], icon: '🏃' }
   }
 
   const getGoalBasedTips = () => {
@@ -889,7 +917,7 @@ function HealthRecommendations({ analysis, profile }) {
       }
     }
 
-    return tips[goal] || tips[2]
+    return { ...(tips[goal] || tips[2]), icon: '🎯' }
   }
 
   const whrRec = getWHRRecommendations()
@@ -897,61 +925,51 @@ function HealthRecommendations({ analysis, profile }) {
   const activityRec = getActivitySuggestions()
   const goalTips = getGoalBasedTips()
 
-  const severityStyles = {
-    warning: 'border border-white/15 text-white/80',
-    good: 'border border-white/15 text-white/80',
-    info: 'border border-white/15 text-white/80',
-  }
+  const recommendationSections = [
+    { key: 'whr', ...whrRec },
+    { key: 'heart', ...heartInfo },
+    { key: 'activity', ...activityRec },
+    { key: 'goal', ...goalTips },
+  ]
 
   return (
-    <div className="grid gap-4">
-      <div className={clsx('rounded-3xl p-6', severityStyles[whrRec.severity])}>
-        <div className="flex items-center justify-between text-white">
-          <h3 className="text-lg font-semibold">{whrRec.title}</h3>
-          <span className="text-base">{whrRec.severity === 'warning' ? '⚠️' : '✅'}</span>
-        </div>
-        <p className="mt-3 text-sm text-white/70">{whrRec.explanation}</p>
-        <ul className="mt-4 space-y-1 text-sm text-white/65">
-          {whrRec.risks.map((risk, index) => (
-            <li key={index}>• {risk}</li>
-          ))}
-        </ul>
-        <p className="mt-4 text-sm text-white/80">{whrRec.content}</p>
-      </div>
-
-      <div className="rounded-3xl border border-white/15 p-6 text-white/80">
-        <div className="flex items-center justify-between text-white">
-          <h3 className="text-lg font-semibold">{heartInfo.title}</h3>
-          <span>❤️</span>
-        </div>
-        <p className="mt-3 text-sm">{heartInfo.content}</p>
-      </div>
-
-      <div className="rounded-3xl border border-white/15 p-6 text-white/80">
-        <div className="flex items-center justify-between text-white">
-          <h3 className="text-lg font-semibold">{activityRec.title}</h3>
-          <span>🏃</span>
-        </div>
-        <p className="mt-3 text-sm">{activityRec.content}</p>
-        <ul className="mt-3 space-y-1 text-sm text-white/65">
-          {activityRec.activities.map((activity, index) => (
-            <li key={index}>{activity}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="rounded-3xl border border-white/15 p-6 text-white/80">
-        <div className="flex items-center justify-between text-white">
-          <h3 className="text-lg font-semibold">{goalTips.title}</h3>
-          <span>🎯</span>
-        </div>
-        <p className="mt-3 text-sm">{goalTips.content}</p>
-        <ul className="mt-3 space-y-1 text-sm text-white/65">
-          {goalTips.tips.map((tip, index) => (
-            <li key={index}>{tip}</li>
-          ))}
-        </ul>
-      </div>
+    <div className="space-y-5 text-white">
+      {recommendationSections.map((section) => (
+        <article
+          key={section.key}
+          className="rounded-3xl bg-gradient-to-br from-white/12 via-white/6 to-transparent p-6 shadow-[0_25px_60px_rgba(2,6,23,0.35)]"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">{section.title}</h3>
+            </div>
+            <span className="text-xl">{section.icon}</span>
+          </div>
+          {section.explanation && <p className="mt-3 text-sm text-white/70">{section.explanation}</p>}
+          {Array.isArray(section.risks) && section.risks.length > 0 && (
+            <ul className="mt-3 space-y-1 text-sm text-white/70">
+              {section.risks.map((risk, index) => (
+                <li key={index}>{risk}</li>
+              ))}
+            </ul>
+          )}
+          {section.content && <p className="mt-3 text-sm text-white/80">{section.content}</p>}
+          {Array.isArray(section.activities) && section.activities.length > 0 && (
+            <ul className="mt-3 space-y-1 text-sm text-white/70">
+              {section.activities.map((activity, index) => (
+                <li key={index}>{activity}</li>
+              ))}
+            </ul>
+          )}
+          {Array.isArray(section.tips) && section.tips.length > 0 && (
+            <ul className="mt-3 space-y-1 text-sm text-white/70">
+              {section.tips.map((tip, index) => (
+                <li key={index}>{tip}</li>
+              ))}
+            </ul>
+          )}
+        </article>
+      ))}
     </div>
   )
 }

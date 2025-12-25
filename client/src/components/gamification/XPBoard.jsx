@@ -1,10 +1,11 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
+import clsx from 'clsx'
 import { calculateLevel, getTitle } from '../../utils/levels'
 import Button from '@/components/ui/Button'
 
-function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails }) {
+function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails, className = '' }) {
   const { t } = useTranslation()
   const level = calculateLevel(xp)
   const titleKey = getTitle(level)
@@ -16,7 +17,10 @@ function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-white/12 bg-base-900/70 p-6 backdrop-blur-md"
+      className={clsx(
+        'rounded-3xl bg-gradient-to-br from-white/15 via-white/8 to-transparent p-6 text-white shadow-[0_25px_60px_rgba(2,6,23,0.35)] backdrop-blur-md',
+        className
+      )}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
