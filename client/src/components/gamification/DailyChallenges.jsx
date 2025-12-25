@@ -4,6 +4,15 @@ import { gamificationAPI, invalidateGamificationCache } from '../../services/gam
 import { DAILY_CHALLENGES } from '../../constants/dailyChallenges'
 import './Gamification.css'
 
+const buildBadgeLabel = (text) => {
+  if (!text || typeof text !== 'string') return 'AI'
+  const sanitized = text.replace(/[^0-9A-Za-zÀ-ÖØ-öø-ÿ\s]/g, ' ').trim()
+  const segments = sanitized.split(/\s+/).filter(Boolean)
+  const letters = segments.slice(0, 2).map((segment) => segment.charAt(0)).join('')
+  if (letters) return letters.toUpperCase()
+  return sanitized.slice(0, 3).toUpperCase() || 'AI'
+}
+
 /**
  * Daily Challenges Component
  * 
@@ -146,6 +155,7 @@ function DailyChallenges() {
           const canComplete = challenge.id === 'LOG_TODAY' && !isCompleted && !isCompleting
           const title = t(challenge.nameKey)
           const description = t(challenge.descriptionKey)
+          const badgeLabel = buildBadgeLabel(title)
           
           return (
             <li
@@ -154,7 +164,7 @@ function DailyChallenges() {
             >
               <div className="daily-challenges-compact-content">
                 <span className="daily-challenges-compact-icon" aria-hidden>
-                  {challenge.icon}
+                  {badgeLabel}
                 </span>
                 <div className="daily-challenges-compact-text">
                   <span className="daily-challenges-compact-title">{title}</span>
@@ -163,7 +173,7 @@ function DailyChallenges() {
               </div>
               <span className="daily-challenges-compact-xp">+{challenge.xpReward} XP</span>
               {isCompleted ? (
-                <span className="daily-challenges-compact-status">✓</span>
+                <span className="daily-challenges-compact-status completed-label">{t('gamification.completedLabel', { defaultValue: 'Completed' })}</span>
               ) : canComplete ? (
                 <button
                   onClick={() => handleChallengeComplete(challenge.id)}
@@ -173,7 +183,7 @@ function DailyChallenges() {
                   {isCompleting ? t('gamification.completing') : t('gamification.complete')}
                 </button>
               ) : (
-                <span className="daily-challenges-compact-status">○</span>
+                <span className="daily-challenges-compact-status">{t('gamification.pendingLabel', { defaultValue: 'Pending' })}</span>
               )}
             </li>
           )

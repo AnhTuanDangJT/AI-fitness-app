@@ -2,6 +2,15 @@ import React, { useState } from 'react'
 import BadgeGrid from './BadgeGrid'
 import './BadgePreview.css'
 
+const buildMonogram = (text) => {
+  if (!text || typeof text !== 'string') return 'AI'
+  const sanitized = text.replace(/[^0-9A-Za-zÀ-ÖØ-öø-ÿ\s]/g, ' ').trim()
+  const segments = sanitized.split(/\s+/).filter(Boolean)
+  const letters = segments.slice(0, 2).map((segment) => segment.charAt(0)).join('')
+  if (letters) return letters.toUpperCase()
+  return sanitized.slice(0, 3).toUpperCase() || 'AI'
+}
+
 /**
  * Badge Preview Component
  * 
@@ -18,32 +27,26 @@ function BadgePreview({ badges = [] }) {
     FIRST_LOG: {
       name: 'First Log',
       description: 'Log your first activity or meal',
-      icon: '🎯',
     },
     STREAK_3: {
       name: '3-Day Streak',
       description: 'Maintain a 3-day streak',
-      icon: '🔥',
     },
     STREAK_7: {
       name: '7-Day Streak',
       description: 'Maintain a 7-day streak',
-      icon: '⚡',
     },
     STREAK_30: {
       name: '30-Day Streak',
       description: 'Maintain a 30-day streak',
-      icon: '💎',
     },
     XP_100: {
       name: 'Centurion',
       description: 'Reach 100 XP',
-      icon: '⭐',
     },
     XP_500: {
       name: 'Elite',
       description: 'Reach 500 XP',
-      icon: '👑',
     },
   }
 
@@ -80,7 +83,9 @@ function BadgePreview({ badges = [] }) {
                 key={badgeId}
                 className={`badge-preview-item ${isUnlocked ? 'unlocked' : 'locked'}`}
               >
-                <div className="badge-preview-icon">{badge.icon}</div>
+                <div className="badge-preview-icon" aria-hidden>
+                  {buildMonogram(badge.name)}
+                </div>
                 <div className="badge-preview-name">{badge.name}</div>
               </div>
             )
@@ -120,6 +125,7 @@ function BadgePreview({ badges = [] }) {
 }
 
 export default BadgePreview
+
 
 
 

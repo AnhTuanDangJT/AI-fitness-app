@@ -88,7 +88,7 @@ function FeedbackModal({ onClose }) {
 
         {success ? (
           <div className="feedback-modal-success">
-            <div className="feedback-success-icon">✓</div>
+            <div className="feedback-success-icon" aria-hidden>OK</div>
             <p>{t('feedback.success')}</p>
           </div>
         ) : (

@@ -125,6 +125,17 @@ const sectionContainerBaseClasses =
 
 const getSectionContainerClasses = (variant) => clsx(sectionContainerBaseClasses, SECTION_ACCENTS[variant]?.panel)
 
+const buildAbbreviation = (text, fallback = 'AI') => {
+  if (!text || typeof text !== 'string') return fallback
+  const sanitized = text.replace(/[^0-9A-Za-zÀ-ÖØ-öø-ÿ\s]/g, ' ').trim()
+  const segments = sanitized.split(/\s+/).filter(Boolean)
+  const letters = segments.slice(0, 2).map((segment) => segment.charAt(0)).join('')
+  if (letters) {
+    return letters.toUpperCase()
+  }
+  return sanitized.slice(0, 3).toUpperCase() || fallback
+}
+
 const SectionHeader = ({ label, title, description, variant = 'default' }) => {
   const accent = SECTION_ACCENTS[variant] || SECTION_ACCENTS.default
   return (
@@ -529,6 +540,11 @@ function Dashboard() {
   ]
 
   const nutritionAccent = SECTION_ACCENTS.nutrition
+  const aiCoachAbbreviation = buildAbbreviation(resolveDashboardText('dashboard.aiCoach', 'AI Coach'))
+  const mealPlannerAbbreviation = buildAbbreviation(
+    resolveDashboardText('dashboard.aiMealPlanner', 'Meal Planner'),
+    'MP'
+  )
   const insightPanels = [
     {
       id: 'targets',
@@ -581,7 +597,9 @@ function Dashboard() {
       description: resolveDashboardText('dashboard.healthTipsSubtitle', 'Quick prompts to keep momentum.'),
       content: (
         <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-white/12 via-white/6 to-transparent p-6 text-white shadow-[0_20px_45px_rgba(2,6,23,0.35)]">
-          <div className="text-3xl">💡</div>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+            {resolveDashboardText('dashboard.healthInsightTag', 'Health insight')}
+          </p>
           <p className="text-lg font-semibold">{getHealthTip()}</p>
           <Button variant="secondary" size="sm" onClick={() => setIsFeedbackModalOpen(true)}>
             {t('dashboard.feedback')}
@@ -616,7 +634,6 @@ function Dashboard() {
           onAction={fetchFullAnalysis}
           secondaryActionLabel={t('dashboard.completeProfileSetup')}
           onSecondaryAction={() => navigate('/profile-setup')}
-          icon="⚠️"
         />
       </div>
     )
@@ -632,7 +649,6 @@ function Dashboard() {
           onAction={() => navigate('/profile-setup')}
           secondaryActionLabel={t('dashboard.retry')}
           onSecondaryAction={fetchFullAnalysis}
-          icon="📊"
         />
       </div>
     )
@@ -724,7 +740,9 @@ function Dashboard() {
                       <h3 className="mt-2 text-2xl font-semibold">{t('dashboard.aiCoachHeadline')}</h3>
                       <p className="mt-3 text-sm text-white/70">{t('dashboard.aiCoachDescription')}</p>
                     </div>
-                    <span className="text-3xl">🤖</span>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+                      {aiCoachAbbreviation}
+                    </div>
                   </div>
                   <p className="mt-4 text-sm text-white/65">{t('dashboard.aiFeaturesSubtitle')}</p>
                   <div className="mt-6 flex flex-wrap gap-3">
@@ -750,7 +768,9 @@ function Dashboard() {
                       <h3 className="mt-2 text-xl font-semibold">{t('dashboard.aiMealPlannerDescription')}</h3>
                       <p className="mt-3 text-sm text-white/70">{t('dashboard.nutritionHubSubtitle')}</p>
                     </div>
-                    <span className="text-3xl">🍽️</span>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+                      {mealPlannerAbbreviation}
+                    </div>
                   </div>
                   <Button className="mt-6" variant="secondary" onClick={() => setIsMealPlannerOpen(true)}>
                     {t('dashboard.aiMealPlanner')}
@@ -893,7 +913,7 @@ function Dashboard() {
                       <p className="text-xs uppercase tracking-[0.3em] text-white/60">{panel.title}</p>
                       <p className="mt-2 text-sm text-white/70">{panel.description}</p>
                     </div>
-                    <span className="text-xl">{isOpen ? '−' : '+'}</span>
+                    <span className="text-xl">{isOpen ? '-' : '+'}</span>
                   </button>
                   {isOpen && (
                     <div id={`insight-${panel.id}`} className="mt-4">
@@ -1038,8 +1058,7 @@ function HealthRecommendations({ analysis, profile }) {
             label: resolveTextWithFallback(t, 'dashboard.statusLabel', 'Status'),
             value: whrRiskLabel
           }
-        ],
-        icon: '⚠️'
+        ]
       }
     }
 
@@ -1071,8 +1090,7 @@ function HealthRecommendations({ analysis, profile }) {
           label: resolveTextWithFallback(t, 'dashboard.statusLabel', 'Status'),
           value: whrRiskLabel
         }
-      ],
-      icon: '✅'
+      ]
     }
   }
 
@@ -1084,7 +1102,6 @@ function HealthRecommendations({ analysis, profile }) {
     return {
       title: resolveRecText('dashboard.heartHealthTitle', 'Lower cardiac strain'),
       detailText: t('healthRecommendations.heartDiseaseContent'),
-      icon: '❤️',
       highlights: [
         {
           label: resolveTextWithFallback(t, 'dashboard.bmi', 'BMI'),
@@ -1149,7 +1166,6 @@ function HealthRecommendations({ analysis, profile }) {
     return {
       ...suggestions[activityLevel || 3],
       title: resolveRecText('dashboard.activityPlanTitle', 'Movement rhythm'),
-      icon: '🏃',
       highlights: [
         {
           label: resolveTextWithFallback(t, 'dashboard.activityLevel', 'Activity profile'),
@@ -1206,7 +1222,6 @@ function HealthRecommendations({ analysis, profile }) {
     return {
       ...selected,
       title: resolveRecText('dashboard.nutritionFocusTitle', 'Nutrition alignment'),
-      icon: '🎯',
       highlights: [
         {
           label: resolveTextWithFallback(t, 'dashboard.primaryGoal', 'Primary goal'),
@@ -1306,6 +1321,7 @@ function HealthRecommendations({ analysis, profile }) {
     <div className="grid gap-6 md:grid-cols-2">
       {recommendationSections.map((section) => {
         const variant = visualVariants[section.key] || defaultVariant
+        const accentLabel = section.accentLabel || buildAbbreviation(section.title || variant.tagline, 'HX')
         const isExpanded = expandedSections.includes(section.key)
         const detailText = section.detailText
         const preview = getContentPreview(detailText)
@@ -1341,11 +1357,12 @@ function HealthRecommendations({ analysis, profile }) {
                 <div className="flex items-start gap-4">
                   <div
                     className={clsx(
-                      'flex h-12 w-12 items-center justify-center rounded-2xl text-2xl',
+                      'flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 text-xs font-semibold uppercase tracking-[0.3em]',
                       variant.iconWrapper
                     )}
+                    aria-hidden
                   >
-                    {section.icon}
+                    {accentLabel}
                   </div>
                   <div className="flex-1">
                     <p className="text-xs uppercase tracking-[0.3em] text-white/60">{variant.tagline}</p>
@@ -1411,7 +1428,7 @@ function HealthRecommendations({ analysis, profile }) {
                         {isExpanded
                           ? resolveRecText('dashboard.collapse', 'Show less')
                           : resolveRecText('dashboard.whyThisMatters', 'Why this matters')}
-                        <span className="text-base">{isExpanded ? '−' : '→'}</span>
+                        <span className="text-base">{isExpanded ? '-' : '>'}</span>
                       </button>
                     )}
                   </div>

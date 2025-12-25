@@ -12,12 +12,15 @@ import './Gamification.css'
 function StreakIndicator({ currentStreakDays = 0, longestStreakDays = 0 }) {
   const isActive = currentStreakDays > 0
   const isHighlighted = currentStreakDays >= 3
+  const streakBadgeLabel = isActive ? 'ST' : '--'
 
   return (
     <div className={`streak-indicator ${isHighlighted ? 'highlighted' : ''}`}>
       <div className="streak-content">
         <div className="streak-icon-wrapper">
-          <span className="streak-icon" aria-label="Streak">🔥</span>
+          <span className="streak-icon" aria-hidden>
+            {streakBadgeLabel}
+          </span>
         </div>
         <div className="streak-info">
           <div className="streak-days">
@@ -62,6 +65,7 @@ function StreakIndicator({ currentStreakDays = 0, longestStreakDays = 0 }) {
 }
 
 export default StreakIndicator
+
 
 
 

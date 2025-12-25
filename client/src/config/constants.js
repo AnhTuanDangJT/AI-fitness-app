@@ -68,8 +68,8 @@ export const BUTTON_TEXT = {
   REFRESH: 'Refresh',
   DOWNLOAD_PROFILE: 'Download my profile',
   DOWNLOAD_PROFILE_PDF: 'DOWNLOAD PROFILE (PDF)',
-  RECALCULATE: '🔄 Recalculate',
-  EDIT_PROFILE: '✏️ Edit Profile',
+  RECALCULATE: 'Recalculate',
+  EDIT_PROFILE: 'Edit Profile',
   COMPLETE_PROFILE_SETUP: 'Complete Profile Setup',
   VIEW_PROFILE: 'View your profile',
 }
@@ -117,7 +117,8 @@ export const INFO_MESSAGES = {
   PROFILE_INCOMPLETE: 'Please complete your profile before using the app.',
   WELCOME_NEW_USER: 'Welcome! Please complete your profile setup to get started.',
   EMAIL_READ_ONLY: 'Email cannot be changed',
-  PROFILE_AUTO_RECALCULATE: '💡 Note: After saving, all metrics (BMI, WHR, BMR, TDEE, calories, protein) will be automatically recalculated and displayed on your dashboard.',
+  PROFILE_AUTO_RECALCULATE:
+    'Note: After saving, all metrics (BMI, WHR, BMR, TDEE, calories, protein) will be automatically recalculated and displayed on your dashboard.',
   ALREADY_HAVE_ACCOUNT: 'Already have an account?',
   DONT_HAVE_ACCOUNT: "Don't have an account?",
   SIGN_IN_HERE: 'Sign in here',

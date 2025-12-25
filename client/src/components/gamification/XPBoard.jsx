@@ -29,9 +29,12 @@ function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails, className = '' 
           </p>
           <p className="mt-1 text-2xl font-semibold text-white">{levelTitle}</p>
         </div>
-        <div className="rounded-full bg-white/5 px-4 py-2 text-sm text-white/80">
-          🔥 {currentStreakDays || 0}{' '}
-          {currentStreakDays === 1 ? t('dashboard.daySingular') : t('dashboard.dayPlural')}
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-right">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-white/60">{t('dashboard.streakLabel')}</p>
+          <p className="text-sm font-semibold text-white">
+            {currentStreakDays || 0}{' '}
+            {currentStreakDays === 1 ? t('dashboard.daySingular') : t('dashboard.dayPlural')}
+          </p>
         </div>
       </div>
 

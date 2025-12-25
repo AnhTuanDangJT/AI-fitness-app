@@ -11,14 +11,12 @@ export const DAILY_CHALLENGES = {
     nameKey: 'gamification.challenges.logToday.title',
     descriptionKey: 'gamification.challenges.logToday.description',
     xpReward: 10,
-    icon: '📝',
   },
   CONSISTENCY_7: {
     id: 'CONSISTENCY_7',
     nameKey: 'gamification.challenges.consistency7.title',
     descriptionKey: 'gamification.challenges.consistency7.description',
     xpReward: 50,
-    icon: '🔥',
   },
 }
 

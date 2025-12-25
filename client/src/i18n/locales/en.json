@@ -123,14 +123,14 @@
     "createAccount": "Create Account"
   },
   "footer": {
-    "copyright": "© AI Fitness App"
+    "copyright": "Copyright AI Fitness App"
   },
   "dashboard": {
     "title": "AI Fitness",
     "brandSubtitle": "Personal Health HQ",
     "toggleLanguage": "Toggle language",
-    "greeting": "Hello, {{name}} 👋",
-    "greetingDefault": "Hello, there 👋",
+    "greeting": "Hello, {{name}}",
+    "greetingDefault": "Hello, there",
     "overviewLabel": "Overview",
     "overviewTitle": "Today at a glance",
     "overviewSubtitle": "Instant clarity on your level, fuel, and consistency.",
@@ -149,8 +149,8 @@
     "overview": "Here's your fitness overview today",
     "expand": "Expand",
     "collapse": "Collapse",
-    "editProfile": "✏️ Edit Profile",
-    "recalculate": "🔄 Recalculate",
+    "editProfile": "Edit profile",
+    "recalculate": "Recalculate",
     "recalculating": "Recalculating...",
     "downloadProfile": "DOWNLOAD PROFILE (PDF)",
     "downloadPdf": "Download PDF",
@@ -570,10 +570,10 @@
     "failedToSend": "Failed to send message. Please try again.",
     "emptyResponse": "Received empty response. Please try again.",
     "retry": "Retry",
-    "streak3": "🔥 3-day streak achieved! Keep it up!",
-    "streak7": "🔥 7-day streak achieved! Amazing consistency!",
-    "streakBroken": "💪 No worries! Every day is a fresh start. You've got this!",
-    "badgeUnlocked": "🏅 New badge unlocked: {{badge}}",
+    "streak3": "3-day streak achieved. Keep it up.",
+    "streak7": "7-day streak achieved. Outstanding consistency.",
+    "streakBroken": "Every day is a fresh start. You’ve got this.",
+    "badgeUnlocked": "New badge unlocked: {{badge}}",
     "firstLog": "First Log",
     "streak3Badge": "3-Day Streak",
     "streak7Badge": "7-Day Streak",
@@ -584,7 +584,7 @@
     "subtitle": "Chat with your personal AI fitness coach",
     "clearChat": "Clear Chat",
     "loading": "Loading...",
-    "personalizedStreak": "🔥 {{count}} {{unit}} streak",
+    "personalizedStreak": "{{count}} {{unit}} streak",
     "suggestions": {
       "title": "Need ideas? These prompts use keywords the coach understands best:",
       "toggleShow": "Show suggestions",
@@ -648,13 +648,15 @@
   },
   "gamification": {
     "level": "Level {{level}}",
-    "viewAchievements": "View achievements →",
+    "viewAchievements": "View achievements",
     "xp": "{{current}} / 100 XP",
     "dailyChallenges": "Daily Challenges",
     "completed": "{{completed}} / {{total}} completed",
     "loadingChallenges": "Loading challenges...",
     "failedToLoad": "Failed to load challenges",
     "failedToComplete": "Failed to complete challenge",
+    "completedLabel": "Completed",
+    "pendingLabel": "Pending",
     "challenges": {
       "logToday": {
         "title": "Log today",

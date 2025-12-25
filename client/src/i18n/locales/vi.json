@@ -123,12 +123,12 @@
     "createAccount": "Tạo tài khoản"
   },
   "footer": {
-    "copyright": "© Ứng dụng AI Fitness"
+    "copyright": "Bản quyền Ứng dụng AI Fitness"
   },
   "dashboard": {
     "title": "AI Fitness",
-    "greeting": "Xin chào, {{name}} 👋",
-    "greetingDefault": "Xin chào 👋",
+    "greeting": "Xin chào, {{name}}",
+    "greetingDefault": "Xin chào",
     "brandSubtitle": "Trung tâm sức khỏe cá nhân",
     "toggleLanguage": "Chuyển ngôn ngữ",
     "overviewLabel": "Tổng quan",
@@ -149,8 +149,8 @@
     "overview": "Đây là tổng quan thể dục của bạn hôm nay",
     "expand": "Mở rộng",
     "collapse": "Thu gọn",
-    "editProfile": "✏️ Chỉnh sửa hồ sơ",
-    "recalculate": "🔄 Tính lại",
+    "editProfile": "Chỉnh sửa hồ sơ",
+    "recalculate": "Tính lại",
     "recalculating": "Đang tính lại...",
     "downloadProfile": "TẢI XUỐNG HỒ SƠ (PDF)",
     "downloadPdf": "Tải PDF",
@@ -570,10 +570,10 @@
     "failedToSend": "Không thể gửi tin nhắn. Vui lòng thử lại.",
     "emptyResponse": "Nhận được phản hồi trống. Vui lòng thử lại.",
     "retry": "Thử lại",
-    "streak3": "🔥 Đạt chuỗi 3 ngày! Tiếp tục phát huy!",
-    "streak7": "🔥 Đạt chuỗi 7 ngày! Tính nhất quán tuyệt vời!",
-    "streakBroken": "💪 Đừng lo lắng! Mỗi ngày là một khởi đầu mới. Bạn làm được!",
-    "badgeUnlocked": "🏅 Mở khóa huy hiệu mới: {{badge}}",
+    "streak3": "Đạt chuỗi 3 ngày! Tiếp tục phát huy!",
+    "streak7": "Đạt chuỗi 7 ngày! Tính nhất quán tuyệt vời!",
+    "streakBroken": "Đừng lo lắng! Mỗi ngày là một khởi đầu mới. Bạn làm được!",
+    "badgeUnlocked": "Mở khóa huy hiệu mới: {{badge}}",
     "firstLog": "Nhật ký đầu tiên",
     "streak3Badge": "Chuỗi 3 ngày",
     "streak7Badge": "Chuỗi 7 ngày",
@@ -584,7 +584,7 @@
     "subtitle": "Trò chuyện với huấn luyện viên AI thể dục cá nhân của bạn",
     "clearChat": "Xóa cuộc trò chuyện",
     "loading": "Đang tải...",
-    "personalizedStreak": "🔥 Chuỗi {{count}} {{unit}}",
+    "personalizedStreak": "Chuỗi {{count}} {{unit}}",
     "suggestions": {
       "title": "Cần ý tưởng? Hãy thử các gợi ý dùng đúng từ khóa mà bot hiểu nhất:",
       "toggleShow": "Hiện gợi ý",
@@ -648,13 +648,15 @@
   },
   "gamification": {
     "level": "Cấp {{level}}",
-    "viewAchievements": "Xem thành tích →",
+    "viewAchievements": "Xem thành tích",
     "xp": "{{current}} / 100 XP",
     "dailyChallenges": "Thử thách hàng ngày",
     "completed": "{{completed}} / {{total}} đã hoàn thành",
     "loadingChallenges": "Đang tải thử thách...",
     "failedToLoad": "Không thể tải thử thách",
     "failedToComplete": "Không thể hoàn thành thử thách",
+    "completedLabel": "Hoàn thành",
+    "pendingLabel": "Đang chờ",
     "challenges": {
       "logToday": {
         "title": "Ghi log hôm nay",

@@ -56,13 +56,25 @@
 }
 
 .badge-preview-icon {
-  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
   margin-bottom: 8px;
-  filter: drop-shadow(0 0 6px rgba(96, 175, 255, 0.4));
+  color: var(--text-primary);
+  background: linear-gradient(135deg, rgba(96, 175, 255, 0.15) 0%, rgba(110, 231, 255, 0.1) 100%);
 }
 
 .badge-preview-item.locked .badge-preview-icon {
-  filter: grayscale(1) opacity(0.5);
+  color: var(--text-tertiary);
+  background: var(--glass-bg-medium);
 }
 
 .badge-preview-name {
@@ -188,7 +200,9 @@
   }
 
   .badge-preview-icon {
-    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    font-size: 11px;
   }
 
   .badge-modal {

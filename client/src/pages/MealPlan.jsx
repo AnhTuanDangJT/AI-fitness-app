@@ -424,7 +424,7 @@ function MealPlan() {
                       <h3>{dayName}</h3>
                       <span className="day-date">{formatDate(dayData.date)}</span>
                       {isMobile && (
-                        <span className="expand-icon">{isExpanded ? '−' : '+'}</span>
+                        <span className="expand-icon">{isExpanded ? '-' : '+'}</span>
                       )}
                     </div>
                     

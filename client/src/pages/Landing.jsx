@@ -109,7 +109,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Problem → Solution Section */}
+      {/* Problem to Solution Section */}
       <section 
         className="landing-problem-solution fade-in-section"
         ref={(el) => (sectionsRef.current[1] = el)}
@@ -118,28 +118,28 @@ function Landing() {
           <div className="landing-problem-column">
             <h2 className="landing-section-title">{t('challenge.title')}</h2>
             <div className="landing-problem-item" style={{ '--delay': '0ms' }}>
-              <div className="landing-problem-icon">❌</div>
+              <div className="landing-problem-icon" aria-hidden>P1</div>
               <div>
                 <h3>{t('challenge.genericPlans.title')}</h3>
                 <p>{t('challenge.genericPlans.description')}</p>
               </div>
             </div>
             <div className="landing-problem-item" style={{ '--delay': '100ms' }}>
-              <div className="landing-problem-icon">❌</div>
+              <div className="landing-problem-icon" aria-hidden>P2</div>
               <div>
                 <h3>{t('challenge.inconsistentTracking.title')}</h3>
                 <p>{t('challenge.inconsistentTracking.description')}</p>
               </div>
             </div>
             <div className="landing-problem-item" style={{ '--delay': '200ms' }}>
-              <div className="landing-problem-icon">❌</div>
+              <div className="landing-problem-icon" aria-hidden>P3</div>
               <div>
                 <h3>{t('challenge.nutritionConfusion.title')}</h3>
                 <p>{t('challenge.nutritionConfusion.description')}</p>
               </div>
             </div>
             <div className="landing-problem-item" style={{ '--delay': '300ms' }}>
-              <div className="landing-problem-icon">❌</div>
+              <div className="landing-problem-icon" aria-hidden>P4</div>
               <div>
                 <h3>{t('challenge.motivationFades.title')}</h3>
                 <p>{t('challenge.motivationFades.description')}</p>
@@ -150,28 +150,28 @@ function Landing() {
           <div className="landing-solution-column">
             <h2 className="landing-section-title">{t('solution.title')}</h2>
             <div className="landing-solution-item" style={{ '--delay': '0ms' }}>
-              <div className="landing-solution-icon">✅</div>
+              <div className="landing-solution-icon" aria-hidden>S1</div>
               <div>
                 <h3>{t('solution.aiPersonalization.title')}</h3>
                 <p>{t('solution.aiPersonalization.description')}</p>
               </div>
             </div>
             <div className="landing-solution-item" style={{ '--delay': '100ms' }}>
-              <div className="landing-solution-icon">✅</div>
+              <div className="landing-solution-icon" aria-hidden>S2</div>
               <div>
                 <h3>{t('solution.realTimeAnalytics.title')}</h3>
                 <p>{t('solution.realTimeAnalytics.description')}</p>
               </div>
             </div>
             <div className="landing-solution-item" style={{ '--delay': '200ms' }}>
-              <div className="landing-solution-icon">✅</div>
+              <div className="landing-solution-icon" aria-hidden>S3</div>
               <div>
                 <h3>{t('solution.smartMealPlanning.title')}</h3>
                 <p>{t('solution.smartMealPlanning.description')}</p>
               </div>
             </div>
             <div className="landing-solution-item" style={{ '--delay': '300ms' }}>
-              <div className="landing-solution-icon">✅</div>
+              <div className="landing-solution-icon" aria-hidden>S4</div>
               <div>
                 <h3>{t('solution.gamifiedConsistency.title')}</h3>
                 <p>{t('solution.gamifiedConsistency.description')}</p>
@@ -192,7 +192,7 @@ function Landing() {
         </div>
         <div className="landing-features-container">
           <div className="landing-feature-card">
-            <div className="landing-feature-icon">🤖</div>
+            <div className="landing-feature-icon" aria-hidden>AI</div>
             <h3 className="landing-feature-title">{t('features.aiCoach.title')}</h3>
             <p className="landing-feature-value">{t('features.aiCoach.value')}</p>
             <p className="landing-feature-description">
@@ -206,7 +206,7 @@ function Landing() {
           </div>
 
           <div className="landing-feature-card">
-            <div className="landing-feature-icon">🍽️</div>
+            <div className="landing-feature-icon" aria-hidden>MP</div>
             <h3 className="landing-feature-title">{t('features.mealPlanner.title')}</h3>
             <p className="landing-feature-value">{t('features.mealPlanner.value')}</p>
             <p className="landing-feature-description">
@@ -220,7 +220,7 @@ function Landing() {
           </div>
 
           <div className="landing-feature-card">
-            <div className="landing-feature-icon">📊</div>
+            <div className="landing-feature-icon" aria-hidden>BM</div>
             <h3 className="landing-feature-title">{t('features.bodyMetrics.title')}</h3>
             <p className="landing-feature-value">{t('features.bodyMetrics.value')}</p>
             <p className="landing-feature-description">
@@ -234,7 +234,7 @@ function Landing() {
           </div>
 
           <div className="landing-feature-card">
-            <div className="landing-feature-icon">🎮</div>
+            <div className="landing-feature-icon" aria-hidden>GX</div>
             <h3 className="landing-feature-title">{t('features.gamification.title')}</h3>
             <p className="landing-feature-value">{t('features.gamification.value')}</p>
             <p className="landing-feature-description">
