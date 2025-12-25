@@ -52,7 +52,7 @@ function AppNavbar({
           <Button variant="primary" onClick={onEditProfile}>
             {labels.edit}
           </Button>
-          <Button variant="destructive" onClick={onLogout}>
+          <Button variant="destructive" onClick={onLogout} className="logout-button">
             {labels.logout}
           </Button>
         </div>

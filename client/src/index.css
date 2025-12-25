@@ -73,3 +73,28 @@ body {
   }
 }
 
+.logout-button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #fda4a1;
+  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.logout-button:hover {
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.logout-button:active {
+  color: #ffe4e6;
+  background: rgba(244, 63, 94, 0.15);
+}
+
+.logout-button:focus-visible {
+  outline: 2px solid rgba(248, 113, 113, 0.85);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.25);
+  color: #ffe4e6;
+}
+
