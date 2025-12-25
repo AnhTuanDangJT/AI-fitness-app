@@ -88,13 +88,13 @@ function AICoach() {
   // Get goal description
   const getGoalDescription = (goal) => {
     if (!goal) return null
-    const goals = {
-      1: t('dashboard.goalLoseWeight') || 'Lose Weight',
-      2: t('dashboard.goalMaintain') || 'Maintain',
-      3: t('dashboard.goalGainMuscle') || 'Gain Muscle',
-      4: t('dashboard.goalRecomposition') || 'Recomposition'
+    const goalMap = {
+      1: t('dashboard.calorieGoals.loseWeight'),
+      2: t('dashboard.calorieGoals.maintain'),
+      3: t('dashboard.calorieGoals.gainMuscle'),
+      4: t('dashboard.calorieGoals.recomp')
     }
-    return goals[goal] || null
+    return goalMap[goal] || null
   }
 
   return (
@@ -118,12 +118,18 @@ function AICoach() {
                   )}
                   {aiContext.nutritionTargets?.calories && (
                     <span className="personalized-calories">
-                      {Math.round(aiContext.nutritionTargets.calories)} kcal/day
+                      {Math.round(aiContext.nutritionTargets.calories)} {t('dashboard.kcalPerDayShort')}
                     </span>
                   )}
                   {aiContext.gamification?.currentStreakDays > 0 && (
                     <span className="personalized-streak">
-                      🔥 {aiContext.gamification.currentStreakDays} day streak
+                      {t('aiCoach.personalizedStreak', {
+                        count: aiContext.gamification.currentStreakDays,
+                        unit:
+                          aiContext.gamification.currentStreakDays === 1
+                            ? t('dashboard.daySingular')
+                            : t('dashboard.dayPlural'),
+                      })}
                     </span>
                   )}
                 </div>

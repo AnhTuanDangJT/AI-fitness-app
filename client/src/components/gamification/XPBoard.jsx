@@ -30,7 +30,8 @@ function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails, className = '' 
           <p className="mt-1 text-2xl font-semibold text-white">{levelTitle}</p>
         </div>
         <div className="rounded-full bg-white/5 px-4 py-2 text-sm text-white/80">
-          🔥 {currentStreakDays || 0}
+          🔥 {currentStreakDays || 0}{' '}
+          {currentStreakDays === 1 ? t('dashboard.daySingular') : t('dashboard.dayPlural')}
         </div>
       </div>
 

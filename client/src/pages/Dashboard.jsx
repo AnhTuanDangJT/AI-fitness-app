@@ -18,6 +18,7 @@ import AppNavbar from '@/components/layout/AppNavbar'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
+import { resolveTextWithFallback, humanizeTranslationKey } from '@/utils/i18nHelpers'
 
 const BMI_SEGMENTS = [
   {
@@ -66,36 +67,85 @@ const segmentGradients = {
   obese: 'from-rose-500/80 to-rose-600/70',
 }
 
-const humanizeTranslationKey = (key = '') => {
-  if (!key || typeof key !== 'string') return ''
-  const raw = key.includes('.') ? key.split('.').pop() : key
-  return raw
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[-_]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+const SECTION_ACCENTS = {
+  overview: {
+    label: 'text-indigo-200',
+    dot: 'bg-indigo-300',
+    title: 'text-white',
+    description: 'text-white/70',
+    halo: 'from-indigo-500/15 via-transparent to-transparent',
+    panel: 'border border-indigo-500/20 bg-gradient-to-br from-indigo-500/10 via-base-900/60 to-transparent shadow-[0_30px_80px_rgba(67,56,202,0.35)]',
+    cardBorder: 'border border-indigo-500/20',
+    badge: 'bg-indigo-400/20 text-indigo-100',
+  },
+  ai: {
+    label: 'text-fuchsia-100',
+    dot: 'bg-fuchsia-400',
+    title: 'text-white',
+    description: 'text-white/70',
+    halo: 'from-fuchsia-500/15 via-transparent to-transparent',
+    panel: 'border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-500/10 via-base-900/60 to-transparent shadow-[0_30px_80px_rgba(134,52,234,0.35)]',
+    cardBorder: 'border border-fuchsia-500/20',
+    badge: 'bg-fuchsia-400/20 text-fuchsia-100',
+  },
+  health: {
+    label: 'text-cyan-100',
+    dot: 'bg-cyan-300',
+    title: 'text-white',
+    description: 'text-white/70',
+    halo: 'from-cyan-500/15 via-transparent to-transparent',
+    panel: 'border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-base-900/60 to-transparent shadow-[0_30px_80px_rgba(6,111,153,0.35)]',
+    cardBorder: 'border border-cyan-500/20',
+    badge: 'bg-cyan-400/20 text-cyan-100',
+  },
+  nutrition: {
+    label: 'text-emerald-100',
+    dot: 'bg-emerald-400',
+    title: 'text-white',
+    description: 'text-white/70',
+    halo: 'from-emerald-500/15 via-transparent to-transparent',
+    panel: 'border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-base-900/60 to-transparent shadow-[0_30px_80px_rgba(16,112,83,0.35)]',
+    cardBorder: 'border border-emerald-500/20',
+    badge: 'bg-emerald-400/20 text-emerald-100',
+  },
+  default: {
+    label: 'text-white/70',
+    dot: 'bg-white/60',
+    title: 'text-white',
+    description: 'text-white/70',
+    halo: 'from-white/10 via-transparent to-transparent',
+    panel: 'border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(2,6,23,0.35)]',
+    cardBorder: 'border border-white/10',
+    badge: 'bg-white/10 text-white/70',
+  },
 }
 
-const resolveTextWithFallback = (tFunction, key, fallback) => {
-  if (!key || typeof key !== 'string') {
-    return fallback ?? ''
-  }
-  const translated = tFunction(key)
-  if (translated && translated !== key) {
-    return translated
-  }
-  if (fallback) return fallback
-  return humanizeTranslationKey(key)
-}
+const sectionContainerBaseClasses =
+  'relative overflow-hidden rounded-[40px] bg-white/5 p-6 sm:p-10 backdrop-blur-xl'
 
-const SectionHeader = ({ label, title, description }) => (
-  <div className="space-y-1 text-white">
-    <p className="text-xs uppercase tracking-[0.4em] text-white/60">{label}</p>
-    <h2 className="text-2xl font-semibold">{title}</h2>
-    {description && <p className="text-sm text-white/60">{description}</p>}
-  </div>
-)
+const getSectionContainerClasses = (variant) => clsx(sectionContainerBaseClasses, SECTION_ACCENTS[variant]?.panel)
+
+const SectionHeader = ({ label, title, description, variant = 'default' }) => {
+  const accent = SECTION_ACCENTS[variant] || SECTION_ACCENTS.default
+  return (
+    <div className="relative space-y-2">
+      <div className="inline-flex items-center gap-3 text-xs uppercase tracking-[0.35em]">
+        <span className={clsx('h-2 w-2 rounded-full', accent.dot)} />
+        <span className={clsx('font-semibold', accent.label)}>{label}</span>
+      </div>
+      <h2 className={clsx('text-3xl font-semibold leading-tight', accent.title)}>{title}</h2>
+      {description && <p className={clsx('text-base', accent.description)}>{description}</p>}
+      <span
+        aria-hidden
+        className={clsx(
+          'pointer-events-none absolute inset-0 -z-10 opacity-60 blur-3xl',
+          'bg-gradient-to-r',
+          accent.halo
+        )}
+      />
+    </div>
+  )
+}
 
 // IMPORTANT: Keep translation maps declared ahead of their usage to avoid
 // Temporal Dead Zone errors that previously crashed the dashboard at runtime.
@@ -444,8 +494,6 @@ function Dashboard() {
     'Cycle header alignment'
   )}`
   const greetingAlignment = alignmentClasses[headerAlignment] || alignmentClasses.center
-  const sectionContainerClasses =
-    'rounded-[40px] bg-white/5 p-6 sm:p-10 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl'
 
   const energyCards = [
     {
@@ -480,6 +528,7 @@ function Dashboard() {
     },
   ]
 
+  const nutritionAccent = SECTION_ACCENTS.nutrition
   const insightPanels = [
     {
       id: 'targets',
@@ -487,11 +536,11 @@ function Dashboard() {
       description: resolveDashboardText('dashboard.nutritionHubSubtitle', 'Daily calorie and macro focus.'),
       content: (
         <div className="space-y-7 text-white">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {energyCards.map((card) => (
               <div
                 key={card.label}
-                className="rounded-2xl bg-gradient-to-b from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_45px_rgba(2,6,23,0.35)]"
+                  className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_45px_rgba(2,6,23,0.35)]"
               >
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">{card.label}</p>
                 <p className="mt-3 text-2xl font-semibold text-white">{card.value}</p>
@@ -600,8 +649,9 @@ function Dashboard() {
         onDownloadPdf={downloadProfilePdf}
         onFeedback={() => setIsFeedbackModalOpen(true)}
         onLogout={handleLogout}
-        brandTitle="AI Fitness"
-        brandSubtitle={resolveDashboardText('dashboard.overview', 'Dashboard overview')}
+        brandTitle={resolveDashboardText('dashboard.title', 'AI Fitness')}
+        brandSubtitle={resolveDashboardText('dashboard.brandSubtitle', 'Personal Health HQ')}
+        languageToggleLabel={resolveDashboardText('dashboard.toggleLanguage', 'Toggle language')}
         labels={{
           feedback: resolveDashboardText('dashboard.feedback', 'Feedback'),
           export: resolveDashboardText('dashboard.downloadPdf', 'Download PDF'),
@@ -616,8 +666,13 @@ function Dashboard() {
             label={resolveDashboardText('dashboard.overviewLabel', 'Executive Summary')}
             title={resolveDashboardText('dashboard.overviewTitle', "Today's Health Overview")}
             description={resolveDashboardText('dashboard.overviewSubtitle', 'Your key vitals and guidance at a glance.')}
+            variant="overview"
           />
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={clsx(sectionContainerClasses, 'space-y-6')}>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={clsx(getSectionContainerClasses('overview'), 'space-y-6')}
+          >
             <div className={clsx('flex flex-col gap-3 text-white', greetingAlignment)}>
               <p className="text-xs uppercase tracking-[0.4em] text-white/60">
                 {resolveDashboardText('dashboard.overview', 'Overview')}
@@ -633,6 +688,7 @@ function Dashboard() {
               gamificationStatus={gamificationStatus}
               calorieTarget={analysis?.goalCalories}
               proteinTarget={analysis?.proteinTarget}
+              variant="overview"
             />
           </motion.div>
         </section>
@@ -645,11 +701,19 @@ function Dashboard() {
               'dashboard.aiGuidanceSubtitle',
               'Personal coaching, streaks, and intelligent nudges.'
             )}
+            variant="ai"
           />
-          <div className={clsx(sectionContainerClasses, 'space-y-6')}>
+          <div className={clsx(getSectionContainerClasses('ai'), 'space-y-6')}>
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-white/60">
               <span>{t('dashboard.aiPoweredLabel')}</span>
-              <span className="rounded-full bg-white/10 px-4 py-1 text-[11px] text-white">{t('dashboard.aiPoweredTag')}</span>
+              <span
+                className={clsx(
+                  'rounded-full px-4 py-1 text-[11px] font-semibold',
+                  SECTION_ACCENTS.ai?.badge
+                )}
+              >
+                {t('dashboard.aiPoweredTag')}
+              </span>
             </div>
             <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
               <div className="flex flex-col gap-6">
@@ -711,8 +775,9 @@ function Dashboard() {
               'dashboard.healthMetricsSubtitle',
               'BMI, WHR, and foundational measurements.'
             )}
+            variant="health"
           />
-          <div className={clsx(sectionContainerClasses, 'space-y-6')}>
+          <div className={clsx(getSectionContainerClasses('health'), 'space-y-6')}>
             <div className="grid gap-6 md:grid-cols-2">
               <article className="rounded-3xl bg-white/5 p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">{t('dashboard.bmi')}</p>
@@ -803,14 +868,18 @@ function Dashboard() {
               'dashboard.nutritionInsightsSubtitle',
               'Targets, recommendations, and quick guidance.'
             )}
+            variant="nutrition"
           />
-          <div className={clsx(sectionContainerClasses, 'space-y-5')}>
+          <div className={clsx(getSectionContainerClasses('nutrition'), 'space-y-5')}>
             {insightPanels.map((panel) => {
               const isOpen = expandedInsights.includes(panel.id)
               return (
                 <div
                   key={panel.id}
-                  className="rounded-3xl bg-gradient-to-b from-white/12 to-white/5 p-6 text-white shadow-[0_25px_60px_rgba(2,6,23,0.35)]"
+                  className={clsx(
+                    'rounded-3xl bg-gradient-to-b from-white/12 to-white/5 p-6 text-white shadow-[0_25px_60px_rgba(2,6,23,0.35)]',
+                    nutritionAccent?.cardBorder
+                  )}
                 >
                   <button
                     type="button"
@@ -897,7 +966,7 @@ function HealthRecommendations({ analysis, profile }) {
     return (
       <div key={`${prefix}-list`}>
         <p className="text-xs uppercase tracking-[0.3em] text-white/55">{heading}</p>
-        <ul className="mt-2 space-y-2 text-sm text-white/80">
+        <ul className="mt-2 space-y-2 text-sm text-white/80 leading-relaxed">
           {displayItems.map((item, index) => (
             <li key={`${prefix}-${index}`} className="flex gap-3">
               <span className={clsx('mt-2 h-1.5 w-1.5 rounded-full', variant.bullet)} />
@@ -1310,9 +1379,9 @@ function HealthRecommendations({ analysis, profile }) {
                 {section.focus && (
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <p className="text-xs uppercase tracking-[0.3em] text-white/60">{section.focus.title}</p>
-                    <p className="mt-2 text-sm leading-relaxed text-white/85">{section.focus.body}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-white/90">{section.focus.body}</p>
                     {Array.isArray(section.focus.actions) && section.focus.actions.length > 0 && (
-                      <ul className="mt-3 space-y-2 text-sm text-white/85">
+                      <ul className="mt-3 space-y-2 text-sm text-white/85 leading-relaxed">
                         {section.focus.actions.map((action, idx) => (
                           <li key={`${section.key}-focus-${idx}`} className="flex gap-2">
                             <span className={clsx('mt-1 h-1.5 w-1.5 rounded-full', variant.bullet)} />

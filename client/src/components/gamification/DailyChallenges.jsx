@@ -33,11 +33,11 @@ function DailyChallenges() {
       if (result.type === 'SUCCESS') {
         setGamificationStatus(result.data)
       } else {
-        setError(result.error || 'Failed to load challenges')
+        setError(result.error || t('gamification.failedToLoad'))
       }
     } catch (err) {
       console.error('Error fetching gamification status:', err)
-      setError('Failed to load challenges')
+      setError(t('gamification.failedToLoad'))
     } finally {
       setLoading(false)
     }
@@ -72,11 +72,11 @@ function DailyChallenges() {
         invalidateGamificationCache()
         await fetchGamificationStatus()
       } else {
-        setError(result.error || 'Failed to complete challenge')
+        setError(result.error || t('gamification.failedToComplete'))
       }
     } catch (err) {
       console.error('Error completing challenge:', err)
-      setError('Failed to complete challenge')
+      setError(t('gamification.failedToComplete'))
     } finally {
       setCompletingChallenge(null)
     }
@@ -144,13 +144,23 @@ function DailyChallenges() {
           const isCompleted = getChallengeStatus(challenge.id)
           const isCompleting = completingChallenge === challenge.id
           const canComplete = challenge.id === 'LOG_TODAY' && !isCompleted && !isCompleting
+          const title = t(challenge.nameKey)
+          const description = t(challenge.descriptionKey)
           
           return (
             <li
               key={challenge.id}
               className={`daily-challenges-compact-item ${isCompleted ? 'completed' : ''}`}
             >
-              <span className="daily-challenges-compact-title">{challenge.name}</span>
+              <div className="daily-challenges-compact-content">
+                <span className="daily-challenges-compact-icon" aria-hidden>
+                  {challenge.icon}
+                </span>
+                <div className="daily-challenges-compact-text">
+                  <span className="daily-challenges-compact-title">{title}</span>
+                  <span className="daily-challenges-compact-description">{description}</span>
+                </div>
+              </div>
               <span className="daily-challenges-compact-xp">+{challenge.xpReward} XP</span>
               {isCompleted ? (
                 <span className="daily-challenges-compact-status">✓</span>

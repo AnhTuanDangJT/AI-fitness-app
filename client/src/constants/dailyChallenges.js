@@ -8,15 +8,15 @@
 export const DAILY_CHALLENGES = {
   LOG_TODAY: {
     id: 'LOG_TODAY',
-    name: 'Log Today',
-    description: 'Log something today',
+    nameKey: 'gamification.challenges.logToday.title',
+    descriptionKey: 'gamification.challenges.logToday.description',
     xpReward: 10,
     icon: '📝',
   },
   CONSISTENCY_7: {
     id: 'CONSISTENCY_7',
-    name: '7-Day Consistency',
-    description: 'Maintain a 7-day streak',
+    nameKey: 'gamification.challenges.consistency7.title',
+    descriptionKey: 'gamification.challenges.consistency7.description',
     xpReward: 50,
     icon: '🔥',
   },

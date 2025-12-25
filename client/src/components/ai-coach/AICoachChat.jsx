@@ -14,6 +14,7 @@ import './AICoachChat.css'
 
 function AICoachChat({ userId, onClearChat }) {
   const { t, i18n } = useTranslation()
+  const locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US'
   
   // Welcome message - appears only once
   const WELCOME_MESSAGE = {
@@ -423,7 +424,7 @@ function AICoachChat({ userId, onClearChat }) {
             </div>
             {message.role !== 'system' && (
               <div className="message-timestamp">
-                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(message.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
               </div>
             )}
           </div>

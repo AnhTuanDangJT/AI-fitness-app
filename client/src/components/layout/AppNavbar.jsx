@@ -13,6 +13,7 @@ function AppNavbar({
   onLogout,
   brandTitle = 'AI Fitness',
   brandSubtitle = 'Personal Health HQ',
+  languageToggleLabel = 'Toggle language',
   labels = {
     feedback: 'Feedback',
     export: 'Export',
@@ -32,7 +33,7 @@ function AppNavbar({
           <button
             className="flex items-center gap-2 rounded-full border border-white/12 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/35"
             onClick={onToggleLanguage}
-            aria-label="Toggle language"
+            aria-label={languageToggleLabel}
           >
             {language?.toUpperCase()}
           </button>
