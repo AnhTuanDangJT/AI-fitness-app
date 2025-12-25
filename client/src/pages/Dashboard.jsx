@@ -67,6 +67,22 @@ const segmentGradients = {
   obese: 'from-rose-500/80 to-rose-600/70',
 }
 
+// IMPORTANT: Keep translation maps declared ahead of their usage to avoid
+// Temporal Dead Zone errors that previously crashed the dashboard at runtime.
+const BMI_CATEGORY_TRANSLATIONS = {
+  Underweight: 'dashboard.underweight',
+  Normal: 'dashboard.normal',
+  Overweight: 'dashboard.overweight',
+  'Obese (Class I)': 'dashboard.obeseClassI',
+  'Obese (Class II)': 'dashboard.obeseClassII',
+  'Obese (Class III)': 'dashboard.obeseClassIII',
+}
+
+const WHR_RISK_TRANSLATIONS = {
+  'Good condition': 'dashboard.goodCondition',
+  'At risk': 'dashboard.atRisk',
+}
+
 function Dashboard() {
   const { t, i18n } = useTranslation()
   const [analysis, setAnalysis] = useState(null)
@@ -364,11 +380,6 @@ function Dashboard() {
     'Obese (Class I)': 'dashboard.obeseClassI',
     'Obese (Class II)': 'dashboard.obeseClassII',
     'Obese (Class III)': 'dashboard.obeseClassIII',
-  }
-
-  const WHR_RISK_TRANSLATIONS = {
-    'Good condition': 'dashboard.goodCondition',
-    'At risk': 'dashboard.atRisk',
   }
 
   const handleLanguageToggle = () => {
