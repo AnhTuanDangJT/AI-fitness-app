@@ -1,29 +1,10 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { motion } from 'framer-motion'
 import { calculateLevel, getTitle } from '../../utils/levels'
-import './DailySummaryStrip.css'
 
-/**
- * Daily Summary Strip Component
- * 
- * A horizontal summary bar displaying key daily metrics:
- * - XP + Level
- * - Current streak
- * - Daily calorie target
- * - Protein target
- * 
- * @param {Object} props
- * @param {Object} props.gamificationStatus - Gamification status object
- * @param {number} props.calorieTarget - Daily calorie target
- * @param {number} props.proteinTarget - Daily protein target
- */
-function DailySummaryStrip({ 
-  gamificationStatus = null, 
-  calorieTarget = null, 
-  proteinTarget = null 
-}) {
+function DailySummaryStrip({ gamificationStatus = null, calorieTarget = null, proteinTarget = null }) {
   const { t } = useTranslation()
-  // Safe defaults if data is not available
   const xp = gamificationStatus?.xp ?? 0
   const currentStreakDays = gamificationStatus?.currentStreakDays ?? 0
   const level = calculateLevel(xp)
@@ -31,55 +12,53 @@ function DailySummaryStrip({
   const levelTitle = t(`levels.titles.${titleKey}`, { defaultValue: titleKey })
   const notAvailableLabel = t('dashboard.notAvailable')
 
+  const items = [
+    {
+      label: t('dashboard.levelLabel', { level }),
+      value: `${xp}`,
+      suffix: t('dashboard.xpUnit'),
+      description: levelTitle,
+    },
+    {
+      label: t('dashboard.streakLabel'),
+      value: currentStreakDays,
+      suffix: currentStreakDays === 1 ? t('dashboard.daySingular') : t('dashboard.dayPlural'),
+      description: t('dashboard.keepGoing', { defaultValue: 'Keep the streak alive' }),
+    },
+    {
+      label: t('dashboard.caloriesLabel'),
+      value: calorieTarget ? Math.round(calorieTarget) : notAvailableLabel,
+      suffix: t('dashboard.kcalPerDayShort'),
+      description: t('dashboard.fuelToday', { defaultValue: 'Fuel for today' }),
+    },
+    {
+      label: t('dashboard.proteinLabel'),
+      value: proteinTarget ? Math.round(proteinTarget) : notAvailableLabel,
+      suffix: t('dashboard.gPerDay'),
+      description: t('dashboard.recoverySupport', { defaultValue: 'Recovery support' }),
+    },
+  ]
+
   return (
-    <div className="daily-summary-strip">
-      {/* XP + Level */}
-      <div className="summary-item">
-        <div className="summary-label">{t('dashboard.levelLabel', { level })}</div>
-        <div className="summary-value">
-          {xp} <span className="summary-unit">{t('dashboard.xpUnit')}</span>
-        </div>
-        <div className="summary-subtitle">{levelTitle}</div>
-      </div>
-
-      {/* Current Streak */}
-      <div className="summary-item">
-        <div className="summary-label">{t('dashboard.streakLabel')}</div>
-        <div className="summary-value">
-          <span className="streak-emoji">🔥</span> {currentStreakDays}
-        </div>
-        <div className="summary-subtitle">
-          {currentStreakDays === 1 ? t('dashboard.daySingular') : t('dashboard.dayPlural')}
-        </div>
-      </div>
-
-      {/* Daily Calorie Target */}
-      <div className="summary-item">
-        <div className="summary-label">{t('dashboard.caloriesLabel')}</div>
-        <div className="summary-value">
-          {calorieTarget ? Math.round(calorieTarget) : notAvailableLabel}
-        </div>
-        <div className="summary-subtitle">{t('dashboard.kcalPerDayShort')}</div>
-      </div>
-
-      {/* Protein Target */}
-      <div className="summary-item">
-        <div className="summary-label">{t('dashboard.proteinLabel')}</div>
-        <div className="summary-value">
-          {proteinTarget ? Math.round(proteinTarget) : notAvailableLabel}
-        </div>
-        <div className="summary-subtitle">{t('dashboard.gPerDay')}</div>
-      </div>
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {items.map((item, index) => (
+        <motion.div
+          key={item.label}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05 }}
+          className="rounded-3xl border border-white/12 bg-base-900/70 p-6 backdrop-blur-md"
+        >
+          <p className="text-xs uppercase tracking-[0.3em] text-muted">{item.label}</p>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-semibold text-white">{item.value}</span>
+            <span className="text-sm text-muted">{item.suffix}</span>
+          </div>
+          <p className="mt-3 text-sm text-white/70">{item.description}</p>
+        </motion.div>
+      ))}
     </div>
   )
 }
 
 export default DailySummaryStrip
-
-
-
-
-
-
-
-

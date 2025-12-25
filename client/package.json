@@ -5,6 +5,8 @@
   "description": "Frontend for AI Fitness Application",
   "dependencies": {
     "axios": "^1.6.2",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.23.26",
     "i18next": "^25.7.2",
     "jspdf": "^3.0.4",
     "react": "^18.2.0",
@@ -14,6 +16,9 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.14",
     "vite": "^5.0.8"
   },
   "scripts": {

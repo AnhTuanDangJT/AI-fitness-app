@@ -1,21 +1,9 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { motion } from 'framer-motion'
 import { calculateLevel, getTitle } from '../../utils/levels'
-import '@/styles/gamification/xpBoard.css'
+import Button from '@/components/ui/Button'
 
-/**
- * XP Board Component - Compact Card
- * 
- * Slim, professional gamification display showing:
- * - Current Level & Title
- * - XP progress bar
- * - Current streak
- * - Link to view achievements
- * 
- * @param {number} xp - Current XP value
- * @param {number} currentStreakDays - Current streak in days
- * @param {function} onOpenDetails - Callback when "View achievements" is clicked
- */
 function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails }) {
   const { t } = useTranslation()
   const level = calculateLevel(xp)
@@ -24,38 +12,39 @@ function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails }) {
   const xpInLevel = xp % 100
   const progressPercent = (xpInLevel / 100) * 100
 
-  const handleViewAchievements = () => {
-    if (onOpenDetails) {
-      onOpenDetails()
-    }
-  }
-
   return (
-    <div className="xp-compact-card">
-      <div className="xp-header">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-3xl border border-white/12 bg-base-900/70 p-6 backdrop-blur-md"
+    >
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <span className="xp-level">{t('gamification.level', { level })}</span>
-          <span className="xp-title">{levelTitle}</span>
+          <p className="text-sm uppercase tracking-[0.3em] text-muted">
+            {t('gamification.level', { level })}
+          </p>
+          <p className="mt-1 text-2xl font-semibold text-white">{levelTitle}</p>
         </div>
-        <div className="xp-streak">
+        <div className="rounded-full bg-white/5 px-4 py-2 text-sm text-white/80">
           🔥 {currentStreakDays || 0}
         </div>
       </div>
 
-      <div className="xp-bar">
-        <div
-          className="xp-bar-fill"
-          style={{ width: `${progressPercent}%` }}
-        />
+      <div className="mt-6">
+        <div className="h-2 w-full rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-accent to-indigo-400 transition-all"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <div className="mt-3 flex items-center justify-between text-sm text-muted">
+          <span>{t('gamification.xp', { current: xpInLevel })}</span>
+          <Button variant="ghost" size="sm" onClick={onOpenDetails}>
+            {t('gamification.viewAchievements')}
+          </Button>
+        </div>
       </div>
-
-      <div className="xp-meta">
-        <span>{t('gamification.xp', { current: xpInLevel })}</span>
-        <button className="xp-link" onClick={handleViewAchievements}>
-          {t('gamification.viewAchievements')}
-        </button>
-      </div>
-    </div>
+    </motion.div>
   )
 }
 

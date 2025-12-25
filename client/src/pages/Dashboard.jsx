@@ -1,31 +1,70 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { motion } from 'framer-motion'
+import clsx from 'clsx'
 import api, { userAPI } from '../services/api'
 import { logout } from '../utils/auth'
 import { gamificationAPI } from '../services/gamificationApi'
 import { generateFitnessProfilePdf } from '../utils/pdfProfile'
-import { ERROR_MESSAGES, UI_LABELS, BUTTON_TEXT, STATUS_MESSAGES, PAGE_TITLES } from '../config/constants'
+import { ERROR_MESSAGES } from '../config/constants'
 import DailyChallenges from '../components/gamification/DailyChallenges'
 import XPBoard from '../components/gamification/XPBoard'
 import DailySummaryStrip from '../components/dashboard/DailySummaryStrip'
 import FeedbackModal from '../components/FeedbackModal'
 import AchievementsModal from '../components/AchievementsModal'
 import MealPreferencesModal from '../components/MealPreferencesModal'
-import './Dashboard.css'
+import AppNavbar from '@/components/layout/AppNavbar'
+import Button from '@/components/ui/Button'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
+import Skeleton from '@/components/ui/Skeleton'
+import EmptyState from '@/components/ui/EmptyState'
 
-const BMI_CATEGORY_TRANSLATIONS = {
-  'Underweight': 'dashboard.underweight',
-  'Normal': 'dashboard.normal',
-  'Overweight': 'dashboard.overweight',
-  'Obese (Class I)': 'dashboard.obeseClassI',
-  'Obese (Class II)': 'dashboard.obeseClassII',
-  'Obese (Class III)': 'dashboard.obeseClassIII'
+const BMI_SEGMENTS = [
+  {
+    key: 'underweight',
+    labelKey: 'dashboard.underweight',
+    min: 14,
+    max: 18.5,
+    rangeKey: 'dashboard.bmiRangeUnderweight',
+  },
+  {
+    key: 'normal',
+    labelKey: 'dashboard.normal',
+    min: 18.5,
+    max: 25,
+    rangeKey: 'dashboard.bmiRangeNormal',
+  },
+  {
+    key: 'overweight',
+    labelKey: 'dashboard.overweight',
+    min: 25,
+    max: 30,
+    rangeKey: 'dashboard.bmiRangeOverweight',
+  },
+  {
+    key: 'obese',
+    labelKey: 'dashboard.obese',
+    min: 30,
+    max: 45,
+    rangeKey: 'dashboard.bmiRangeObese',
+  },
+]
+
+const BMI_MIN = BMI_SEGMENTS[0].min
+const BMI_MAX = BMI_SEGMENTS[BMI_SEGMENTS.length - 1].max
+
+const alignmentClasses = {
+  left: 'items-start text-left',
+  center: 'items-center text-center',
+  right: 'items-end text-right',
 }
 
-const WHR_RISK_TRANSLATIONS = {
-  'Good condition': 'dashboard.goodCondition',
-  'At risk': 'dashboard.atRisk'
+const segmentGradients = {
+  underweight: 'from-sky-400/80 to-sky-500/70',
+  normal: 'from-emerald-400/80 to-emerald-500/70',
+  overweight: 'from-amber-400/80 to-amber-500/70',
+  obese: 'from-rose-500/80 to-rose-600/70',
 }
 
 function Dashboard() {
@@ -126,13 +165,7 @@ function Dashboard() {
   }, [navigate]) // Only run on mount - do NOT add fetchGamificationStatus or other dependencies
 
   useEffect(() => {
-    const classes = ['header-align-left', 'header-align-center', 'header-align-right']
-    document.body.classList.remove(...classes)
-    document.body.classList.add(`header-align-${headerAlignment}`)
     localStorage.setItem('dashboardHeaderAlign', headerAlignment)
-    return () => {
-      document.body.classList.remove(...classes)
-    }
   }, [headerAlignment])
 
   const cycleHeaderAlignment = () => {
@@ -281,57 +314,6 @@ function Dashboard() {
     return tips[Math.floor(Math.random() * tips.length)] || t('healthTips.defaultTip')
   }
 
-  if (loading) {
-    return (
-      <div className="dashboard-page">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>{t('dashboard.loadingDashboard')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    // If error is about incomplete profile, we should have already redirected
-    // But keep this as a fallback
-    if (error.includes('Profile incomplete') || error.includes('complete your profile')) {
-      // Redirect will happen in useEffect if not already done
-      return null
-    }
-    
-    return (
-      <div className="dashboard-page">
-        <div className="error-container">
-          <h2>{t('dashboard.error')}</h2>
-          <p>{error}</p>
-          <div className="error-actions">
-            <button onClick={fetchFullAnalysis} className="retry-button">
-              {t('dashboard.retry')}
-            </button>
-            <button onClick={() => navigate('/profile-setup')} className="setup-button">
-              {t('dashboard.completeProfileSetup')}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!analysis) {
-    return (
-      <div className="dashboard-page">
-        <div className="empty-container">
-          <h2>{t('dashboard.noAnalysisData')}</h2>
-          <p>{t('dashboard.completeProfileToSeeAnalysis')}</p>
-          <button onClick={() => navigate('/profile-setup')} className="setup-button">
-            {t('dashboard.completeProfileSetup')}
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   const notAvailableLabel = t('dashboard.notAvailable')
   const getLocalizedCategoricalValue = (value, map) => {
     if (!value) return notAvailableLabel
@@ -339,6 +321,14 @@ function Dashboard() {
     return translationKey ? t(translationKey) : value
   }
   const bmiCategoryLabel = getLocalizedCategoricalValue(analysis.bmiCategory, BMI_CATEGORY_TRANSLATIONS)
+  const whrValue = (() => {
+    if (analysis?.whr === null || analysis?.whr === undefined) return null
+    if (typeof analysis.whr === 'number' && Number.isFinite(analysis.whr)) {
+      return analysis.whr
+    }
+    const parsed = parseFloat(analysis.whr)
+    return Number.isFinite(parsed) ? parsed : null
+  })()
   const whrRiskLabel = getLocalizedCategoricalValue(analysis.whrRisk, WHR_RISK_TRANSLATIONS)
   const isWhrGoodCondition = analysis.whrRisk === 'Good condition'
 
@@ -351,492 +341,437 @@ function Dashboard() {
     return Number.isFinite(parsed) ? parsed : null
   })()
 
-  const BMI_SEGMENTS = [
-    {
-      key: 'underweight',
-      label: t('dashboard.underweight'),
-      min: 14,
-      max: 18.5,
-      rangeLabel: t('dashboard.bmiRangeUnderweight')
-    },
-    {
-      key: 'normal',
-      label: t('dashboard.normal'),
-      min: 18.5,
-      max: 25,
-      rangeLabel: t('dashboard.bmiRangeNormal')
-    },
-    {
-      key: 'overweight',
-      label: t('dashboard.overweight'),
-      min: 25,
-      max: 30,
-      rangeLabel: t('dashboard.bmiRangeOverweight')
-    },
-    {
-      key: 'obese',
-      label: t('dashboard.obese'),
-      min: 30,
-      max: 45,
-      rangeLabel: t('dashboard.bmiRangeObese')
-    }
-  ]
-
-  const BMI_MIN = BMI_SEGMENTS[0].min
-  const BMI_MAX = BMI_SEGMENTS[BMI_SEGMENTS.length - 1].max
   const clampBmi = (value) => Math.min(BMI_MAX, Math.max(BMI_MIN, value))
-  const bmiIndicatorPosition = bmiValue === null
-    ? '0%'
-    : `${((clampBmi(bmiValue) - BMI_MIN) / (BMI_MAX - BMI_MIN)) * 100}%`
-  const activeBmiSegmentKey = bmiValue === null
-    ? null
-    : (BMI_SEGMENTS.find((segment, index) => {
-        if (index === BMI_SEGMENTS.length - 1) {
-          return bmiValue >= segment.min
-        }
-        return bmiValue < segment.max
-      })?.key ?? BMI_SEGMENTS[BMI_SEGMENTS.length - 1].key)
+  const bmiIndicatorPosition =
+    bmiValue === null ? '0%' : `${((clampBmi(bmiValue) - BMI_MIN) / (BMI_MAX - BMI_MIN)) * 100}%`
+  const activeBmiSegmentKey =
+    bmiValue === null
+      ? null
+      : BMI_SEGMENTS.find((segment, index) => {
+          if (index === BMI_SEGMENTS.length - 1) {
+            return bmiValue >= segment.min
+          }
+          return bmiValue < segment.max
+        })?.key ?? BMI_SEGMENTS[BMI_SEGMENTS.length - 1].key
   const bmiIndicatorDisplay = bmiValue === null ? '—' : bmiValue.toFixed(1)
   const getSegmentWidth = (segment) => ((segment.max - segment.min) / (BMI_MAX - BMI_MIN)) * 100
+  const BMI_CATEGORY_TRANSLATIONS = {
+    'Underweight': 'dashboard.underweight',
+    'Normal': 'dashboard.normal',
+    'Overweight': 'dashboard.overweight',
+    'Obese (Class I)': 'dashboard.obeseClassI',
+    'Obese (Class II)': 'dashboard.obeseClassII',
+    'Obese (Class III)': 'dashboard.obeseClassIII',
+  }
+
+  const WHR_RISK_TRANSLATIONS = {
+    'Good condition': 'dashboard.goodCondition',
+    'At risk': 'dashboard.atRisk',
+  }
+
+  const handleLanguageToggle = () => {
+    const newLang = i18n.language === 'en' ? 'vi' : 'en'
+    i18n.changeLanguage(newLang)
+  }
+
+  const handleLogout = () => {
+    if (confirm(t('dashboard.logOutConfirm'))) {
+      logout()
+      navigate('/')
+    }
+  }
+
+  const headerAlignmentLabel = `${headerAlignment === 'left' ? '⇤' : headerAlignment === 'center' ? '⇆' : '⇥'} ${t('dashboard.headerAlignToggle')}`
+  const greetingAlignment = alignmentClasses[headerAlignment] || alignmentClasses.center
+
+  const aiFeatureCards = [
+    {
+      id: 'coach',
+      title: t('dashboard.aiCoach'),
+      description: t('dashboard.aiCoachDescription'),
+      icon: '🤖',
+      badge: t('dashboard.recommended'),
+      onClick: () => window.open('/ai-coach', '_blank'),
+    },
+    {
+      id: 'meal',
+      title: t('dashboard.aiMealPlanner'),
+      description: t('dashboard.aiMealPlannerDescription'),
+      icon: '🍽️',
+      badge: t('dashboard.aiMealPlanner'),
+      onClick: () => setIsMealPlannerOpen(true),
+    },
+  ]
+
+  const energyCards = [
+    {
+      label: t('dashboard.bmr'),
+      value: analysis?.bmr ? Math.round(analysis.bmr) : notAvailableLabel,
+      description: t('dashboard.bmrDescription'),
+    },
+    {
+      label: t('dashboard.tdee'),
+      value: analysis?.tdee ? Math.round(analysis.tdee) : notAvailableLabel,
+      description: t('dashboard.tdeeDescription'),
+    },
+    {
+      label: t('dashboard.goalCalories'),
+      value: analysis?.goalCalories ? Math.round(analysis.goalCalories) : notAvailableLabel,
+      description: t('dashboard.goalCaloriesDescription'),
+    },
+  ]
+
+  if (loading) {
+    return (
+      <div className="px-4 py-12 lg:px-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+          <Skeleton className="h-24 w-full" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="px-4 py-12 lg:px-6">
+        <EmptyState
+          title={t('dashboard.error')}
+          description={error}
+          actionLabel={t('dashboard.retry')}
+          onAction={fetchFullAnalysis}
+          secondaryActionLabel={t('dashboard.completeProfileSetup')}
+          onSecondaryAction={() => navigate('/profile-setup')}
+          icon="⚠️"
+        />
+      </div>
+    )
+  }
+
+  if (!analysis) {
+    return (
+      <div className="px-4 py-12 lg:px-6">
+        <EmptyState
+          title={t('dashboard.noAnalysisData')}
+          description={t('dashboard.completeProfileToSeeAnalysis')}
+          actionLabel={t('dashboard.completeProfileSetup')}
+          onAction={() => navigate('/profile-setup')}
+          secondaryActionLabel={t('dashboard.retry')}
+          onSecondaryAction={fetchFullAnalysis}
+          icon="📊"
+        />
+      </div>
+    )
+  }
 
   return (
-    <div className="dashboard-root">
-      <header className="app-header">
-        <div className="app-header-inner">
-          {/* Left: Logo */}
-          <div className="app-logo" onClick={() => navigate('/dashboard')}>
-            AI Fitness
+    <div className="relative z-10 min-h-screen px-4 pb-16 pt-6 lg:px-6">
+      <AppNavbar
+        language={i18n.language}
+        onToggleLanguage={handleLanguageToggle}
+        onAlignToggle={cycleHeaderAlignment}
+        headerAlignmentLabel={headerAlignmentLabel}
+        onEditProfile={() => navigate('/profile/edit')}
+        onDownloadPdf={downloadProfilePdf}
+        onFeedback={() => setIsFeedbackModalOpen(true)}
+        onLogout={handleLogout}
+        brandTitle="AI Fitness"
+        brandSubtitle={t('dashboard.overview')}
+        labels={{
+          feedback: t('dashboard.feedback'),
+          export: t('dashboard.downloadPdf'),
+          edit: t('dashboard.editProfile') || 'Edit Profile',
+          logout: t('dashboard.logOut'),
+        }}
+      />
+
+      <main className="mx-auto mt-8 flex w-full max-w-6xl flex-col gap-8">
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={clsx(
+            'flex flex-col gap-4 rounded-3xl border border-white/12 bg-base-900/70 p-10 text-white',
+            greetingAlignment
+          )}
+        >
+          <p className="text-xs uppercase tracking-[0.4em] text-muted">{t('dashboard.overview')}</p>
+          <h1 className="text-4xl font-semibold leading-tight">
+            {profile?.name ? t('dashboard.greeting', { name: profile.name }) : t('dashboard.greetingDefault')}
+          </h1>
+          <p className="max-w-2xl text-base text-white/70">{t('dashboard.healthTipsSubtitle')}</p>
+        </motion.section>
+
+        <DailySummaryStrip
+          gamificationStatus={gamificationStatus}
+          calorieTarget={analysis?.goalCalories}
+          proteinTarget={analysis?.proteinTarget}
+        />
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="flex flex-col gap-6">
+            <section className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-muted">{t('dashboard.aiFeatures')}</p>
+                  <p className="text-sm text-white/60">{t('dashboard.aiFeaturesSubtitle')}</p>
+                </div>
+                <span className="rounded-full border border-white/15 px-4 py-1 text-xs text-white/60">
+                  AI Generated
+                </span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {aiFeatureCards.map((card, index) => (
+                  <motion.button
+                    key={card.id}
+                    onClick={card.onClick}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="group rounded-3xl border border-white/12 bg-transparent p-6 text-left transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  >
+                    <span className="text-2xl">{card.icon}</span>
+                    <p className="mt-4 text-lg font-semibold text-white">{card.title}</p>
+                    <p className="mt-2 text-sm text-white/65">{card.description}</p>
+                    <span className="mt-6 inline-flex text-xs uppercase tracking-[0.4em] text-white/50">
+                      {card.badge}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
+            </section>
+
+            <Card className="bg-base-900/60">
+              <CardHeader className="flex flex-col gap-2">
+                <CardTitle>{t('dashboard.yourStats')}</CardTitle>
+                <CardDescription>{t('dashboard.trackMetrics')}</CardDescription>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 p-1">
+                  {[
+                    { id: 'BMI', label: t('dashboard.bmiValue') },
+                    { id: 'WHR', label: t('dashboard.whrValue') },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      className={clsx(
+                        'rounded-full px-4 py-2 text-sm transition',
+                        activeStatTab === tab.id ? 'bg-white/15 text-white' : 'text-white/60'
+                      )}
+                      onClick={() => setActiveStatTab(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {activeStatTab === 'BMI' ? (
+                  <motion.div initial={{ opacity: 0.5 }} animate={{ opacity: 1 }}>
+                    <p className="text-sm text-muted">{t('dashboard.bmiSubtitle')}</p>
+                    <div className="mt-4 flex items-baseline gap-3">
+                      <span className="text-4xl font-semibold text-white">
+                        {bmiValue !== null ? bmiValue.toFixed(1) : notAvailableLabel}
+                      </span>
+                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-wide text-white/80">
+                        {bmiCategoryLabel}
+                      </span>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div initial={{ opacity: 0.5 }} animate={{ opacity: 1 }}>
+                    <p className="text-sm text-muted">{t('dashboard.whrSubtitle')}</p>
+                    <div className="mt-4 flex items-baseline gap-3">
+                      <span className="text-4xl font-semibold text-white">
+                        {whrValue !== null ? whrValue.toFixed(2) : notAvailableLabel}
+                      </span>
+                      <span
+                        className={clsx(
+                          'rounded-full px-3 py-1 text-xs uppercase tracking-wide',
+                          isWhrGoodCondition ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
+                        )}
+                      >
+                        {whrRiskLabel}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card className="bg-base-900/60">
+                <CardHeader>
+                  <CardTitle>{t('dashboard.bmi')}</CardTitle>
+                  <CardDescription>{t('dashboard.bmiSubtitle')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-5xl font-semibold text-white">
+                      {bmiValue !== null ? bmiValue.toFixed(1) : notAvailableLabel}
+                    </span>
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-wide text-white/70">
+                      {bmiCategoryLabel}
+                    </span>
+                  </div>
+                  <div className="relative h-4 w-full overflow-hidden rounded-full bg-white/5">
+                    <div className="flex h-full w-full">
+                      {BMI_SEGMENTS.map((segment) => (
+                        <div
+                          key={segment.key}
+                          className={clsx(
+                            'h-full bg-gradient-to-r',
+                            segmentGradients[segment.key],
+                            activeBmiSegmentKey === segment.key ? 'opacity-100' : 'opacity-60'
+                          )}
+                          style={{ width: `${getSegmentWidth(segment)}%` }}
+                        />
+                      ))}
+                    </div>
+                    <div
+                      className="absolute top-1/2 flex -translate-y-1/2 flex-col items-center"
+                      style={{ left: bmiIndicatorPosition }}
+                    >
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-base-800 shadow-card">
+                        {bmiIndicatorDisplay}
+                      </span>
+                      <span className="mt-1 h-6 w-px bg-white/60" />
+                    </div>
+                  </div>
+                  <div className="grid gap-2 text-sm text-white/70 sm:grid-cols-2">
+                    {BMI_SEGMENTS.map((segment) => (
+                      <div key={segment.key} className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-2">
+                        <span>{t(segment.labelKey)}</span>
+                        <span className="text-white/60">{t(segment.rangeKey)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-base-900/60">
+                <CardHeader>
+                  <CardTitle>{t('dashboard.whr')}</CardTitle>
+                  <CardDescription>{t('dashboard.whrSubtitle')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-5xl font-semibold text-white">
+                      {whrValue !== null ? whrValue.toFixed(2) : notAvailableLabel}
+                    </span>
+                    <span
+                      className={clsx(
+                        'rounded-full px-3 py-1 text-xs uppercase tracking-wide',
+                        isWhrGoodCondition ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
+                      )}
+                    >
+                      {whrRiskLabel}
+                    </span>
+                  </div>
+                  <p className="text-white/70">
+                    {isWhrGoodCondition ? t('dashboard.whrGoodCondition') : t('dashboard.whrAtRisk')}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="bg-base-900/60">
+              <CardHeader>
+                <CardTitle>{t('dashboard.nutritionHub')}</CardTitle>
+                <CardDescription>{t('dashboard.nutritionHubSubtitle')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div className="grid gap-4 md:grid-cols-3">
+                  {energyCards.map((card) => (
+                    <div key={card.label} className="rounded-3xl border border-white/12 bg-transparent p-5">
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted">{card.label}</p>
+                      <p className="mt-3 text-2xl font-semibold text-white">{card.value}</p>
+                      <p className="text-xs text-white/50">{t('dashboard.kcalPerDay')}</p>
+                      <p className="mt-4 text-sm text-white/60 whitespace-pre-line">{card.description}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-3xl border border-white/12 bg-transparent p-6">
+                  <div className="flex flex-wrap items-baseline justify-between gap-4">
+                    <div>
+                      <p className="text-sm uppercase tracking-[0.3em] text-muted">{t('dashboard.nutritionTarget')}</p>
+                      <p className="text-3xl font-semibold text-white">
+                        {analysis.proteinTarget ? Math.round(analysis.proteinTarget) : notAvailableLabel}
+                        <span className="ml-2 text-base text-white/60">{t('dashboard.gramsPerDay')}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-6 h-2 w-full rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-accent/80" style={{ width: `${Math.min(100, ((analysis.proteinTarget || 0) / 200) * 100)}%` }} />
+                  </div>
+                  <p className="mt-4 text-sm text-white/70">{t('dashboard.proteinTip')}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-base-900/60">
+              <CardHeader>
+                <CardTitle>{t('dashboard.healthRecommendations')}</CardTitle>
+                <CardDescription>{t('dashboard.healthRecommendationsSubtitle')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <HealthRecommendations analysis={analysis} profile={profile} />
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Center: Empty */}
-
-          {/* Right: Language Toggle, Edit Profile, Download PDF, Feedback & Logout */}
-          <div className="app-actions">
-            <button
-              className="language-toggle"
-              onClick={() => {
-                const newLang = i18n.language === 'en' ? 'vi' : 'en'
-                i18n.changeLanguage(newLang)
-              }}
-            >
-              <span className={i18n.language === 'en' ? 'active' : ''}>EN</span>
-              <span className="divider">|</span>
-              <span className={i18n.language === 'vi' ? 'active' : ''}>VI</span>
-            </button>
-            <button
-              className="header-align-toggle"
-              onClick={cycleHeaderAlignment}
-            >
-              {headerAlignment === 'left' && '⇤ '}
-              {headerAlignment === 'center' && '⇆ '}
-              {headerAlignment === 'right' && '⇥ '}
-              {t('dashboard.headerAlignToggle')}
-            </button>
-            <button
-              className="dashboard-action-btn primary-btn"
-              onClick={() => navigate('/profile/edit')}
-            >
-              {t('dashboard.editProfile') || '✏️ Edit Profile'}
-            </button>
-            <button
-              className="dashboard-action-btn primary-btn"
-              onClick={downloadProfilePdf}
-            >
-              {t('dashboard.downloadPdf') || 'Download PDF'}
-            </button>
-            <button
-              className="dashboard-action-btn primary-btn"
-              onClick={() => setIsFeedbackModalOpen(true)}
-            >
-              {t('dashboard.feedback') || 'Feedback'}
-            </button>
-            <button
-              className="dashboard-action-btn danger-btn"
-              onClick={() => {
-                if (confirm(t('dashboard.logOutConfirm'))) {
-                  logout();
-                  navigate("/");
-                }
-              }}
-            >
-              {t('dashboard.logOut')}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="dashboard-page">
-        {/* Single wrapper for ALL dashboard sections with consistent width */}
-        <div className="dashboard-content-wrapper">
-          {/* Greeting Section - Below header */}
-          <section className="dashboard-greeting">
-            <h2>{profile?.name ? `Hello, ${profile.name} 👋` : 'Hello 👋'}</h2>
-            <p>Here's your fitness overview today</p>
-          </section>
-
-          {/* Daily Summary Strip - Key metrics at a glance */}
-          <div className="dashboard-top-section">
-            <DailySummaryStrip
-              gamificationStatus={gamificationStatus}
-              calorieTarget={analysis?.goalCalories}
-              proteinTarget={analysis?.proteinTarget}
-            />
-          </div>
-
-          {/* XP Board - Compact gamification display */}
-          {gamificationStatus && (
-            <div className="dashboard-top-section">
+          <div className="flex flex-col gap-6">
+            {gamificationStatus && (
               <XPBoard
                 xp={gamificationStatus.xp ?? 0}
                 currentStreakDays={gamificationStatus.currentStreakDays ?? 0}
                 onOpenDetails={() => setIsAchievementsModalOpen(true)}
               />
-            </div>
-          )}
+            )}
 
-          {/* Dashboard Grid Layout */}
-          <div className="dashboard-grid">
-        {/* Main Content Column */}
-        <div className="dashboard-main-content">
+            <Card className="bg-base-900/60">
+              <CardContent className="px-0 pb-0">
+                <DailyChallenges />
+              </CardContent>
+            </Card>
 
-          {/* Daily Challenges */}
-          {gamificationStatus && (
-            <div className="dashboard-section">
-              <DailyChallenges />
-            </div>
-          )}
-
-          {/* Stats and Progress Container - Shared Width */}
-          <div className="stats-progress-container">
-            {/* User Stats Section - Tab Layout */}
-            <div className="dashboard-section">
-              <h2>{t('dashboard.yourStats')}</h2>
-              <p className="section-subtitle">{t('dashboard.trackMetrics')}</p>
-              
-              {/* Tab Navigation */}
-              <div className="stats-tabs">
-                <button
-                  className={`stats-tab ${activeStatTab === 'BMI' ? 'active' : ''}`}
-                  onClick={() => setActiveStatTab('BMI')}
-                >
-                  {t('dashboard.bmiValue')}
-                </button>
-                <button
-                  className={`stats-tab ${activeStatTab === 'WHR' ? 'active' : ''}`}
-                  onClick={() => setActiveStatTab('WHR')}
-                >
-                  {t('dashboard.whrValue')}
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              <div className="stats-tab-content">
-                {activeStatTab === 'BMI' && (
-                  <div className="stat-card primary">
-                    <div className="stat-label">{t('dashboard.bmiValue')}</div>
-                    <div className="stat-value">{analysis.bmi ? analysis.bmi.toFixed(1) : notAvailableLabel}</div>
-                    <div className="stat-category">{bmiCategoryLabel}</div>
-                  </div>
-                )}
-                {activeStatTab === 'WHR' && (
-                  <div className="stat-card secondary">
-                    <div className="stat-label">{t('dashboard.whrValue')}</div>
-                    <div className="stat-value">{analysis.whr ? analysis.whr.toFixed(2) : notAvailableLabel}</div>
-                    <div className="stat-category">{whrRiskLabel}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* AI Features Section */}
-          <div className="dashboard-section ai-features-section">
-            <h2>{t('dashboard.aiFeatures')}</h2>
-            <p className="section-subtitle">{t('dashboard.aiFeaturesSubtitle')}</p>
-            <div className="ai-features-grid">
-              <button
-                className="ai-feature-card ai-feature-card-dominant"
-                onClick={() => window.open('/ai-coach', '_blank')}
-              >
-                <div className="ai-feature-badge">{t('dashboard.recommended')}</div>
-                <div className="ai-feature-icon">🤖</div>
-                <div className="ai-feature-title">{t('dashboard.aiCoach')}</div>
-                <div className="ai-feature-description">
-                  {t('dashboard.aiCoachDescription')}
+            <Card className="bg-base-900/60">
+              <CardHeader>
+                <CardTitle>{t('dashboard.healthTips')}</CardTitle>
+                <CardDescription>{t('dashboard.healthTipsSubtitle')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-3xl border border-white/15 bg-transparent p-6 text-white">
+                  <div className="text-2xl">💡</div>
+                  <p className="mt-4 text-lg font-semibold">{getHealthTip()}</p>
+                  <Button className="mt-6" variant="secondary" size="sm" onClick={() => setIsFeedbackModalOpen(true)}>
+                    {t('dashboard.feedback')}
+                  </Button>
                 </div>
-              </button>
-              <button
-                className="ai-feature-card"
-                onClick={() => setIsMealPlannerOpen(true)}
-              >
-                <div className="ai-feature-icon">🍽️</div>
-                <div className="ai-feature-title">{t('dashboard.aiMealPlanner')}</div>
-                <div className="ai-feature-description">
-                  {t('dashboard.aiMealPlannerDescription')}
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* BMI Details */}
-          <div className="dashboard-section">
-            <h2>{t('dashboard.bmi')}</h2>
-            <p className="section-subtitle">{t('dashboard.bmiSubtitle')}</p>
-            <div className="metric-card bmi">
-              <div className="metric-header">
-                <h3>{t('dashboard.yourBMI')}</h3>
-                <div className="bmi-value">{analysis.bmi ? analysis.bmi.toFixed(1) : notAvailableLabel}</div>
-              </div>
-              <div className="metric-body">
-                <div className="category-badge">{bmiCategoryLabel}</div>
-                <div className="bmi-bar">
-                  <div className="bmi-bar-track">
-                    {BMI_SEGMENTS.map((segment) => (
-                      <div
-                        key={segment.key}
-                        className={`bmi-segment ${segment.key} ${activeBmiSegmentKey === segment.key ? 'active' : ''}`}
-                        style={{ width: `${getSegmentWidth(segment)}%` }}
-                      ></div>
-                    ))}
-                  </div>
-                  <div 
-                    className="bmi-indicator"
-                    style={{ left: bmiIndicatorPosition }}
-                    aria-label={t('dashboard.yourBMI')}
-                  >
-                    <span>{bmiIndicatorDisplay}</span>
-                  </div>
-                </div>
-                <div className="bmi-labels">
-                  {BMI_SEGMENTS.map((segment) => (
-                    <div key={segment.key} className="bmi-label">
-                      <span>{segment.label}</span>
-                      <small>{segment.rangeLabel}</small>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* WHR Details */}
-          <div className="dashboard-section">
-            <h2>{t('dashboard.whr')}</h2>
-            <p className="section-subtitle">{t('dashboard.whrSubtitle')}</p>
-            <div className="metric-card whr">
-              <div className="metric-header">
-                <h3>{t('dashboard.yourWHR')}</h3>
-                <div className="whr-value">{analysis.whr ? analysis.whr.toFixed(2) : notAvailableLabel}</div>
-              </div>
-              <div className="metric-body">
-                <div className={`risk-badge ${isWhrGoodCondition ? 'good' : 'risk'}`}>
-                  {whrRiskLabel}
-                </div>
-                <p className="risk-interpretation">
-                  {isWhrGoodCondition 
-                    ? t('dashboard.whrGoodCondition')
-                    : t('dashboard.whrAtRisk')}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Nutrition Hub */}
-          <div className="dashboard-section nutrition-hub">
-            <h2>{t('dashboard.nutritionHub')}</h2>
-            <p className="section-subtitle">{t('dashboard.nutritionHubSubtitle')}</p>
-            
-            {/* Energy & Calories */}
-            <div className="nutrition-hub-section">
-              <h3 className="nutrition-hub-subtitle">{t('dashboard.energyCalories')}</h3>
-              <div className="energy-grid">
-                <div className="energy-card">
-                  <div className="energy-label">{t('dashboard.bmr')}</div>
-                  <div className="energy-value">{analysis.bmr ? Math.round(analysis.bmr) : notAvailableLabel}</div>
-                  <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
-                  <div className="energy-description">{t('dashboard.bmrDescription')}</div>
-                </div>
-                <div className="energy-card">
-                  <div className="energy-label">{t('dashboard.tdee')}</div>
-                  <div className="energy-value">{analysis.tdee ? Math.round(analysis.tdee) : notAvailableLabel}</div>
-                  <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
-                  <div className="energy-description">{t('dashboard.tdeeDescription')}</div>
-                </div>
-                <div className="energy-card highlight">
-                  <div className="energy-label">{t('dashboard.goalCalories')}</div>
-                  <div className="energy-value">{analysis.goalCalories ? Math.round(analysis.goalCalories) : notAvailableLabel}</div>
-                  <div className="energy-unit">{t('dashboard.kcalPerDay')}</div>
-                  <div className="energy-description">{t('dashboard.goalCaloriesDescription')}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Protein Target */}
-            <div className="nutrition-hub-section">
-              <h3 className="nutrition-hub-subtitle">{t('dashboard.nutritionTarget')}</h3>
-              <div className="protein-card">
-                <div className="protein-header">
-                  <h3>{t('dashboard.dailyProteinTarget')}</h3>
-                  <div className="protein-value">{analysis.proteinTarget ? Math.round(analysis.proteinTarget) : notAvailableLabel}</div>
-                  <div className="protein-unit">{t('dashboard.gramsPerDay')}</div>
-                </div>
-                <div className="protein-body">
-                  <div className="protein-bar">
-                    <div 
-                      className="protein-fill"
-                      style={{ width: `${Math.min(100, ((analysis.proteinTarget || 0) / 200) * 100)}%` }}
-                    ></div>
-                  </div>
-                  <p className="protein-tip">
-                    {t('dashboard.proteinTip')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Health Tips */}
-          <div className="dashboard-section">
-            <h2>{t('dashboard.healthTips')}</h2>
-            <p className="section-subtitle">{t('dashboard.healthTipsSubtitle')}</p>
-            <div className="health-tips-card">
-              <div className="tip-icon">💡</div>
-              <p className="health-tip">{getHealthTip()}</p>
-            </div>
-          </div>
-
-            {/* Health Recommendations - Progress Container */}
-            <div className="dashboard-section">
-              <h2>{t('dashboard.healthRecommendations')}</h2>
-              <p className="section-subtitle">{t('dashboard.healthRecommendationsSubtitle')}</p>
-              <div className="recommendations-card">
-                <HealthRecommendations 
-                  analysis={analysis} 
-                  profile={profile}
-                  onOpenFeedback={() => setIsFeedbackModalOpen(true)}
-                  onOpenAchievements={() => setIsAchievementsModalOpen(true)}
-                  gamificationStatus={gamificationStatus}
-                />
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
-        </div>
-      </div>
+      </main>
 
-      {/* Modals - Rendered at root level */}
-      {isFeedbackModalOpen && (
-        <FeedbackModal onClose={() => setIsFeedbackModalOpen(false)} />
-      )}
-
+      {isFeedbackModalOpen && <FeedbackModal onClose={() => setIsFeedbackModalOpen(false)} />}
       {isAchievementsModalOpen && gamificationStatus && (
-        <AchievementsModal 
-          badges={gamificationStatus.badges || []}
-          onClose={() => setIsAchievementsModalOpen(false)} 
-        />
+        <AchievementsModal badges={gamificationStatus.badges || []} onClose={() => setIsAchievementsModalOpen(false)} />
       )}
-
-      {isMealPlannerOpen && (
-        <MealPreferencesModal onClose={() => setIsMealPlannerOpen(false)} />
-      )}
+      {isMealPlannerOpen && <MealPreferencesModal onClose={() => setIsMealPlannerOpen(false)} />}
     </div>
   )
 }
 
-// AI Coach Panel Component
-function AICoachPanel({ advice, loading, error, onRetry }) {
-  // Show loading spinner while waiting for API response
-  if (loading) {
-    return (
-      <div className="ai-coach-card">
-        <div className="ai-coach-loading">
-          <div className="loading-spinner-small"></div>
-          <p>{t('dashboard.analyzingProgress')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Handle errors gracefully
-  if (error) {
-    return (
-      <div className="ai-coach-card">
-        <div className="ai-coach-error">
-          <p>{t('dashboard.unableToLoadAdvice')}</p>
-          {onRetry && (
-            <button 
-              onClick={onRetry} 
-              className="retry-button-small"
-              style={{ marginTop: '12px' }}
-            >
-              {t('dashboard.retry')}
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // Check if advice is null, undefined, or empty
-  const hasAdvice = advice && (
-    (advice.summary && advice.summary.trim() !== '') ||
-    (advice.recommendations && advice.recommendations.length > 0)
-  )
-
-  // Show fallback message if no advice is available
-  if (!hasAdvice) {
-    return (
-      <div className="ai-coach-card">
-        <div className="ai-coach-empty">
-          <p>{t('dashboard.aiCoachAnalyzing')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Display advice content
-  const summaryText = advice.summary && advice.summary.trim() !== '' 
-    ? advice.summary 
-    : t('dashboard.aiCoachAnalyzing')
-
-  return (
-    <div className="ai-coach-card">
-      <div className="ai-coach-content">
-        <div className="ai-coach-summary">
-          <h3>{t('dashboard.summary')}</h3>
-          <p>{summaryText}</p>
-        </div>
-        
-        {advice.recommendations && advice.recommendations.length > 0 && (
-          <div className="ai-coach-recommendations">
-            <h3>{t('dashboard.recommendations')}</h3>
-            <ul>
-              {advice.recommendations.map((recommendation, index) => (
-                <li key={index}>{recommendation}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// Health Recommendations Component
-function HealthRecommendations({
-  analysis,
-  profile,
-  onOpenFeedback,
-  onOpenAchievements,
-  gamificationStatus,
-  ...props
-}) {
+function HealthRecommendations({ analysis, profile }) {
   const { t } = useTranslation()
 
   if (!analysis) {
     return (
-      <div className="recommendations-loading">
-        <p>{t('healthRecommendations.loadingRecommendations')}</p>
+      <div className="space-y-3">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
       </div>
     )
   }
@@ -957,56 +892,56 @@ function HealthRecommendations({
   const activityRec = getActivitySuggestions()
   const goalTips = getGoalBasedTips()
 
+  const severityStyles = {
+    warning: 'border border-white/15 text-white/80',
+    good: 'border border-white/15 text-white/80',
+    info: 'border border-white/15 text-white/80',
+  }
+
   return (
-    <div className="recommendations-content">
-      {/* WHR Recommendations */}
-      <div className={`recommendation-item ${whrRec.severity}`}>
-        <div className="recommendation-header">
-          <h3>{whrRec.title}</h3>
-          <span className={`severity-badge ${whrRec.severity}`}>
-            {whrRec.severity === 'warning' ? '⚠️' : '✅'}
-          </span>
+    <div className="grid gap-4">
+      <div className={clsx('rounded-3xl p-6', severityStyles[whrRec.severity])}>
+        <div className="flex items-center justify-between text-white">
+          <h3 className="text-lg font-semibold">{whrRec.title}</h3>
+          <span className="text-base">{whrRec.severity === 'warning' ? '⚠️' : '✅'}</span>
         </div>
-        <p className="recommendation-explanation">{whrRec.explanation}</p>
-        <ul className="risk-list">
+        <p className="mt-3 text-sm text-white/70">{whrRec.explanation}</p>
+        <ul className="mt-4 space-y-1 text-sm text-white/65">
           {whrRec.risks.map((risk, index) => (
             <li key={index}>• {risk}</li>
           ))}
         </ul>
-        <p className="recommendation-conclusion">{whrRec.content}</p>
+        <p className="mt-4 text-sm text-white/80">{whrRec.content}</p>
       </div>
 
-      {/* Heart Disease Information */}
-      <div className={`recommendation-item ${heartInfo.severity}`}>
-        <div className="recommendation-header">
-          <h3>{heartInfo.title}</h3>
-          <span className={`severity-badge ${heartInfo.severity}`}>❤️</span>
+      <div className="rounded-3xl border border-white/15 p-6 text-white/80">
+        <div className="flex items-center justify-between text-white">
+          <h3 className="text-lg font-semibold">{heartInfo.title}</h3>
+          <span>❤️</span>
         </div>
-        <p>{heartInfo.content}</p>
+        <p className="mt-3 text-sm">{heartInfo.content}</p>
       </div>
 
-      {/* Activity Suggestions */}
-      <div className="recommendation-item info">
-        <div className="recommendation-header">
-          <h3>{activityRec.title}</h3>
-          <span className="severity-badge info">🏃</span>
+      <div className="rounded-3xl border border-white/15 p-6 text-white/80">
+        <div className="flex items-center justify-between text-white">
+          <h3 className="text-lg font-semibold">{activityRec.title}</h3>
+          <span>🏃</span>
         </div>
-        <p>{activityRec.content}</p>
-        <ul className="activity-list">
+        <p className="mt-3 text-sm">{activityRec.content}</p>
+        <ul className="mt-3 space-y-1 text-sm text-white/65">
           {activityRec.activities.map((activity, index) => (
             <li key={index}>{activity}</li>
           ))}
         </ul>
       </div>
 
-      {/* Goal-Based Tips */}
-      <div className="recommendation-item info">
-        <div className="recommendation-header">
-          <h3>{goalTips.title}</h3>
-          <span className="severity-badge info">🎯</span>
+      <div className="rounded-3xl border border-white/15 p-6 text-white/80">
+        <div className="flex items-center justify-between text-white">
+          <h3 className="text-lg font-semibold">{goalTips.title}</h3>
+          <span>🎯</span>
         </div>
-        <p>{goalTips.content}</p>
-        <ul className="goal-tips-list">
+        <p className="mt-3 text-sm">{goalTips.content}</p>
+        <ul className="mt-3 space-y-1 text-sm text-white/65">
           {goalTips.tips.map((tip, index) => (
             <li key={index}>{tip}</li>
           ))}

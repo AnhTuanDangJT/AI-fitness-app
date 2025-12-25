@@ -1,195 +1,100 @@
-/* ===================================
-   AI FITNESS - FUTURISTIC AI THEME
-   ===================================
-   Premium futuristic AI design system
-   with glassmorphism, neumorphism, and
-   neon accents for a top-tier interface.
-   =================================== */
-
 :root {
-  /* === FUTURISTIC AI COLOR PALETTE === */
-  
-  /* Primary Colors - Metallic & Chrome */
-  --color-metallic-silver: #C0C0C0;
-  --color-chrome: #B9B9B9;
-  --color-chrome-light: #D0D0D0;
-  --color-chrome-dark: #8F8F8F;
-  
-  /* Deep Space Background */
-  --color-deep-space: #0F1115;
-  --color-black-titanium: #090A0F;
-  --color-space-gray: #1A1D24;
-  --color-space-gray-light: #252932;
-  
-  /* Neon Accent Colors */
-  --color-neon-ice-blue: #60AFFF;
-  --color-neon-ice-blue-bright: #7BC4FF;
-  --color-neon-ice-blue-dark: #4A9FFF;
-  --color-electric-aqua: #6EE7FF;
-  --color-electric-aqua-bright: #8FF0FF;
-  
-  /* Glassmorphism Colors */
-  --glass-bg-light: rgba(255, 255, 255, 0.08);
-  --glass-bg-medium: rgba(255, 255, 255, 0.05);
-  --glass-bg-dark: rgba(255, 255, 255, 0.03);
-  --glass-border-light: rgba(255, 255, 255, 0.2);
-  --glass-border-medium: rgba(255, 255, 255, 0.15);
-  --glass-border-dark: rgba(255, 255, 255, 0.1);
-  --glass-border-neon: rgba(96, 175, 255, 0.4);
-  
-  /* Background Gradient */
-  --bg-gradient: linear-gradient(135deg, #0F1115 0%, #090A0F 50%, #0A0B10 100%);
-  --bg-gradient-animated: radial-gradient(circle at 20% 50%, rgba(96, 175, 255, 0.1) 0%, transparent 50%),
-                           radial-gradient(circle at 80% 80%, rgba(110, 231, 255, 0.08) 0%, transparent 50%),
-                           linear-gradient(135deg, #0F1115 0%, #090A0F 100%);
-  
-  /* Neumorphism Shadows */
-  --neumorphism-light: rgba(255, 255, 255, 0.25);
-  --neumorphism-dark: rgba(0, 0, 0, 0.56);
-  --neumorphism-inset-light: rgba(255, 255, 255, 0.15);
-  --neumorphism-inset-dark: rgba(0, 0, 0, 0.35);
-  
-  /* Neumorphism Shadow Combinations */
-  --shadow-neumorphic-outer: 8px 8px 16px var(--neumorphism-dark),
-                             -8px -8px 16px var(--neumorphism-light);
-  --shadow-neumorphic-inner: inset 4px 4px 8px var(--neumorphism-inset-dark),
-                             inset -4px -4px 8px var(--neumorphism-inset-light);
-  --shadow-neumorphic-soft: 4px 4px 8px var(--neumorphism-dark),
-                           -4px -4px 8px var(--neumorphism-light);
-  
-  /* Glassmorphism Shadows */
-  --shadow-glass: 0 6px 18px rgba(0, 0, 0, 0.45),
-                  0 2px 6px rgba(0, 0, 0, 0.25);
-  --shadow-glass-elevated: 0 12px 28px rgba(0, 0, 0, 0.5),
-                           0 4px 10px rgba(0, 0, 0, 0.35);
-  
-  /* Neon Glow Effects */
-  --glow-neon-blue: 0 0 15px rgba(96, 175, 255, 0.6),
-                    0 0 30px rgba(96, 175, 255, 0.4),
-                    0 0 45px rgba(96, 175, 255, 0.2);
-  --glow-neon-blue-strong: 0 0 20px rgba(96, 175, 255, 0.8),
-                           0 0 40px rgba(96, 175, 255, 0.6),
-                           0 0 60px rgba(96, 175, 255, 0.4);
-  --glow-neon-aqua: 0 0 15px rgba(110, 231, 255, 0.6),
-                    0 0 30px rgba(110, 231, 255, 0.4);
-  --glow-neon-silver: 0 0 20px rgba(192, 192, 192, 0.3),
-                      0 0 40px rgba(192, 192, 192, 0.2);
-  
-  /* Border Glows */
-  --border-glow-neon: 1px solid rgba(96, 175, 255, 0.5);
-  --border-glow-neon-strong: 2px solid rgba(96, 175, 255, 0.8);
-  --border-glow-aqua: 1px solid rgba(110, 231, 255, 0.5);
-  
-  /* Text Colors */
-  --text-primary: #FFFFFF;
-  --text-secondary: #E0E0E0;
-  --text-tertiary: #C0C0C0;
-  --text-muted: #8F8F8F;
-  --text-neon: #60AFFF;
-  --text-neon-aqua: #6EE7FF;
-  
-  /* Status Colors (Futuristic) */
-  --success-neon: #00FF88;
-  --error-neon: #FF3366;
-  --warning-neon: #FFAA00;
-  --info-neon: #60AFFF;
-  
-  /* Transitions */
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Spacing */
+  /* Base surfaces */
+  --color-deep-space: #030712;
+  --color-black-titanium: #020617;
+  --color-space-gray: #0f172a;
+  --color-space-gray-light: #17213a;
+  --color-space-gray-muted: #1f2b46;
+  --bg-surface: #05070f;
+
+  /* Accent system */
+  --color-neon-ice-blue: #8b5cf6;
+  --color-neon-ice-blue-bright: #a78bfa;
+  --color-neon-ice-blue-dark: #6d28d9;
+  --color-electric-aqua: #22d3ee;
+  --color-electric-aqua-bright: #67e8f9;
+
+  /* Neutral metals */
+  --color-metallic-silver: #cbd5f5;
+  --color-chrome: #a5b4fc;
+  --color-chrome-light: #e2e8f0;
+  --color-chrome-dark: #64748b;
+
+  /* Typography */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5f5;
+  --text-tertiary: #94a3b8;
+  --text-muted: #7c8ba6;
+  --text-neon: #a78bfa;
+  --text-neon-aqua: #67e8f9;
+
+  /* Elevation + borders */
+  --glass-bg-light: rgba(255, 255, 255, 0.04);
+  --glass-bg-medium: rgba(15, 23, 42, 0.85);
+  --glass-bg-dark: rgba(15, 23, 42, 0.65);
+  --glass-border-light: rgba(148, 163, 184, 0.25);
+  --glass-border-medium: rgba(124, 58, 237, 0.25);
+  --glass-border-dark: rgba(15, 23, 42, 0.95);
+  --glass-border-neon: rgba(135, 92, 246, 0.45);
+
+  /* Shadows + glows */
+  --shadow-glass: 0 18px 35px rgba(5, 7, 19, 0.55);
+  --shadow-glass-elevated: 0 28px 60px rgba(5, 7, 19, 0.65);
+  --glow-neon-blue: 0 0 18px rgba(135, 92, 246, 0.5);
+  --glow-neon-blue-strong: 0 0 28px rgba(135, 92, 246, 0.7);
+  --shadow-neumorphic-outer: 18px 18px 40px rgba(2, 6, 23, 0.65), -12px -12px 30px rgba(15, 23, 42, 0.4);
+  --shadow-neumorphic-inner: inset 2px 2px 6px rgba(2, 6, 23, 0.55), inset -2px -2px 5px rgba(15, 23, 42, 0.45);
+  --shadow-neumorphic-soft: 0 24px 55px rgba(2, 6, 23, 0.45);
+
+  /* Borders */
+  --border-glow-neon: 1px solid rgba(135, 92, 246, 0.4);
+  --border-glow-neon-strong: 2px solid rgba(135, 92, 246, 0.7);
+  --border-glow-aqua: 1px solid rgba(34, 211, 238, 0.45);
+
+  /* Status */
+  --success-neon: #22c55e;
+  --error-neon: #fb7185;
+  --warning-neon: #facc15;
+  --info-neon: #38bdf8;
+
+  /* Motion + spacing */
+  --transition-fast: 0.18s ease;
+  --transition-normal: 0.28s ease;
+  --transition-slow: 0.4s ease;
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
-  
-  /* Border Radius */
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
   --radius-full: 9999px;
-  
-  /* Blur Values */
   --blur-sm: 6px;
   --blur-md: 12px;
   --blur-lg: 18px;
   --blur-xl: 26px;
 }
 
-/* Modern Font Import */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&display=swap');
-
-/* ===================================
-   UTILITY CLASSES
-   =================================== */
-
-/* Glassmorphism Utilities */
 .glass-effect {
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-medium);
   backdrop-filter: blur(var(--blur-md));
-  -webkit-backdrop-filter: blur(var(--blur-md));
   border: 1px solid var(--glass-border-light);
   box-shadow: var(--shadow-glass);
 }
 
 .glass-effect-strong {
-  background: var(--glass-bg-medium);
+  background: var(--glass-bg-dark);
   backdrop-filter: blur(var(--blur-lg));
-  -webkit-backdrop-filter: blur(var(--blur-lg));
-  border: 1px solid var(--glass-border-medium);
+  border: 1px solid var(--glass-border-neon);
   box-shadow: var(--shadow-glass-elevated);
 }
 
-@media (max-width: 1024px) {
-  :root {
-    --blur-sm: 4px;
-    --blur-md: 8px;
-    --blur-lg: 12px;
-    --shadow-glass: 0 4px 12px rgba(0, 0, 0, 0.4),
-                    0 2px 4px rgba(0, 0, 0, 0.25);
-    --shadow-glass-elevated: 0 8px 20px rgba(0, 0, 0, 0.45),
-                             0 3px 8px rgba(0, 0, 0, 0.3);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --blur-sm: 2px;
-    --blur-md: 4px;
-    --blur-lg: 6px;
-    --shadow-glass: 0 3px 10px rgba(0, 0, 0, 0.35),
-                    0 1px 3px rgba(0, 0, 0, 0.25);
-    --shadow-glass-elevated: 0 6px 16px rgba(0, 0, 0, 0.4),
-                             0 2px 6px rgba(0, 0, 0, 0.3);
-  }
-}
-
-/* Neumorphism Utilities */
 .neumorphic {
   background: var(--color-space-gray);
-  box-shadow: var(--shadow-neumorphic-outer);
-}
-
-.neumorphic-pressed {
-  box-shadow: var(--shadow-neumorphic-inner);
-}
-
-.neumorphic-soft {
-  box-shadow: var(--shadow-neumorphic-soft);
-}
-
-/* Neon Glow Utilities */
-.neon-glow {
-  box-shadow: var(--glow-neon-blue);
-}
-
-.neon-glow-strong {
-  box-shadow: var(--glow-neon-blue-strong);
+  box-shadow: 12px 12px 32px rgba(2, 6, 23, 0.65), -12px -12px 32px rgba(15, 23, 42, 0.4);
 }
 
 .neon-border {
@@ -198,42 +103,4 @@
 
 .neon-border-strong {
   border: var(--border-glow-neon-strong);
-}
-
-/* Particle Animation Keyframes */
-@keyframes float-particle {
-  0% {
-    transform: translateY(100vh) translateX(0) rotate(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100vh) translateX(100px) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-@keyframes pulse-neon {
-  0%, 100% {
-    opacity: 0.6;
-    box-shadow: var(--glow-neon-blue);
-  }
-  50% {
-    opacity: 1;
-    box-shadow: var(--glow-neon-blue-strong);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
 }
