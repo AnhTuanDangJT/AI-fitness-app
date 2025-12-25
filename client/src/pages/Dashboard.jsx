@@ -373,14 +373,6 @@ function Dashboard() {
         })?.key ?? BMI_SEGMENTS[BMI_SEGMENTS.length - 1].key
   const bmiIndicatorDisplay = bmiValue === null ? '—' : bmiValue.toFixed(1)
   const getSegmentWidth = (segment) => ((segment.max - segment.min) / (BMI_MAX - BMI_MIN)) * 100
-  const BMI_CATEGORY_TRANSLATIONS = {
-    'Underweight': 'dashboard.underweight',
-    'Normal': 'dashboard.normal',
-    'Overweight': 'dashboard.overweight',
-    'Obese (Class I)': 'dashboard.obeseClassI',
-    'Obese (Class II)': 'dashboard.obeseClassII',
-    'Obese (Class III)': 'dashboard.obeseClassIII',
-  }
 
   const handleLanguageToggle = () => {
     const newLang = i18n.language === 'en' ? 'vi' : 'en'
