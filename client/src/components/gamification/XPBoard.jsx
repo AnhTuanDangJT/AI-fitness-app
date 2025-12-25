@@ -10,6 +10,9 @@ function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails, className = '' 
   const level = calculateLevel(xp)
   const titleKey = getTitle(level)
   const levelTitle = t(`levels.titles.${titleKey}`, { defaultValue: titleKey })
+  const levelLabel = t('gamification.level', { level })
+  const levelHeadline = `${levelLabel} – ${levelTitle}`
+  const highlightConsistency = level === 4
   const xpInLevel = xp % 100
   const progressPercent = (xpInLevel / 100) * 100
 
@@ -25,9 +28,12 @@ function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails, className = '' 
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-muted">
-            {t('gamification.level', { level })}
+            {levelLabel}
           </p>
-          <p className="mt-1 text-2xl font-semibold text-white">{levelTitle}</p>
+          <p className="mt-1 text-2xl font-semibold text-white flex items-center gap-2">
+            <span>{levelHeadline}</span>
+            {highlightConsistency && <span aria-hidden className="text-2xl leading-none">🔥</span>}
+          </p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-right">
           <p className="text-[11px] uppercase tracking-[0.3em] text-white/60">{t('dashboard.streakLabel')}</p>

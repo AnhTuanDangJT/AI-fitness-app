@@ -125,17 +125,6 @@ const sectionContainerBaseClasses =
 
 const getSectionContainerClasses = (variant) => clsx(sectionContainerBaseClasses, SECTION_ACCENTS[variant]?.panel)
 
-const buildAbbreviation = (text, fallback = 'AI') => {
-  if (!text || typeof text !== 'string') return fallback
-  const sanitized = text.replace(/[^0-9A-Za-zÀ-ÖØ-öø-ÿ\s]/g, ' ').trim()
-  const segments = sanitized.split(/\s+/).filter(Boolean)
-  const letters = segments.slice(0, 2).map((segment) => segment.charAt(0)).join('')
-  if (letters) {
-    return letters.toUpperCase()
-  }
-  return sanitized.slice(0, 3).toUpperCase() || fallback
-}
-
 const SectionHeader = ({ label, title, description, variant = 'default' }) => {
   const accent = SECTION_ACCENTS[variant] || SECTION_ACCENTS.default
   return (
@@ -540,11 +529,6 @@ function Dashboard() {
   ]
 
   const nutritionAccent = SECTION_ACCENTS.nutrition
-  const aiCoachAbbreviation = buildAbbreviation(resolveDashboardText('dashboard.aiCoach', 'AI Coach'))
-  const mealPlannerAbbreviation = buildAbbreviation(
-    resolveDashboardText('dashboard.aiMealPlanner', 'Meal Planner'),
-    'MP'
-  )
   const insightPanels = [
     {
       id: 'targets',
@@ -734,15 +718,16 @@ function Dashboard() {
             <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
               <div className="flex flex-col gap-6">
                 <div className="rounded-3xl bg-white/5 p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t('dashboard.aiCoach')}</p>
                       <h3 className="mt-2 text-2xl font-semibold">{t('dashboard.aiCoachHeadline')}</h3>
                       <p className="mt-3 text-sm text-white/70">{t('dashboard.aiCoachDescription')}</p>
                     </div>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
-                      {aiCoachAbbreviation}
-                    </div>
+                    <span
+                      aria-hidden
+                      className="inline-flex h-0.5 w-full rounded-full bg-gradient-to-r from-white/40 via-white/20 to-transparent"
+                    />
                   </div>
                   <p className="mt-4 text-sm text-white/65">{t('dashboard.aiFeaturesSubtitle')}</p>
                   <div className="mt-6 flex flex-wrap gap-3">
@@ -762,15 +747,16 @@ function Dashboard() {
               </div>
               <div className="flex flex-col gap-6">
                 <div className="rounded-3xl bg-white/5 p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t('dashboard.aiMealPlanner')}</p>
                       <h3 className="mt-2 text-xl font-semibold">{t('dashboard.aiMealPlannerDescription')}</h3>
                       <p className="mt-3 text-sm text-white/70">{t('dashboard.nutritionHubSubtitle')}</p>
                     </div>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
-                      {mealPlannerAbbreviation}
-                    </div>
+                    <span
+                      aria-hidden
+                      className="inline-flex h-0.5 w-full rounded-full bg-gradient-to-r from-white/40 via-white/20 to-transparent"
+                    />
                   </div>
                   <Button className="mt-6" variant="secondary" onClick={() => setIsMealPlannerOpen(true)}>
                     {t('dashboard.aiMealPlanner')}
@@ -1256,7 +1242,6 @@ function HealthRecommendations({ analysis, profile }) {
       tagline: resolveRecText('dashboard.bodyCompositionTag', 'Body composition'),
       background: 'from-cyan-500/12 via-slate-900/50 to-slate-900/20',
       cardBorder: 'border-cyan-400/40',
-      iconWrapper: 'bg-cyan-500/15 text-cyan-100',
       bullet: 'bg-cyan-200/80',
       accentLine: 'from-cyan-300/70 to-transparent',
       highlightBorder: 'border-cyan-300/30',
@@ -1267,7 +1252,6 @@ function HealthRecommendations({ analysis, profile }) {
       tagline: resolveRecText('dashboard.cardioHealthTag', 'Cardiovascular health'),
       background: 'from-rose-500/12 via-slate-900/50 to-slate-900/20',
       cardBorder: 'border-rose-400/40',
-      iconWrapper: 'bg-rose-500/15 text-rose-100',
       bullet: 'bg-rose-200/80',
       accentLine: 'from-rose-400/70 to-transparent',
       highlightBorder: 'border-rose-300/30',
@@ -1278,7 +1262,6 @@ function HealthRecommendations({ analysis, profile }) {
       tagline: resolveRecText('dashboard.movementTag', 'Movement strategy'),
       background: 'from-amber-400/12 via-slate-900/50 to-slate-900/20',
       cardBorder: 'border-amber-400/40',
-      iconWrapper: 'bg-amber-400/15 text-amber-100',
       bullet: 'bg-amber-200/80',
       accentLine: 'from-amber-300/70 to-transparent',
       highlightBorder: 'border-amber-300/30',
@@ -1289,7 +1272,6 @@ function HealthRecommendations({ analysis, profile }) {
       tagline: resolveRecText('dashboard.nutritionTag', 'Nutrition focus'),
       background: 'from-emerald-400/12 via-slate-900/50 to-slate-900/20',
       cardBorder: 'border-emerald-400/40',
-      iconWrapper: 'bg-emerald-400/15 text-emerald-100',
       bullet: 'bg-emerald-200/80',
       accentLine: 'from-emerald-300/70 to-transparent',
       highlightBorder: 'border-emerald-300/30',
@@ -1302,7 +1284,6 @@ function HealthRecommendations({ analysis, profile }) {
     tagline: resolveRecText('dashboard.healthInsightTag', 'Health insight'),
     background: 'from-white/12 via-white/6 to-transparent',
     cardBorder: 'border-white/10',
-    iconWrapper: 'bg-white/10 text-white',
     bullet: 'bg-white/70',
     accentLine: 'from-white/40 to-transparent',
     highlightBorder: 'border-white/20',
@@ -1321,7 +1302,6 @@ function HealthRecommendations({ analysis, profile }) {
     <div className="grid gap-6 md:grid-cols-2">
       {recommendationSections.map((section) => {
         const variant = visualVariants[section.key] || defaultVariant
-        const accentLabel = section.accentLabel || buildAbbreviation(section.title || variant.tagline, 'HX')
         const isExpanded = expandedSections.includes(section.key)
         const detailText = section.detailText
         const preview = getContentPreview(detailText)
@@ -1354,19 +1334,14 @@ function HealthRecommendations({ analysis, profile }) {
             />
             <div className="relative z-10 flex flex-col gap-5 lg:flex-row">
               <div className="space-y-4 lg:w-2/5">
-                <div className="flex items-start gap-4">
-                  <div
-                    className={clsx(
-                      'flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 text-xs font-semibold uppercase tracking-[0.3em]',
-                      variant.iconWrapper
-                    )}
-                    aria-hidden
-                  >
-                    {accentLabel}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs uppercase tracking-[0.3em] text-white/60">{variant.tagline}</p>
-                    <h3 className="mt-1 text-xl font-semibold">{section.title}</h3>
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/60">{variant.tagline}</p>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-semibold">{section.title}</h3>
+                    <span
+                      aria-hidden
+                      className={clsx('inline-flex h-1 w-10 rounded-full opacity-90', variant.bullet)}
+                    />
                   </div>
                 </div>
                 {section.explanation && <p className="text-sm leading-relaxed text-white/75">{section.explanation}</p>}

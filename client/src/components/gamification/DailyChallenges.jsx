@@ -4,15 +4,6 @@ import { gamificationAPI, invalidateGamificationCache } from '../../services/gam
 import { DAILY_CHALLENGES } from '../../constants/dailyChallenges'
 import './Gamification.css'
 
-const buildBadgeLabel = (text) => {
-  if (!text || typeof text !== 'string') return 'AI'
-  const sanitized = text.replace(/[^0-9A-Za-zÀ-ÖØ-öø-ÿ\s]/g, ' ').trim()
-  const segments = sanitized.split(/\s+/).filter(Boolean)
-  const letters = segments.slice(0, 2).map((segment) => segment.charAt(0)).join('')
-  if (letters) return letters.toUpperCase()
-  return sanitized.slice(0, 3).toUpperCase() || 'AI'
-}
-
 /**
  * Daily Challenges Component
  * 
@@ -146,7 +137,10 @@ function DailyChallenges() {
     <div className="daily-challenges-compact">
       <div className="daily-challenges-compact-header">
         <h3>{t('gamification.dailyChallenges')}</h3>
-        <span className="daily-challenges-compact-progress">{t('gamification.completed', { completed: completedCount, total: challenges.length })}</span>
+        <span className="daily-challenges-compact-progress">
+          <span aria-hidden className="daily-challenges-flame">🔥</span>
+          {t('gamification.completed', { completed: completedCount, total: challenges.length })}
+        </span>
       </div>
       <ul className="daily-challenges-compact-list">
         {challenges.map((challenge) => {
@@ -155,7 +149,6 @@ function DailyChallenges() {
           const canComplete = challenge.id === 'LOG_TODAY' && !isCompleted && !isCompleting
           const title = t(challenge.nameKey)
           const description = t(challenge.descriptionKey)
-          const badgeLabel = buildBadgeLabel(title)
           
           return (
             <li
@@ -163,9 +156,7 @@ function DailyChallenges() {
               className={`daily-challenges-compact-item ${isCompleted ? 'completed' : ''}`}
             >
               <div className="daily-challenges-compact-content">
-                <span className="daily-challenges-compact-icon" aria-hidden>
-                  {badgeLabel}
-                </span>
+                <span className="daily-challenges-compact-marker" aria-hidden />
                 <div className="daily-challenges-compact-text">
                   <span className="daily-challenges-compact-title">{title}</span>
                   <span className="daily-challenges-compact-description">{description}</span>
