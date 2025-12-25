@@ -853,6 +853,7 @@ function HealthRecommendations({ analysis, profile }) {
   const PREVIEW_LIMIT = 180
   const MAX_LIST_ITEMS = 3
   const notAvailableText = resolveTextWithFallback(t, 'dashboard.notAvailable', 'Not available')
+  const resolveRecText = (key, fallback) => resolveTextWithFallback(t, key, fallback)
 
   if (!analysis) {
     return (
@@ -916,9 +917,9 @@ function HealthRecommendations({ analysis, profile }) {
           <div
             key={`${prefix}-highlight-${index}`}
             className={clsx(
-              'min-w-[120px] flex-1 rounded-2xl border px-4 py-3 text-sm',
-              variant.border,
-              'border-white/20 bg-white/5 backdrop-blur'
+              'min-w-[120px] flex-1 rounded-2xl border px-4 py-3 text-sm backdrop-blur',
+              variant.highlightBorder,
+              variant.highlightBg
             )}
           >
             <p className="text-[11px] uppercase tracking-[0.3em] text-white/55">{highlight.label}</p>
@@ -944,9 +945,21 @@ function HealthRecommendations({ analysis, profile }) {
         title: t('healthRecommendations.whrHealthRisk'),
         explanation: whrExplanation,
         risks,
-        content: profile?.sex === 'Male'
-          ? t('healthRecommendations.whrAtRiskMale')
-          : t('healthRecommendations.whrAtRiskFemale'),
+        detailText:
+          profile?.sex === 'Male'
+            ? t('healthRecommendations.whrAtRiskMale')
+            : t('healthRecommendations.whrAtRiskFemale'),
+        focus: {
+          title: resolveRecText('dashboard.focusWhrAttention', 'Bring your ratio back into range'),
+          body: resolveRecText(
+            'dashboard.focusWhrAttentionBody',
+            'Central adiposity pushes metabolic stress higher. Track the same waist/hip measurements each week and pair steady strength work with daily low-impact movement.'
+          ),
+          actions: [
+            resolveRecText('dashboard.focusWhrAction1', 'Base meals around lean protein, vegetables, and fiber'),
+            resolveRecText('dashboard.focusWhrAction2', 'Layer 20–30 minutes of moderate cardio 4x weekly')
+          ],
+        },
         highlights: [
           {
             label: resolveTextWithFallback(t, 'dashboard.whr', 'WHR'),
@@ -965,9 +978,21 @@ function HealthRecommendations({ analysis, profile }) {
       title: t('healthRecommendations.whrHealthStatus'),
       explanation: whrExplanation,
       risks,
-      content: profile?.sex === 'Male'
-        ? t('healthRecommendations.whrGoodMale')
-        : t('healthRecommendations.whrGoodFemale'),
+      detailText:
+        profile?.sex === 'Male'
+          ? t('healthRecommendations.whrGoodMale')
+          : t('healthRecommendations.whrGoodFemale'),
+      focus: {
+        title: resolveRecText('dashboard.focusWhrMaintain', 'Protect this healthy ratio'),
+        body: resolveRecText(
+          'dashboard.focusWhrMaintainBody',
+          'Your current measurements suggest balanced fat distribution. Keep reinforcing core strength and nutrition that favors satiating, minimally processed foods.'
+        ),
+        actions: [
+          resolveRecText('dashboard.focusWhrMaintainAction1', 'Measure at the same time of day for consistency'),
+          resolveRecText('dashboard.focusWhrMaintainAction2', 'Blend posture, core, and mobility sessions weekly')
+        ],
+      },
       highlights: [
         {
           label: resolveTextWithFallback(t, 'dashboard.whr', 'WHR'),
@@ -988,8 +1013,8 @@ function HealthRecommendations({ analysis, profile }) {
     const bmiCategory = getMappedTranslation(analysis?.bmiCategory, BMI_CATEGORY_TRANSLATIONS)
 
     return {
-      title: t('healthRecommendations.heartDiseasePrevention'),
-      content: t('healthRecommendations.heartDiseaseContent'),
+      title: resolveRecText('dashboard.heartHealthTitle', 'Lower cardiac strain'),
+      detailText: t('healthRecommendations.heartDiseaseContent'),
       icon: '❤️',
       highlights: [
         {
@@ -1000,7 +1025,18 @@ function HealthRecommendations({ analysis, profile }) {
           label: resolveTextWithFallback(t, 'dashboard.categoryLabel', 'Category'),
           value: bmiCategory
         }
-      ]
+      ],
+      focus: {
+        title: resolveRecText('dashboard.heartHealthFocusTitle', 'Why this matters'),
+        body: resolveRecText(
+          'dashboard.heartHealthFocusBody',
+          'Cardiovascular tissue adapts best when training, recovery, and stress control stay balanced. Maintain predictable workouts, sleep, and hydration.'
+        ),
+        actions: [
+          resolveRecText('dashboard.heartHealthAction1', 'Aim for 150+ minutes of moderate cardio each week'),
+          resolveRecText('dashboard.heartHealthAction2', 'Keep sodium moderate and check resting heart rate weekly')
+        ],
+      }
     }
   }
 
@@ -1043,6 +1079,7 @@ function HealthRecommendations({ analysis, profile }) {
 
     return {
       ...suggestions[activityLevel || 3],
+      title: resolveRecText('dashboard.activityPlanTitle', 'Movement rhythm'),
       icon: '🏃',
       highlights: [
         {
@@ -1053,7 +1090,18 @@ function HealthRecommendations({ analysis, profile }) {
           label: resolveTextWithFallback(t, 'dashboard.frequencyLabel', 'Weekly rhythm'),
           value: resolveTextWithFallback(t, 'dashboard.steadyProgress', 'Steady progress')
         }
-      ]
+      ],
+      focus: {
+        title: resolveRecText('dashboard.activityPlanFocusTitle', 'How to apply this'),
+        body: resolveRecText(
+          'dashboard.activityPlanFocusBody',
+          'Rotate higher-intensity days with restorative work. Consistency plus variety builds capacity without overloading joints or hormones.'
+        ),
+        actions: [
+          resolveRecText('dashboard.activityPlanAction1', 'Note effort level after every session to track fatigue'),
+          resolveRecText('dashboard.activityPlanAction2', 'Add 5-minute mobility or walk breaks between desk work')
+        ],
+      }
     }
   }
 
@@ -1088,6 +1136,7 @@ function HealthRecommendations({ analysis, profile }) {
 
     return {
       ...selected,
+      title: resolveRecText('dashboard.nutritionFocusTitle', 'Nutrition alignment'),
       icon: '🎯',
       highlights: [
         {
@@ -1098,7 +1147,18 @@ function HealthRecommendations({ analysis, profile }) {
           label: resolveTextWithFallback(t, 'dashboard.energyPlan', 'Energy plan'),
           value: resolveTextWithFallback(t, 'dashboard.guidedPlan', 'Guided plan')
         }
-      ]
+      ],
+      focus: {
+        title: resolveRecText('dashboard.nutritionFocusActionTitle', 'Turn goals into meals'),
+        body: resolveRecText(
+          'dashboard.nutritionFocusActionBody',
+          'Anchor each meal with protein, produce, and slow carbs. Review weekly energy intake and adjust portions in small increments.'
+        ),
+        actions: [
+          resolveRecText('dashboard.nutritionFocusAction1', 'Prep two nutrient-dense snacks to prevent reactive eating'),
+          resolveRecText('dashboard.nutritionFocusAction2', 'Modify portions by roughly 10% rather than drastic cuts')
+        ],
+      }
     }
   }
 
@@ -1109,41 +1169,61 @@ function HealthRecommendations({ analysis, profile }) {
 
   const visualVariants = {
     whr: {
-      tagline: 'Body composition',
-      border: 'border-sky-400/50',
-      background: 'from-sky-500/10 via-slate-900/50 to-slate-900/20',
-      iconWrapper: 'bg-sky-500/15 text-sky-100',
-      bullet: 'bg-sky-300/80'
+      tagline: resolveRecText('dashboard.bodyCompositionTag', 'Body composition'),
+      background: 'from-cyan-500/12 via-slate-900/50 to-slate-900/20',
+      cardBorder: 'border-cyan-400/40',
+      iconWrapper: 'bg-cyan-500/15 text-cyan-100',
+      bullet: 'bg-cyan-200/80',
+      accentLine: 'from-cyan-300/70 to-transparent',
+      highlightBorder: 'border-cyan-300/30',
+      highlightBg: 'bg-cyan-500/5',
+      leftStripe: 'border-l-cyan-400/80'
     },
     heart: {
-      tagline: 'Cardiovascular health',
-      border: 'border-rose-400/40',
-      background: 'from-rose-500/10 via-slate-900/50 to-slate-900/20',
+      tagline: resolveRecText('dashboard.cardioHealthTag', 'Cardiovascular health'),
+      background: 'from-rose-500/12 via-slate-900/50 to-slate-900/20',
+      cardBorder: 'border-rose-400/40',
       iconWrapper: 'bg-rose-500/15 text-rose-100',
-      bullet: 'bg-rose-300/80'
+      bullet: 'bg-rose-200/80',
+      accentLine: 'from-rose-400/70 to-transparent',
+      highlightBorder: 'border-rose-300/30',
+      highlightBg: 'bg-rose-500/5',
+      leftStripe: 'border-l-rose-400/80'
     },
     activity: {
-      tagline: 'Movement strategy',
-      border: 'border-amber-400/40',
-      background: 'from-amber-400/10 via-slate-900/50 to-slate-900/20',
+      tagline: resolveRecText('dashboard.movementTag', 'Movement strategy'),
+      background: 'from-amber-400/12 via-slate-900/50 to-slate-900/20',
+      cardBorder: 'border-amber-400/40',
       iconWrapper: 'bg-amber-400/15 text-amber-100',
-      bullet: 'bg-amber-200/80'
+      bullet: 'bg-amber-200/80',
+      accentLine: 'from-amber-300/70 to-transparent',
+      highlightBorder: 'border-amber-300/30',
+      highlightBg: 'bg-amber-400/5',
+      leftStripe: 'border-l-amber-400/80'
     },
     goal: {
-      tagline: 'Nutrition focus',
-      border: 'border-emerald-400/40',
-      background: 'from-emerald-400/10 via-slate-900/50 to-slate-900/20',
+      tagline: resolveRecText('dashboard.nutritionTag', 'Nutrition focus'),
+      background: 'from-emerald-400/12 via-slate-900/50 to-slate-900/20',
+      cardBorder: 'border-emerald-400/40',
       iconWrapper: 'bg-emerald-400/15 text-emerald-100',
-      bullet: 'bg-emerald-200/80'
+      bullet: 'bg-emerald-200/80',
+      accentLine: 'from-emerald-300/70 to-transparent',
+      highlightBorder: 'border-emerald-300/30',
+      highlightBg: 'bg-emerald-400/5',
+      leftStripe: 'border-l-emerald-400/80'
     }
   }
 
   const defaultVariant = {
-    tagline: 'Health insight',
-    border: 'border-white/10',
+    tagline: resolveRecText('dashboard.healthInsightTag', 'Health insight'),
     background: 'from-white/12 via-white/6 to-transparent',
+    cardBorder: 'border-white/10',
     iconWrapper: 'bg-white/10 text-white',
-    bullet: 'bg-white/70'
+    bullet: 'bg-white/70',
+    accentLine: 'from-white/40 to-transparent',
+    highlightBorder: 'border-white/20',
+    highlightBg: 'bg-white/5',
+    leftStripe: 'border-l-white/30'
   }
 
   const recommendationSections = [
@@ -1158,19 +1238,28 @@ function HealthRecommendations({ analysis, profile }) {
       {recommendationSections.map((section) => {
         const variant = visualVariants[section.key] || defaultVariant
         const isExpanded = expandedSections.includes(section.key)
-        const preview = getContentPreview(section.content)
-        const showToggle = !!section.content && section.content.length > PREVIEW_LIMIT
+        const detailText = section.detailText
+        const preview = getContentPreview(detailText)
+        const showToggle = !!detailText && detailText.length > PREVIEW_LIMIT
 
         return (
           <article
             key={section.key}
             className={clsx(
               'group relative flex h-full flex-col rounded-3xl border bg-gradient-to-br p-6 text-white shadow-[0_30px_70px_rgba(2,6,23,0.45)] transition-all hover:shadow-[0_40px_90px_rgba(2,6,23,0.55)]',
-              variant.border,
               variant.background,
-              'overflow-hidden'
+              variant.cardBorder,
+              variant.leftStripe,
+              'overflow-hidden border-l-[3px] lg:border-l-[4px]'
             )}
           >
+            <div
+              aria-hidden
+              className={clsx(
+                'absolute inset-x-6 top-3 h-0.5 rounded-full bg-gradient-to-r opacity-70',
+                variant.accentLine
+              )}
+            />
             <span
               aria-hidden
               className={clsx(
@@ -1194,7 +1283,7 @@ function HealthRecommendations({ analysis, profile }) {
                     <h3 className="mt-1 text-xl font-semibold">{section.title}</h3>
                   </div>
                 </div>
-                {section.explanation && <p className="text-sm text-white/75">{section.explanation}</p>}
+                {section.explanation && <p className="text-sm leading-relaxed text-white/75">{section.explanation}</p>}
                 {renderHighlights(section.highlights, variant, section.key)}
               </div>
 
@@ -1218,12 +1307,31 @@ function HealthRecommendations({ analysis, profile }) {
                   `${section.key}-tips`
                 )}
 
-                {section.content && (
+                {section.focus && (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/60">{section.focus.title}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-white/85">{section.focus.body}</p>
+                    {Array.isArray(section.focus.actions) && section.focus.actions.length > 0 && (
+                      <ul className="mt-3 space-y-2 text-sm text-white/85">
+                        {section.focus.actions.map((action, idx) => (
+                          <li key={`${section.key}-focus-${idx}`} className="flex gap-2">
+                            <span className={clsx('mt-1 h-1.5 w-1.5 rounded-full', variant.bullet)} />
+                            <span>{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {detailText && (
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-                      {resolveTextWithFallback(t, 'dashboard.focusArea', 'Focus')}
+                      {resolveRecText('dashboard.fullGuidance', 'Full guidance')}
                     </p>
-                    <p className="mt-2 text-sm text-white/85">{isExpanded || !showToggle ? section.content : preview}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-white/80">
+                      {isExpanded || !showToggle ? detailText : preview}
+                    </p>
                     {showToggle && (
                       <button
                         type="button"
@@ -1232,8 +1340,8 @@ function HealthRecommendations({ analysis, profile }) {
                         aria-expanded={isExpanded}
                       >
                         {isExpanded
-                          ? resolveTextWithFallback(t, 'dashboard.collapse', 'Show less')
-                          : resolveTextWithFallback(t, 'dashboard.whyThisMatters', 'Why this matters')}
+                          ? resolveRecText('dashboard.collapse', 'Show less')
+                          : resolveRecText('dashboard.whyThisMatters', 'Why this matters')}
                         <span className="text-base">{isExpanded ? '−' : '→'}</span>
                       </button>
                     )}
