@@ -67,7 +67,7 @@ function BadgeGrid({ badges = [] }) {
             onClick={() => setIsExpanded(!isExpanded)}
             aria-label={isExpanded ? 'Collapse badges' : 'Expand badges'}
           >
-            {isExpanded ? '▼' : '▶'}
+            {isExpanded ? 'v' : '>'}
           </button>
         )}
       </div>

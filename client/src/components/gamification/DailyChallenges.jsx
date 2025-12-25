@@ -138,7 +138,11 @@ function DailyChallenges() {
       <div className="daily-challenges-compact-header">
         <h3>{t('gamification.dailyChallenges')}</h3>
         <span className="daily-challenges-compact-progress">
-          <span aria-hidden className="daily-challenges-flame">🔥</span>
+          <span
+            aria-hidden
+            role="presentation"
+            className="daily-challenges-flame"
+          />
           {t('gamification.completed', { completed: completedCount, total: challenges.length })}
         </span>
       </div>

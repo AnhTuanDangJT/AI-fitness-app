@@ -578,9 +578,13 @@
 
 .daily-challenges-flame {
   margin-right: 6px;
-  font-size: 14px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #ffd89c, #ff8a00);
+  box-shadow: 0 0 10px rgba(255, 138, 0, 0.55);
   display: inline-flex;
-  align-items: center;
+  flex-shrink: 0;
 }
 
 .daily-challenges-compact-loading,

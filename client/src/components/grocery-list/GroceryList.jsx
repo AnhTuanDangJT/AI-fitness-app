@@ -184,7 +184,7 @@ function GroceryList({ mealPlan }) {
       }
 
       const isChecked = checkedItems.has(index)
-      const checkbox = isChecked ? '☑' : '☐'
+      const checkbox = isChecked ? '[x]' : '[ ]'
       const itemName = item.name
       const quantityText = item.quantityText || ''
 

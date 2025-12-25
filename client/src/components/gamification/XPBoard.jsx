@@ -32,7 +32,13 @@ function XPBoard({ xp = 0, currentStreakDays = 0, onOpenDetails, className = '' 
           </p>
           <p className="mt-1 text-2xl font-semibold text-white flex items-center gap-2">
             <span>{levelHeadline}</span>
-            {highlightConsistency && <span aria-hidden className="text-2xl leading-none">🔥</span>}
+            {highlightConsistency && (
+              <span
+                aria-hidden
+                role="presentation"
+                className="inline-block h-3 w-3 rounded-full bg-gradient-to-br from-orange-300 via-orange-500 to-pink-500 shadow-[0_0_12px_rgba(249,115,22,0.65)]"
+              />
+            )}
           </p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-right">
