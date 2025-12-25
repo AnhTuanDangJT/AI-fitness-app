@@ -284,11 +284,13 @@ function Dashboard() {
     const tips = []
     
     // BMI tips
-    if (analysis.bmiCategory === 'Underweight') {
+    const bmiCategory = analysis?.bmiCategory
+    
+    if (bmiCategory === 'Underweight') {
       tips.push(t('healthTips.underweightTip'))
-    } else if (analysis.bmiCategory === 'Overweight' || analysis.bmiCategory.startsWith('Obese')) {
+    } else if (bmiCategory === 'Overweight' || bmiCategory?.startsWith('Obese')) {
       tips.push(t('healthTips.overweightTip'))
-    } else if (analysis.bmiCategory === 'Normal') {
+    } else if (bmiCategory === 'Normal') {
       tips.push(t('healthTips.normalWeightTip'))
     }
 
