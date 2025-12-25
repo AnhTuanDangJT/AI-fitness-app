@@ -3,9 +3,10 @@ import { motion } from 'framer-motion'
 import clsx from 'clsx'
 
 const variantStyles = {
-  primary: 'bg-accent text-white hover:bg-accent/90',
-  secondary: 'border border-white/15 text-white hover:border-white/35',
-  ghost: 'text-white/70 hover:text-white',
+  primary: 'bg-accent text-white hover:bg-accent/90 focus-visible:ring-accent/60',
+  secondary: 'border border-white/15 text-white hover:border-white/35 focus-visible:ring-accent/60',
+  ghost: 'text-white/70 hover:text-white focus-visible:ring-accent/60',
+  destructive: 'text-red-300 hover:text-red-200 hover:bg-red-500/5 focus-visible:ring-red-400/45',
 }
 
 const sizeStyles = {
@@ -27,7 +28,7 @@ const Button = forwardRef(function Button(
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.97 }}
       className={clsx(
-        'inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-tight transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-base-900 focus-visible:ring-accent/60',
+        'inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-tight transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-base-900',
         variantStyles[variant],
         sizeStyles[size],
         className
