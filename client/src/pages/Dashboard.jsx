@@ -307,6 +307,8 @@ function Dashboard() {
     }
   }
 
+  const proteinTargetValue = analysis?.proteinTarget ?? null
+
   const getHealthTip = () => {
     if (!analysis) return null
 
@@ -340,7 +342,9 @@ function Dashboard() {
     }
 
     // Protein tips
-    tips.push(t('healthTips.proteinTip', { protein: Math.round(analysis.proteinTarget) }))
+    if (proteinTargetValue) {
+      tips.push(t('healthTips.proteinTip', { protein: Math.round(proteinTargetValue) }))
+    }
 
     return tips[Math.floor(Math.random() * tips.length)] || t('healthTips.defaultTip')
   }
@@ -472,13 +476,13 @@ function Dashboard() {
           <div className="rounded-3xl bg-gradient-to-br from-white/12 via-white/6 to-transparent p-7 text-white shadow-[0_25px_60px_rgba(2,6,23,0.4)]">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">{t('dashboard.dailyProteinTarget')}</p>
             <p className="mt-3 text-3xl font-semibold">
-              {analysis.proteinTarget ? Math.round(analysis.proteinTarget) : notAvailableLabel}
+              {proteinTargetValue ? Math.round(proteinTargetValue) : notAvailableLabel}
               <span className="ml-2 text-base text-white/60">{t('dashboard.gramsPerDay')}</span>
             </p>
             <div className="mt-6 h-2 w-full rounded-full bg-white/10">
               <div
                 className="h-full rounded-full bg-accent/80"
-                style={{ width: `${Math.min(100, ((analysis.proteinTarget || 0) / 200) * 100)}%` }}
+                style={{ width: `${Math.min(100, ((proteinTargetValue || 0) / 200) * 100)}%` }}
               />
             </div>
             <p className="mt-4 text-sm text-white/70">{t('dashboard.proteinTip')}</p>
