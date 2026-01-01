@@ -34,15 +34,21 @@ public class AiConfig {
     
     /**
      * AI API Key from environment variable.
-     * 
+     *
      * Set this in your environment:
      * - Development: Set in application.properties or environment variable
      * - Production: Set as environment variable (e.g., AI_API_KEY=sk-...)
-     * 
+     *
      * DO NOT hardcode the API key in this file or commit it to version control.
      */
     @Value("${AI_API_KEY:}")
     private String apiKey;
+
+    /**
+     * GitHub token used for shared AI helper (GitHub Models / Copilot).
+     */
+    @Value("${GITHUB_TOKEN:}")
+    private String githubToken;
     
     /**
      * AI API Base URL (optional, for custom endpoints).
@@ -57,6 +63,12 @@ public class AiConfig {
      */
     @Value("${AI_MODEL:gpt-4}")
     private String model;
+
+    /**
+     * GitHub model identifier (defaults to gpt-4o-mini).
+     */
+    @Value("${GITHUB_MODEL:gpt-4o-mini}")
+    private String githubModel;
     
     /**
      * Maximum tokens for AI responses (default: 2000).
@@ -78,6 +90,13 @@ public class AiConfig {
      */
     public String getApiKey() {
         return apiKey;
+    }
+
+    /**
+     * Gets the GitHub token used for shared AI calls.
+     */
+    public String getGithubToken() {
+        return githubToken;
     }
     
     /**
@@ -105,6 +124,13 @@ public class AiConfig {
      */
     public String getModel() {
         return model;
+    }
+
+    /**
+     * Gets the GitHub model name.
+     */
+    public String getGithubModel() {
+        return githubModel;
     }
     
     /**
