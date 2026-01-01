@@ -1,6 +1,5 @@
 package com.aifitness.service;
 
-import com.aifitness.ai.OpenAiClient;
 import com.aifitness.ai.data.GlobalCuisineKnowledgeBase;
 import com.aifitness.ai.data.GlobalCuisineKnowledgeBase.CuisineProfile;
 import com.aifitness.ai.data.GlobalCuisineKnowledgeBase.MealBlueprint;
@@ -14,9 +13,14 @@ import com.aifitness.entity.MealPlanEntry;
 import com.aifitness.entity.User;
 import com.aifitness.repository.MealPlanEntryRepository;
 import com.aifitness.repository.MealPlanRepository;
+import com.aifitness.exception.AiServiceException;
+import com.aifitness.service.ai.AiClient;
+import com.aifitness.service.ai.AiPromptPayload;
+import com.aifitness.service.ai.PromptBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,21 +45,24 @@ public class MealPlanService {
     private final MealPlanEntryRepository mealPlanEntryRepository;
     private final NutritionService nutritionService;
     private final ProfileService profileService;
-    private final OpenAiClient openAiClient;
+    private final AiClient aiClient;
+    private final PromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
     private final Random random;
     
     @Autowired
     public MealPlanService(MealPlanRepository mealPlanRepository,
-                          MealPlanEntryRepository mealPlanEntryRepository,
-                          NutritionService nutritionService,
-                          ProfileService profileService,
-                          OpenAiClient openAiClient) {
+                           MealPlanEntryRepository mealPlanEntryRepository,
+                           NutritionService nutritionService,
+                           ProfileService profileService,
+                           AiClient aiClient,
+                           PromptBuilder promptBuilder) {
         this.mealPlanRepository = mealPlanRepository;
         this.mealPlanEntryRepository = mealPlanEntryRepository;
         this.nutritionService = nutritionService;
         this.profileService = profileService;
-        this.openAiClient = openAiClient;
+        this.aiClient = aiClient;
+        this.promptBuilder = promptBuilder;
         this.objectMapper = new ObjectMapper();
         this.random = new Random();
     }
@@ -103,11 +110,8 @@ public class MealPlanService {
     }
     
     /**
-     * Generates a weekly meal plan for a user using AI.
-     * 
-     * Uses OpenAI to generate a personalized meal plan based on user preferences,
-     * dietary restrictions, calorie targets, and macro requirements.
-     * 
+     * Generates a weekly meal plan for a user using the shared AI helper.
+     *
      * @param user The user to generate the meal plan for
      * @param startDate The start date of the week (typically Monday)
      * @return The generated meal plan
@@ -124,40 +128,28 @@ public class MealPlanService {
         MealPlan mealPlan = new MealPlan(user, startDate);
         mealPlan = mealPlanRepository.save(mealPlan);
 
-        // Skip AI generation entirely if the API key isn't configured.
-        if (!openAiClient.isEnabled()) {
-            System.out.println("AI API key not configured — using rule-based meal plan fallback.");
-            return generateWeeklyMealPlanForUserFallback(user, startDate);
-        }
-        
         try {
-            // Calculate nutrition targets
-            double bmr = nutritionService.calculateBMR(user.getWeight(), user.getHeight(), user.getAge(), user.getSex());
-            double tdee = nutritionService.calculateTDEE(bmr, user.getActivityLevel());
-            double goalCalories = nutritionService.calculateGoalCalories(tdee, user.getCalorieGoal());
-            double proteinTarget = nutritionService.calculateProtein(user.getCalorieGoal(), user.getWeight());
-            double fatTarget = nutritionService.calculateFat(user.getWeight());
-            double carbTarget = nutritionService.calculateCarbs(goalCalories, proteinTarget, fatTarget);
-            
-            // Build prompt with hard constraints
-            String prompt = buildMealPlanPrompt(user, goalCalories, proteinTarget, carbTarget, fatTarget, startDate);
-            
-            // Generate meal plan with validation and retry if needed
-            List<MealPlanEntry> entries = generateMealPlanWithValidation(user, prompt, mealPlan, startDate);
-            
-            // Add entries to meal plan
-            for (MealPlanEntry entry : entries) {
+            MacroTargets macroTargetsRaw = buildMacroTargets(user);
+            DailyMacrosDTO macroTargets = new DailyMacrosDTO(
+                    (int)Math.round(macroTargetsRaw.calories),
+                    (int)Math.round(macroTargetsRaw.protein),
+                    (int)Math.round(macroTargetsRaw.carbs),
+                    (int)Math.round(macroTargetsRaw.fats)
+            );
+            AiPromptPayload payload = promptBuilder.buildMealPrompt(user, startDate, macroTargets);
+            StructuredMealPlan structuredPlan = generateStructuredPlanWithValidation(user, mealPlan, startDate, payload);
+
+            for (MealPlanEntry entry : structuredPlan.entries) {
                 mealPlan.addEntry(entry);
             }
-            
-            // Save meal plan with all entries
+
             mealPlan = mealPlanRepository.save(mealPlan);
-            
             return mealPlan;
+        } catch (AiServiceException | IllegalArgumentException e) {
+            System.err.println("Shared AI meal generation failed, using fallback: " + e.getMessage());
+            return generateWeeklyMealPlanForUserFallback(user, startDate);
         } catch (Exception e) {
-            // If AI generation fails, fall back to hardcoded meals
-            // This ensures the system still works if AI is unavailable
-            System.err.println("AI meal generation failed, using fallback: " + e.getMessage());
+            System.err.println("Unexpected meal generation error, using fallback: " + e.getMessage());
             return generateWeeklyMealPlanForUserFallback(user, startDate);
         }
     }
@@ -358,36 +350,32 @@ public class MealPlanService {
     /**
      * Generates meal plan with validation and retry if preferences are violated.
      */
-    private List<MealPlanEntry> generateMealPlanWithValidation(User user, String prompt, MealPlan mealPlan, LocalDate startDate) {
+    private StructuredMealPlan generateStructuredPlanWithValidation(User user,
+                                                                   MealPlan mealPlan,
+                                                                   LocalDate startDate,
+                                                                   AiPromptPayload payload) {
         int maxRetries = 2;
+        String userPrompt = payload.getUserPrompt();
+
         for (int attempt = 0; attempt < maxRetries; attempt++) {
             try {
-                // Generate meal plan
-                String aiResponse = openAiClient.generateMealPlan(prompt);
-                
-                // Parse response
-                List<MealPlanEntry> entries = parseAiResponse(aiResponse, mealPlan, startDate);
-                
-                // Validate preferences were followed
-                if (validatePreferencesFollowed(user, entries)) {
-                    return entries;
-                } else {
-                    // Preferences violated, retry with stronger warning
-                    if (attempt < maxRetries - 1) {
-                        prompt = addValidationWarning(prompt, user);
-                        continue;
-                    }
+                String aiResponse = aiClient.generateAIResponse(
+                        payload.getSystemPrompt(),
+                        userPrompt,
+                        payload.getContext()
+                );
+                StructuredMealPlan plan = parseStructuredAiResponse(aiResponse, mealPlan, startDate);
+                if (validatePreferencesFollowed(user, plan.entries)) {
+                    return plan;
                 }
-            } catch (Exception e) {
+                userPrompt = userPrompt + "\n\nPrevious plan violated preferences. Regenerate and strictly obey cuisine, allergy, and ingredient requirements.";
+            } catch (AiServiceException ex) {
                 if (attempt == maxRetries - 1) {
-                    throw new RuntimeException("Failed to generate meal plan after " + maxRetries + " attempts: " + e.getMessage(), e);
+                    throw ex;
                 }
-                // Retry on error
-                continue;
             }
         }
-        
-        // If we get here, validation failed after all retries
+
         throw new RuntimeException("Generated meal plan does not respect user preferences after " + maxRetries + " attempts.");
     }
     
@@ -464,45 +452,21 @@ public class MealPlanService {
     }
     
     /**
-     * Adds validation warning to prompt for retry.
-     */
-    private String addValidationWarning(String originalPrompt, User user) {
-        StringBuilder warning = new StringBuilder();
-        warning.append("\n\n");
-        warning.append("⚠️ CRITICAL: Your previous response violated user preferences.\n");
-        warning.append("Regenerate the meal plan strictly following these requirements:\n\n");
-        
-        if (user.getFavoriteCuisines() != null && !user.getFavoriteCuisines().trim().isEmpty()) {
-            String cuisines = user.getFavoriteCuisines().toLowerCase();
-            if (cuisines.contains("asian")) {
-                warning.append("- EVERY meal MUST be Asian-style with rice as primary carbohydrate.\n");
-                warning.append("- NO pasta, bread, sandwiches, or Western staples.\n");
-            }
-        }
-        
-        if (user.getPreferredFoods() != null && !user.getPreferredFoods().trim().isEmpty()) {
-            warning.append("- MUST include these ingredients: ").append(user.getPreferredFoods()).append("\n");
-        }
-        
-        if (user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) {
-            warning.append("- MUST NEVER include: ").append(user.getAllergies()).append("\n");
-        }
-        
-        warning.append("\nIf you violate preferences again, the output is INVALID.\n");
-        
-        return originalPrompt + warning.toString();
-    }
-    
-    /**
      * Parses AI response JSON into MealPlanEntry objects.
      */
-    private List<MealPlanEntry> parseAiResponse(String aiResponse, MealPlan mealPlan, LocalDate startDate) {
+    private StructuredMealPlan parseStructuredAiResponse(String aiResponse, MealPlan mealPlan, LocalDate startDate) {
         try {
-            JsonNode root = objectMapper.readTree(aiResponse);
-            if (!root.isArray()) {
-                throw new RuntimeException("AI response is not a JSON array");
+            String sanitized = sanitizeJson(aiResponse);
+            JsonNode root = objectMapper.readTree(sanitized);
+            if (!root.isObject()) {
+                throw new RuntimeException("AI response must be a JSON object");
             }
-            
+
+            JsonNode mealsNode = root.get("meals");
+            if (mealsNode == null || !mealsNode.isArray()) {
+                throw new RuntimeException("AI response missing meals array");
+            }
+
             List<MealPlanEntry> entries = new ArrayList<>();
             Map<String, LocalDate> dayMap = new HashMap<>();
             dayMap.put("monday", startDate);
@@ -513,37 +477,81 @@ public class MealPlanService {
             dayMap.put("saturday", startDate.plusDays(5));
             dayMap.put("sunday", startDate.plusDays(6));
             
-            for (JsonNode mealNode : root) {
-                String day = mealNode.get("day").asText().toLowerCase();
-                String mealType = mealNode.get("mealType").asText();
-                String name = mealNode.get("name").asText();
-                int calories = mealNode.get("calories").asInt();
-                int protein = mealNode.get("protein").asInt();
-                int carbs = mealNode.get("carbs").asInt();
-                int fats = mealNode.get("fats").asInt();
+            for (JsonNode mealNode : mealsNode) {
+                String day = mealNode.path("day").asText("").toLowerCase(Locale.ROOT);
+                String mealType = mealNode.path("mealType").asText("BREAKFAST").toUpperCase(Locale.ROOT);
+                String name = mealNode.path("name").asText();
+                if (!dayMap.containsKey(day)) {
+                    throw new RuntimeException("Invalid day provided by AI: " + day);
+                }
+                if (!StringUtils.hasText(name)) {
+                    throw new RuntimeException("Meal name missing in AI response");
+                }
+
+                JsonNode macrosNode = mealNode.path("macros");
+                int calories = mealNode.path("calories").asInt(macrosNode.path("calories").asInt(0));
+                int protein = macrosNode.path("protein").asInt(mealNode.path("protein").asInt(0));
+                int carbs = macrosNode.path("carbs").asInt(mealNode.path("carbs").asInt(0));
+                int fats = macrosNode.path("fats").asInt(mealNode.path("fats").asInt(0));
                 
                 LocalDate date = dayMap.get(day);
-                if (date == null) {
-                    throw new RuntimeException("Invalid day: " + day);
-                }
                 
                 // Parse ingredients
                 String ingredientsJson = "[]";
                 if (mealNode.has("ingredients") && mealNode.get("ingredients").isArray()) {
                     ingredientsJson = objectMapper.writeValueAsString(mealNode.get("ingredients"));
                 }
-                
+
                 MealPlanEntry entry = new MealPlanEntry(
                     mealPlan, date, mealType, name, calories, protein, carbs, fats, ingredientsJson
                 );
                 entries.add(entry);
             }
-            
-            return entries;
-            
+
+            DailyMacrosDTO dailyTargets = null;
+            JsonNode macroNode = root.path("macros");
+            if (macroNode.isObject()) {
+                dailyTargets = new DailyMacrosDTO(
+                        macroNode.path("calories").asInt(root.path("dailyCalories").asInt(0)),
+                        macroNode.path("protein").asInt(0),
+                        macroNode.path("carbs").asInt(0),
+                        macroNode.path("fats").asInt(0)
+                );
+            }
+
+            List<String> shoppingList = new ArrayList<>();
+            JsonNode shoppingNode = root.path("shoppingList");
+            if (shoppingNode.isArray()) {
+                shoppingNode.forEach(item -> {
+                    if (item.isTextual()) {
+                        shoppingList.add(item.asText());
+                    }
+                });
+            }
+
+            return new StructuredMealPlan(entries, dailyTargets, shoppingList);
+
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse AI response: " + e.getMessage(), e);
         }
+    }
+
+    private String sanitizeJson(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String trimmed = raw.trim();
+        if (trimmed.startsWith("```")) {
+            int start = trimmed.indexOf("```");
+            int end = trimmed.lastIndexOf("```");
+            if (start >= 0 && end > start) {
+                trimmed = trimmed.substring(start + 3, end).trim();
+                if (trimmed.startsWith("json")) {
+                    trimmed = trimmed.substring(4).trim();
+                }
+            }
+        }
+        return trimmed;
     }
     
     /**
@@ -827,6 +835,18 @@ public class MealPlanService {
         double protein;
         double carbs;
         double fats;
+    }
+
+    private static class StructuredMealPlan {
+        private final List<MealPlanEntry> entries;
+        private final DailyMacrosDTO dailyTargets;
+        private final List<String> shoppingList;
+
+        private StructuredMealPlan(List<MealPlanEntry> entries, DailyMacrosDTO dailyTargets, List<String> shoppingList) {
+            this.entries = entries;
+            this.dailyTargets = dailyTargets;
+            this.shoppingList = shoppingList;
+        }
     }
     
     /**

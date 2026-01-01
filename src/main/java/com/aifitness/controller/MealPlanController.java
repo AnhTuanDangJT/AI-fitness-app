@@ -30,7 +30,7 @@ import java.util.UUID;
  * Handles meal plan generation and retrieval endpoints.
  */
 @RestController
-@RequestMapping("/ai/meals")
+@RequestMapping({"/ai/meals", "/ai"})
 public class MealPlanController {
     
     private static final Logger logger = LoggerFactory.getLogger(MealPlanController.class);
@@ -108,7 +108,7 @@ public class MealPlanController {
      *   "timestamp": "2024-01-15T10:30:00"
      * }
      */
-    @PostMapping("/generate")
+    @PostMapping({"/generate", "/meal-plan"})
     public ResponseEntity<ApiResponse<MealPlanResponseDTO>> generateMealPlan(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
             HttpServletRequest request) {
@@ -217,7 +217,7 @@ public class MealPlanController {
      *   "timestamp": "2024-01-15T10:30:00"
      * }
      */
-    @GetMapping("/current")
+    @GetMapping({"/current", "/meal-plan"})
     public ResponseEntity<ApiResponse<MealPlanResponseDTO>> getCurrentMealPlan(HttpServletRequest request) {
         String requestId = UUID.randomUUID().toString().substring(0, 8);
         Long userId = null;
@@ -299,7 +299,7 @@ public class MealPlanController {
      *   "timestamp": "2024-01-15T10:30:00"
      * }
      */
-    @GetMapping("/grocery-list")
+    @GetMapping({"/grocery-list", "/meal-plan/grocery-list"})
     public ResponseEntity<ApiResponse<List<GroceryItem>>> getGroceryList(HttpServletRequest request) {
         String requestId = UUID.randomUUID().toString().substring(0, 8);
         Long userId = null;

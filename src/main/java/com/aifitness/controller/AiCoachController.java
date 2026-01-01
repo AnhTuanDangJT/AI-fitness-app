@@ -4,9 +4,15 @@ import com.aifitness.dto.ApiResponse;
 import com.aifitness.dto.AiCoachResponse;
 import com.aifitness.dto.ChatRequest;
 import com.aifitness.dto.ChatResponse;
+import com.aifitness.dto.MealPlanResponseDTO;
 import com.aifitness.entity.User;
 import com.aifitness.repository.UserRepository;
 import com.aifitness.ai.AiCoachService;
+import com.aifitness.exception.AiServiceException;
+import com.aifitness.service.MealPlanService;
+import com.aifitness.service.ai.AiClient;
+import com.aifitness.service.ai.AiPromptPayload;
+import com.aifitness.service.ai.PromptBuilder;
 import com.aifitness.util.JwtTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -18,6 +24,9 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -29,7 +38,7 @@ import java.util.UUID;
  * The API contract is stable and will remain the same when real AI is integrated.
  */
 @RestController
-@RequestMapping("/ai/coach")
+@RequestMapping("/ai")
 // CORS is handled globally in SecurityConfig, no need for @CrossOrigin here
 public class AiCoachController {
     
@@ -38,14 +47,23 @@ public class AiCoachController {
     private final AiCoachService aiCoachService;
     private final JwtTokenService jwtTokenService;
     private final UserRepository userRepository;
+    private final MealPlanService mealPlanService;
+    private final PromptBuilder promptBuilder;
+    private final AiClient aiClient;
     
     @Autowired
     public AiCoachController(AiCoachService aiCoachService,
-                            JwtTokenService jwtTokenService,
-                            UserRepository userRepository) {
+                             JwtTokenService jwtTokenService,
+                             UserRepository userRepository,
+                             MealPlanService mealPlanService,
+                             PromptBuilder promptBuilder,
+                             AiClient aiClient) {
         this.aiCoachService = aiCoachService;
         this.jwtTokenService = jwtTokenService;
         this.userRepository = userRepository;
+        this.mealPlanService = mealPlanService;
+        this.promptBuilder = promptBuilder;
+        this.aiClient = aiClient;
     }
     
     /**
@@ -117,7 +135,7 @@ public class AiCoachController {
      *   "timestamp": "2024-01-15T10:30:00"
      * }
      */
-    @GetMapping("/advice")
+    @GetMapping({"/coach/advice", "/advice"})
     public ResponseEntity<ApiResponse<AiCoachResponse>> getCoachAdvice(HttpServletRequest request) {
         String requestId = UUID.randomUUID().toString().substring(0, 8);
         Long userId = null;
@@ -191,7 +209,7 @@ public class AiCoachController {
      *   "timestamp": "2024-01-15T10:30:00"
      * }
      */
-    @PostMapping("/chat")
+    @PostMapping({"/chat", "/coach/chat"})
     public ResponseEntity<ApiResponse<ChatResponse>> handleChat(
             HttpServletRequest request,
             @Valid @RequestBody ChatRequest chatRequest) {
@@ -246,43 +264,45 @@ public class AiCoachController {
             logger.info("[RequestId: {}] Processing chat: date={}, language={}, message='{}' (length={})", 
                     requestId, date, language, message, message.length());
             
-            // Process chat request with timeout protection
-            ChatResponse response;
+            MealPlanResponseDTO latestPlanDto = null;
             try {
-                // Set a timeout for AI processing (30 seconds)
-                // In a real implementation with external AI, this would use CompletableFuture with timeout
-                response = aiCoachService.handleChat(user, message, date, language);
-            } catch (Exception e) {
-                // Check if it's a timeout-related exception in the cause chain
-                if (e.getCause() instanceof java.util.concurrent.TimeoutException) {
-                    logger.error("[RequestId: {}] Timeout in handleChat for userId={}", requestId, userId);
-                    return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
-                            .body(ApiResponse.error("AI request timed out"));
+                var latestPlan = mealPlanService.getLatestMealPlan(user);
+                if (latestPlan != null) {
+                    latestPlanDto = mealPlanService.toDTO(latestPlan);
                 }
-                // Other exceptions
-                logger.error("[RequestId: {}] AI service error in handleChat for userId={}: {}", 
-                        requestId, userId, e.getMessage(), e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ApiResponse.error("AI service error"));
+            } catch (Exception planEx) {
+                logger.warn("[RequestId: {}] Unable to load latest meal plan for userId={}: {}", requestId, userId, planEx.getMessage());
             }
-            
-            // Validate response
-            if (response == null || response.getAssistantMessage() == null || response.getAssistantMessage().trim().isEmpty()) {
-                logger.warn("[RequestId: {}] Empty response from AI Coach for userId={}", requestId, userId);
+
+            String enrichedMessage = String.format("Date: %s%n%s", date, message);
+            AiPromptPayload prompt = promptBuilder.buildChatPrompt(user, enrichedMessage, language, latestPlanDto);
+            String assistantReply = aiClient.generateAIResponse(
+                    prompt.getSystemPrompt(),
+                    prompt.getUserPrompt(),
+                    prompt.getContext()
+            );
+
+            if (assistantReply == null || assistantReply.trim().isEmpty()) {
+                logger.warn("[RequestId: {}] Empty response from shared AI for userId={}", requestId, userId);
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                         .body(ApiResponse.error("AI Coach is temporarily unavailable. Please try again later."));
             }
+
+            ChatResponse response = new ChatResponse(assistantReply.trim(), buildSuggestedActions(message));
             
             logger.info("[RequestId: {}] Chat response generated successfully for userId={}. Response length: {}", 
-                    requestId, userId, 
-                    response.getAssistantMessage() != null ? response.getAssistantMessage().length() : 0);
+                    requestId, userId, assistantReply.length());
             
-            // Return success response
             return ResponseEntity.ok(ApiResponse.success(
                     "Chat response generated successfully",
                     response
             ));
             
+        } catch (AiServiceException e) {
+            logger.error("[RequestId: {}] Shared AI error in handleChat for userId={}: {}", 
+                    requestId, userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error(e.getMessage() != null ? e.getMessage() : "AI service error"));
         } catch (RuntimeException e) {
             String errorMsg = e.getMessage();
             if (errorMsg != null && errorMsg.contains("Unauthorized")) {
@@ -301,6 +321,20 @@ public class AiCoachController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("An error occurred while processing your message. Please try again later."));
         }
+    }
+
+    private List<String> buildSuggestedActions(String userMessage) {
+        if (userMessage == null) {
+            return Collections.emptyList();
+        }
+        String lower = userMessage.toLowerCase(Locale.ROOT);
+        if (lower.contains("meal") || lower.contains("food")) {
+            return List.of("View meal plan", "Open grocery list");
+        }
+        if (lower.contains("workout") || lower.contains("train")) {
+            return List.of("Log workout", "Review progress");
+        }
+        return List.of("View dashboard");
     }
 }
 
