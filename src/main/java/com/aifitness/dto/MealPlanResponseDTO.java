@@ -19,6 +19,9 @@ public class MealPlanResponseDTO {
     
     // Daily summary (calculated)
     private DailyMacrosDTO dailyTargets;
+
+    // Deterministic document for clients that expect strict JSON
+    private RuleBasedMealPlanDocument planDocument;
     
     // Constructors
     public MealPlanResponseDTO() {
@@ -72,7 +75,19 @@ public class MealPlanResponseDTO {
     public void setDailyTargets(DailyMacrosDTO dailyTargets) {
         this.dailyTargets = dailyTargets;
     }
+
+    public RuleBasedMealPlanDocument getPlanDocument() {
+        return planDocument;
+    }
+
+    public void setPlanDocument(RuleBasedMealPlanDocument planDocument) {
+        this.planDocument = planDocument;
+    }
 }
+
+
+
+
 
 
 

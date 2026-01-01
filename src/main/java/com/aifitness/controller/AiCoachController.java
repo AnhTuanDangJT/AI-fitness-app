@@ -4,15 +4,9 @@ import com.aifitness.dto.ApiResponse;
 import com.aifitness.dto.AiCoachResponse;
 import com.aifitness.dto.ChatRequest;
 import com.aifitness.dto.ChatResponse;
-import com.aifitness.dto.MealPlanResponseDTO;
 import com.aifitness.entity.User;
 import com.aifitness.repository.UserRepository;
 import com.aifitness.ai.AiCoachService;
-import com.aifitness.exception.AiServiceException;
-import com.aifitness.service.MealPlanService;
-import com.aifitness.service.ai.AiClient;
-import com.aifitness.service.ai.AiPromptPayload;
-import com.aifitness.service.ai.PromptBuilder;
 import com.aifitness.util.JwtTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -21,12 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.util.StringUtils;
 import jakarta.validation.Valid;
 
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -47,23 +39,14 @@ public class AiCoachController {
     private final AiCoachService aiCoachService;
     private final JwtTokenService jwtTokenService;
     private final UserRepository userRepository;
-    private final MealPlanService mealPlanService;
-    private final PromptBuilder promptBuilder;
-    private final AiClient aiClient;
     
     @Autowired
     public AiCoachController(AiCoachService aiCoachService,
                              JwtTokenService jwtTokenService,
-                             UserRepository userRepository,
-                             MealPlanService mealPlanService,
-                             PromptBuilder promptBuilder,
-                             AiClient aiClient) {
+                             UserRepository userRepository) {
         this.aiCoachService = aiCoachService;
         this.jwtTokenService = jwtTokenService;
         this.userRepository = userRepository;
-        this.mealPlanService = mealPlanService;
-        this.promptBuilder = promptBuilder;
-        this.aiClient = aiClient;
     }
     
     /**
@@ -264,45 +247,21 @@ public class AiCoachController {
             logger.info("[RequestId: {}] Processing chat: date={}, language={}, message='{}' (length={})", 
                     requestId, date, language, message, message.length());
             
-            MealPlanResponseDTO latestPlanDto = null;
-            try {
-                var latestPlan = mealPlanService.getLatestMealPlan(user);
-                if (latestPlan != null) {
-                    latestPlanDto = mealPlanService.toDTO(latestPlan);
-                }
-            } catch (Exception planEx) {
-                logger.warn("[RequestId: {}] Unable to load latest meal plan for userId={}: {}", requestId, userId, planEx.getMessage());
-            }
-
-            String enrichedMessage = String.format("Date: %s%n%s", date, message);
-            AiPromptPayload prompt = promptBuilder.buildChatPrompt(user, enrichedMessage, language, latestPlanDto);
-            String assistantReply = aiClient.generateAIResponse(
-                    prompt.getSystemPrompt(),
-                    prompt.getUserPrompt(),
-                    prompt.getContext()
-            );
-
-            if (assistantReply == null || assistantReply.trim().isEmpty()) {
-                logger.warn("[RequestId: {}] Empty response from shared AI for userId={}", requestId, userId);
+            ChatResponse response = aiCoachService.handleChat(user, message, date, language);
+            if (response == null || !StringUtils.hasText(response.getAssistantMessage())) {
+                logger.warn("[RequestId: {}] Rule-based response unavailable for userId={}", requestId, userId);
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                         .body(ApiResponse.error("AI Coach is temporarily unavailable. Please try again later."));
             }
-
-            ChatResponse response = new ChatResponse(assistantReply.trim(), buildSuggestedActions(message));
             
             logger.info("[RequestId: {}] Chat response generated successfully for userId={}. Response length: {}", 
-                    requestId, userId, assistantReply.length());
+                    requestId, userId, response.getAssistantMessage().length());
             
             return ResponseEntity.ok(ApiResponse.success(
                     "Chat response generated successfully",
                     response
             ));
             
-        } catch (AiServiceException e) {
-            logger.error("[RequestId: {}] Shared AI error in handleChat for userId={}: {}", 
-                    requestId, userId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(ApiResponse.error(e.getMessage() != null ? e.getMessage() : "AI service error"));
         } catch (RuntimeException e) {
             String errorMsg = e.getMessage();
             if (errorMsg != null && errorMsg.contains("Unauthorized")) {
@@ -321,20 +280,6 @@ public class AiCoachController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("An error occurred while processing your message. Please try again later."));
         }
-    }
-
-    private List<String> buildSuggestedActions(String userMessage) {
-        if (userMessage == null) {
-            return Collections.emptyList();
-        }
-        String lower = userMessage.toLowerCase(Locale.ROOT);
-        if (lower.contains("meal") || lower.contains("food")) {
-            return List.of("View meal plan", "Open grocery list");
-        }
-        if (lower.contains("workout") || lower.contains("train")) {
-            return List.of("Log workout", "Review progress");
-        }
-        return List.of("View dashboard");
     }
 }
 

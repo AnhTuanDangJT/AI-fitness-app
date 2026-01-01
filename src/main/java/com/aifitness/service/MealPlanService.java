@@ -8,22 +8,18 @@ import com.aifitness.dto.DailyMealPlanDTO;
 import com.aifitness.dto.GroceryItem;
 import com.aifitness.dto.MealPlanEntryDTO;
 import com.aifitness.dto.MealPlanResponseDTO;
+import com.aifitness.dto.RuleBasedMealPlanDocument;
 import com.aifitness.entity.MealPlan;
 import com.aifitness.entity.MealPlanEntry;
 import com.aifitness.entity.User;
-import com.aifitness.repository.MealPlanEntryRepository;
 import com.aifitness.repository.MealPlanRepository;
-import com.aifitness.exception.AiServiceException;
-import com.aifitness.service.ai.AiClient;
-import com.aifitness.service.ai.AiPromptPayload;
-import com.aifitness.service.ai.PromptBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.Normalizer;
 import java.time.DayOfWeek;
@@ -41,30 +37,18 @@ import java.util.stream.Collectors;
 @Transactional
 public class MealPlanService {
     
+    private static final Logger logger = LoggerFactory.getLogger(MealPlanService.class);
+    
     private final MealPlanRepository mealPlanRepository;
-    private final MealPlanEntryRepository mealPlanEntryRepository;
     private final NutritionService nutritionService;
-    private final ProfileService profileService;
-    private final AiClient aiClient;
-    private final PromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
-    private final Random random;
     
     @Autowired
     public MealPlanService(MealPlanRepository mealPlanRepository,
-                           MealPlanEntryRepository mealPlanEntryRepository,
-                           NutritionService nutritionService,
-                           ProfileService profileService,
-                           AiClient aiClient,
-                           PromptBuilder promptBuilder) {
+                           NutritionService nutritionService) {
         this.mealPlanRepository = mealPlanRepository;
-        this.mealPlanEntryRepository = mealPlanEntryRepository;
         this.nutritionService = nutritionService;
-        this.profileService = profileService;
-        this.aiClient = aiClient;
-        this.promptBuilder = promptBuilder;
         this.objectMapper = new ObjectMapper();
-        this.random = new Random();
     }
     
     /**
@@ -117,266 +101,10 @@ public class MealPlanService {
      * @return The generated meal plan
      */
     public MealPlan generateWeeklyMealPlanForUser(User user, LocalDate startDate) {
-        // Check if meal plan already exists for this week
-        Optional<MealPlan> existingPlan = mealPlanRepository.findByUserAndWeekStartDate(user, startDate);
-        if (existingPlan.isPresent()) {
-            // Delete existing plan and create a new one
-            mealPlanRepository.delete(existingPlan.get());
-        }
-        
-        // Create meal plan (save first to get ID)
-        MealPlan mealPlan = new MealPlan(user, startDate);
-        mealPlan = mealPlanRepository.save(mealPlan);
-
-        try {
-            MacroTargets macroTargetsRaw = buildMacroTargets(user);
-            DailyMacrosDTO macroTargets = new DailyMacrosDTO(
-                    (int)Math.round(macroTargetsRaw.calories),
-                    (int)Math.round(macroTargetsRaw.protein),
-                    (int)Math.round(macroTargetsRaw.carbs),
-                    (int)Math.round(macroTargetsRaw.fats)
-            );
-            AiPromptPayload payload = promptBuilder.buildMealPrompt(user, startDate, macroTargets);
-            StructuredMealPlan structuredPlan = generateStructuredPlanWithValidation(user, mealPlan, startDate, payload);
-
-            for (MealPlanEntry entry : structuredPlan.entries) {
-                mealPlan.addEntry(entry);
-            }
-
-            mealPlan = mealPlanRepository.save(mealPlan);
-            return mealPlan;
-        } catch (AiServiceException | IllegalArgumentException e) {
-            System.err.println("Shared AI meal generation failed, using fallback: " + e.getMessage());
-            return generateWeeklyMealPlanForUserFallback(user, startDate);
-        } catch (Exception e) {
-            System.err.println("Unexpected meal generation error, using fallback: " + e.getMessage());
-            return generateWeeklyMealPlanForUserFallback(user, startDate);
-        }
-    }
-    
-    /**
-     * Builds the meal plan prompt with hard constraints based on user preferences.
-     */
-    private String buildMealPlanPrompt(User user, double calories, double protein, double carbs, double fats, LocalDate startDate) {
-        StringBuilder prompt = new StringBuilder();
-        
-        prompt.append("You are a professional nutritionist and regional cuisine expert.\n\n");
-        prompt.append("The meal plan MUST strictly follow the user's preferences.\n");
-        prompt.append("These are NOT suggestions — they are REQUIREMENTS.\n\n");
-        
-        prompt.append("USER PREFERENCES:\n");
-        
-        // Preferred cuisine
-        if (user.getFavoriteCuisines() != null && !user.getFavoriteCuisines().trim().isEmpty()) {
-            String cuisines = user.getFavoriteCuisines().trim();
-            prompt.append("- Preferred cuisine: ").append(cuisines).append("\n");
-        } else {
-            prompt.append("- Preferred cuisine: Not specified (use balanced international cuisine)\n");
-        }
-        
-        // Preferred foods (mandatory ingredients)
-        if (user.getPreferredFoods() != null && !user.getPreferredFoods().trim().isEmpty()) {
-            String preferred = user.getPreferredFoods().trim();
-            prompt.append("- Mandatory ingredients: ").append(preferred).append("\n");
-        } else {
-            prompt.append("- Mandatory ingredients: None specified\n");
-        }
-        
-        // Dietary restriction
-        if (user.getDietaryPreference() != null && !user.getDietaryPreference().trim().isEmpty()) {
-            String dietary = user.getDietaryPreference().trim();
-            prompt.append("- Dietary restriction: ").append(dietary).append("\n");
-        }
-        
-        // Allergies (must avoid)
-        if (user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) {
-            prompt.append("- Allergies (MUST AVOID): ").append(user.getAllergies().trim()).append("\n");
-        }
-        
-        // Disliked foods (must avoid)
-        if (user.getDislikedFoods() != null && !user.getDislikedFoods().trim().isEmpty()) {
-            prompt.append("- Disliked foods (MUST AVOID): ").append(user.getDislikedFoods().trim()).append("\n");
-        }
-        
-        // Cooking time constraint
-        if (user.getMaxCookingTimePerMeal() != null && user.getMaxCookingTimePerMeal() > 0) {
-            prompt.append("- Maximum cooking time per meal: ").append(user.getMaxCookingTimePerMeal()).append(" minutes\n");
-        }
-        
-        prompt.append("\n");
-        prompt.append("NUTRITION TARGETS (per day):\n");
-        prompt.append("- Calories: ").append(Math.round(calories)).append(" kcal\n");
-        prompt.append("- Protein: ").append(Math.round(protein)).append(" g\n");
-        prompt.append("- Carbohydrates: ").append(Math.round(carbs)).append(" g\n");
-        prompt.append("- Fats: ").append(Math.round(fats)).append(" g\n");
-        
-        prompt.append("\n");
-        prompt.append("RULES (HARD CONSTRAINTS - VIOLATION MAKES OUTPUT INVALID):\n");
-        
-        // Build cuisine-specific rules
-        if (user.getFavoriteCuisines() != null && !user.getFavoriteCuisines().trim().isEmpty()) {
-            String cuisines = user.getFavoriteCuisines().toLowerCase();
-            if (cuisines.contains("asian") || cuisines.contains("chinese") || cuisines.contains("japanese") || 
-                cuisines.contains("korean") || cuisines.contains("thai") || cuisines.contains("vietnamese")) {
-                prompt.append("1. Every meal MUST include rice or rice-based products as the primary carbohydrate.\n");
-                prompt.append("2. Meals MUST be Asian-style (no pasta, bread, cheese, or Western sauces unless explicitly requested).\n");
-                prompt.append("3. Cooking style MUST be Asian (e.g., stir-fry, steaming, pan-fry, soups).\n");
-            } else if (cuisines.contains("european") || cuisines.contains("italian") || cuisines.contains("french") ||
-                       cuisines.contains("mediterranean") || cuisines.contains("german")) {
-                prompt.append("1. Meals MUST follow European/Mediterranean cooking styles.\n");
-                prompt.append("2. Use traditional European ingredients and preparation methods.\n");
-            } else if (cuisines.contains("mexican") || cuisines.contains("latin")) {
-                prompt.append("1. Meals MUST follow Mexican/Latin American cooking styles.\n");
-                prompt.append("2. Use traditional Latin ingredients (corn, beans, peppers, etc.).\n");
-            } else {
-                prompt.append("1. Meals MUST strictly follow ").append(user.getFavoriteCuisines()).append(" cuisine style.\n");
-            }
-        }
-        
-        // Preferred foods rules
-        if (user.getPreferredFoods() != null && !user.getPreferredFoods().trim().isEmpty()) {
-            String[] preferred = user.getPreferredFoods().split(",");
-            prompt.append("2. Protein rotation MUST prioritize: ");
-            List<String> proteins = new ArrayList<>();
-            List<String> carbsList = new ArrayList<>();
-            for (String food : preferred) {
-                String trimmed = food.trim().toLowerCase();
-                if (trimmed.contains("chicken") || trimmed.contains("beef") || trimmed.contains("pork") || 
-                    trimmed.contains("fish") || trimmed.contains("salmon") || trimmed.contains("tofu") ||
-                    trimmed.contains("turkey") || trimmed.contains("lamb")) {
-                    proteins.add(food.trim());
-                } else if (trimmed.contains("rice") || trimmed.contains("quinoa") || trimmed.contains("pasta") ||
-                          trimmed.contains("potato") || trimmed.contains("bread")) {
-                    carbsList.add(food.trim());
-                }
-            }
-            if (!proteins.isEmpty()) {
-                prompt.append(String.join(", ", proteins));
-            }
-            if (!carbsList.isEmpty()) {
-                prompt.append("\n3. Carbohydrate sources MUST prioritize: ").append(String.join(", ", carbsList));
-            }
-            prompt.append("\n");
-        }
-        
-        // Dietary restriction rules
-        if (user.getDietaryPreference() != null) {
-            String dietary = user.getDietaryPreference().toLowerCase();
-            if (dietary.equals("vegan")) {
-                prompt.append("4. ALL meals MUST be 100% vegan (no animal products whatsoever).\n");
-            } else if (dietary.equals("vegetarian")) {
-                prompt.append("4. ALL meals MUST be vegetarian (no meat or fish, eggs and dairy allowed).\n");
-            } else if (dietary.equals("pescatarian")) {
-                prompt.append("4. ALL meals MUST be pescatarian (fish and seafood allowed, no meat).\n");
-            } else if (dietary.equals("halal")) {
-                prompt.append("4. ALL meals MUST be halal (no pork, no alcohol, halal-certified meat only).\n");
-            } else if (dietary.equals("kosher")) {
-                prompt.append("4. ALL meals MUST be kosher (no pork, no shellfish, kosher-certified meat only).\n");
-            }
-        }
-        
-        // Allergies and dislikes
-        if ((user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) ||
-            (user.getDislikedFoods() != null && !user.getDislikedFoods().trim().isEmpty())) {
-            prompt.append("5. NEVER include any of these: ");
-            List<String> avoid = new ArrayList<>();
-            if (user.getAllergies() != null && !user.getAllergies().trim().isEmpty()) {
-                avoid.addAll(Arrays.asList(user.getAllergies().split(",")));
-            }
-            if (user.getDislikedFoods() != null && !user.getDislikedFoods().trim().isEmpty()) {
-                avoid.addAll(Arrays.asList(user.getDislikedFoods().split(",")));
-            }
-            prompt.append(String.join(", ", avoid.stream().map(String::trim).collect(Collectors.toList())));
-            prompt.append("\n");
-        }
-        
-        prompt.append("6. Meals MUST respect calorie and macro targets exactly.\n");
-        prompt.append("7. If preferences conflict, prioritize cuisine and ingredients over creativity.\n");
-        prompt.append("8. Maximum cooking time per meal: ");
-        if (user.getMaxCookingTimePerMeal() != null && user.getMaxCookingTimePerMeal() > 0) {
-            prompt.append(user.getMaxCookingTimePerMeal()).append(" minutes\n");
-        } else {
-            prompt.append("No limit\n");
-        }
-        
-        prompt.append("\n");
-        prompt.append("If you violate any rule, the output is INVALID.\n\n");
-
-        List<CuisineProfile> matchedProfiles = GlobalCuisineKnowledgeBase.matchCuisines(user.getFavoriteCuisines());
-        if (!matchedProfiles.isEmpty()) {
-            prompt.append("CURATED CUISINE BLUEPRINTS (STRICTLY FOLLOW WHEN USER REQUESTS THESE STYLES):\n");
-            prompt.append(GlobalCuisineKnowledgeBase.buildCuisinePromptSection(matchedProfiles));
-        } else {
-            prompt.append("GLOBAL CUISINE BLUEPRINTS YOU CAN DRAW FROM:\n");
-            prompt.append(GlobalCuisineKnowledgeBase.buildCuisinePromptSection(GlobalCuisineKnowledgeBase.getDefaultProfiles()));
-        }
-
-        prompt.append("INGREDIENT REASONING CHEAT SHEET:\n");
-        prompt.append(GlobalCuisineKnowledgeBase.buildIngredientLogicPrompt("en")).append("\n");
-        
-        prompt.append("OUTPUT FORMAT:\n");
-        prompt.append("Return a JSON array with 7 days (Monday to Sunday), each day with 3 meals (BREAKFAST, LUNCH, DINNER).\n");
-        prompt.append("Each meal must have:\n");
-        prompt.append("- day: \"Monday\", \"Tuesday\", etc.\n");
-        prompt.append("- mealType: \"BREAKFAST\", \"LUNCH\", or \"DINNER\"\n");
-        prompt.append("- name: meal name (e.g., \"Chicken teriyaki bowl with jasmine rice\")\n");
-        prompt.append("- calories: integer\n");
-        prompt.append("- protein: integer (grams)\n");
-        prompt.append("- carbs: integer (grams)\n");
-        prompt.append("- fats: integer (grams)\n");
-        prompt.append("- ingredients: array of objects with \"name\" and \"quantityText\"\n\n");
-        
-        prompt.append("Example format:\n");
-        prompt.append("[\n");
-        prompt.append("  {\n");
-        prompt.append("    \"day\": \"Monday\",\n");
-        prompt.append("    \"mealType\": \"BREAKFAST\",\n");
-        prompt.append("    \"name\": \"Chicken congee with vegetables\",\n");
-        prompt.append("    \"calories\": 400,\n");
-        prompt.append("    \"protein\": 30,\n");
-        prompt.append("    \"carbs\": 50,\n");
-        prompt.append("    \"fats\": 10,\n");
-        prompt.append("    \"ingredients\": [{\"name\": \"chicken breast\", \"quantityText\": \"150g\"}, {\"name\": \"jasmine rice\", \"quantityText\": \"100g cooked\"}]\n");
-        prompt.append("  },\n");
-        prompt.append("  ...\n");
-        prompt.append("]\n\n");
-        
-        prompt.append("Week start date: ").append(startDate.toString()).append("\n");
-        prompt.append("Generate meals for 7 days starting from ").append(startDate.toString()).append(".\n");
-        
-        return prompt.toString();
-    }
-    
-    /**
-     * Generates meal plan with validation and retry if preferences are violated.
-     */
-    private StructuredMealPlan generateStructuredPlanWithValidation(User user,
-                                                                   MealPlan mealPlan,
-                                                                   LocalDate startDate,
-                                                                   AiPromptPayload payload) {
-        int maxRetries = 2;
-        String userPrompt = payload.getUserPrompt();
-
-        for (int attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                String aiResponse = aiClient.generateAIResponse(
-                        payload.getSystemPrompt(),
-                        userPrompt,
-                        payload.getContext()
-                );
-                StructuredMealPlan plan = parseStructuredAiResponse(aiResponse, mealPlan, startDate);
-                if (validatePreferencesFollowed(user, plan.entries)) {
-                    return plan;
-                }
-                userPrompt = userPrompt + "\n\nPrevious plan violated preferences. Regenerate and strictly obey cuisine, allergy, and ingredient requirements.";
-            } catch (AiServiceException ex) {
-                if (attempt == maxRetries - 1) {
-                    throw ex;
-                }
-            }
-        }
-
-        throw new RuntimeException("Generated meal plan does not respect user preferences after " + maxRetries + " attempts.");
+        logger.info("Rule-based AI mode active (no LLM)");
+        logger.info("Generating deterministic meal plan for userId={}, startDate={}", 
+                user.getId(), startDate);
+        return generateWeeklyMealPlanForUserFallback(user, startDate);
     }
     
     /**
@@ -454,106 +182,6 @@ public class MealPlanService {
     /**
      * Parses AI response JSON into MealPlanEntry objects.
      */
-    private StructuredMealPlan parseStructuredAiResponse(String aiResponse, MealPlan mealPlan, LocalDate startDate) {
-        try {
-            String sanitized = sanitizeJson(aiResponse);
-            JsonNode root = objectMapper.readTree(sanitized);
-            if (!root.isObject()) {
-                throw new RuntimeException("AI response must be a JSON object");
-            }
-
-            JsonNode mealsNode = root.get("meals");
-            if (mealsNode == null || !mealsNode.isArray()) {
-                throw new RuntimeException("AI response missing meals array");
-            }
-
-            List<MealPlanEntry> entries = new ArrayList<>();
-            Map<String, LocalDate> dayMap = new HashMap<>();
-            dayMap.put("monday", startDate);
-            dayMap.put("tuesday", startDate.plusDays(1));
-            dayMap.put("wednesday", startDate.plusDays(2));
-            dayMap.put("thursday", startDate.plusDays(3));
-            dayMap.put("friday", startDate.plusDays(4));
-            dayMap.put("saturday", startDate.plusDays(5));
-            dayMap.put("sunday", startDate.plusDays(6));
-            
-            for (JsonNode mealNode : mealsNode) {
-                String day = mealNode.path("day").asText("").toLowerCase(Locale.ROOT);
-                String mealType = mealNode.path("mealType").asText("BREAKFAST").toUpperCase(Locale.ROOT);
-                String name = mealNode.path("name").asText();
-                if (!dayMap.containsKey(day)) {
-                    throw new RuntimeException("Invalid day provided by AI: " + day);
-                }
-                if (!StringUtils.hasText(name)) {
-                    throw new RuntimeException("Meal name missing in AI response");
-                }
-
-                JsonNode macrosNode = mealNode.path("macros");
-                int calories = mealNode.path("calories").asInt(macrosNode.path("calories").asInt(0));
-                int protein = macrosNode.path("protein").asInt(mealNode.path("protein").asInt(0));
-                int carbs = macrosNode.path("carbs").asInt(mealNode.path("carbs").asInt(0));
-                int fats = macrosNode.path("fats").asInt(mealNode.path("fats").asInt(0));
-                
-                LocalDate date = dayMap.get(day);
-                
-                // Parse ingredients
-                String ingredientsJson = "[]";
-                if (mealNode.has("ingredients") && mealNode.get("ingredients").isArray()) {
-                    ingredientsJson = objectMapper.writeValueAsString(mealNode.get("ingredients"));
-                }
-
-                MealPlanEntry entry = new MealPlanEntry(
-                    mealPlan, date, mealType, name, calories, protein, carbs, fats, ingredientsJson
-                );
-                entries.add(entry);
-            }
-
-            DailyMacrosDTO dailyTargets = null;
-            JsonNode macroNode = root.path("macros");
-            if (macroNode.isObject()) {
-                dailyTargets = new DailyMacrosDTO(
-                        macroNode.path("calories").asInt(root.path("dailyCalories").asInt(0)),
-                        macroNode.path("protein").asInt(0),
-                        macroNode.path("carbs").asInt(0),
-                        macroNode.path("fats").asInt(0)
-                );
-            }
-
-            List<String> shoppingList = new ArrayList<>();
-            JsonNode shoppingNode = root.path("shoppingList");
-            if (shoppingNode.isArray()) {
-                shoppingNode.forEach(item -> {
-                    if (item.isTextual()) {
-                        shoppingList.add(item.asText());
-                    }
-                });
-            }
-
-            return new StructuredMealPlan(entries, dailyTargets, shoppingList);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse AI response: " + e.getMessage(), e);
-        }
-    }
-
-    private String sanitizeJson(String raw) {
-        if (raw == null) {
-            return "";
-        }
-        String trimmed = raw.trim();
-        if (trimmed.startsWith("```")) {
-            int start = trimmed.indexOf("```");
-            int end = trimmed.lastIndexOf("```");
-            if (start >= 0 && end > start) {
-                trimmed = trimmed.substring(start + 3, end).trim();
-                if (trimmed.startsWith("json")) {
-                    trimmed = trimmed.substring(4).trim();
-                }
-            }
-        }
-        return trimmed;
-    }
-    
     /**
      * Fallback method: Generates a weekly meal plan for a user using hardcoded data.
      * Used when AI is not available.
@@ -705,7 +333,6 @@ public class MealPlanService {
                 score -= 4;
             }
             score += Math.abs(option.name.hashCode() + rotationIndex) % 3; // encourage variety
-            score += random.nextInt(3); // introduce randomness so regenerate ≠ identical plan
             
             if (score > bestScore) {
                 best = option;
@@ -837,18 +464,6 @@ public class MealPlanService {
         double fats;
     }
 
-    private static class StructuredMealPlan {
-        private final List<MealPlanEntry> entries;
-        private final DailyMacrosDTO dailyTargets;
-        private final List<String> shoppingList;
-
-        private StructuredMealPlan(List<MealPlanEntry> entries, DailyMacrosDTO dailyTargets, List<String> shoppingList) {
-            this.entries = entries;
-            this.dailyTargets = dailyTargets;
-            this.shoppingList = shoppingList;
-        }
-    }
-    
     /**
      * Gets the latest meal plan for a user.
      * 
@@ -908,6 +523,7 @@ public class MealPlanService {
         dto.setEntries(entryDTOs);
         System.out.println("[MealPlanService] Converted " + entryDTOs.size() + " entries to DTOs");
         
+        DailyMacrosDTO calculatedTargets = null;
         // Calculate daily targets from first day's entries
         if (!entryDTOs.isEmpty()) {
             Map<LocalDate, List<MealPlanEntryDTO>> entriesByDate = entryDTOs.stream()
@@ -921,7 +537,8 @@ public class MealPlanService {
                 int totalCarbs = firstDayEntries.stream().mapToInt(MealPlanEntryDTO::getCarbs).sum();
                 int totalFats = firstDayEntries.stream().mapToInt(MealPlanEntryDTO::getFats).sum();
                 
-                dto.setDailyTargets(new DailyMacrosDTO(totalCal, totalProtein, totalCarbs, totalFats));
+                calculatedTargets = new DailyMacrosDTO(totalCal, totalProtein, totalCarbs, totalFats);
+                dto.setDailyTargets(calculatedTargets);
                 System.out.println("[MealPlanService] Daily targets calculated: calories=" + totalCal + ", protein=" + totalProtein + ", carbs=" + totalCarbs + ", fats=" + totalFats);
             } else {
                 System.out.println("[MealPlanService] No entries found for firstDate=" + firstDate);
@@ -931,6 +548,7 @@ public class MealPlanService {
         }
         
         System.out.println("[MealPlanService] toDTO() - COMPLETE. Returning DTO with " + entryDTOs.size() + " entries");
+        dto.setPlanDocument(buildRuleBasedPlanDocument(mealPlan, entryDTOs, calculatedTargets));
         return dto;
     }
     
@@ -948,6 +566,49 @@ public class MealPlanService {
             entry.getCarbs(),
             entry.getFats()
         );
+    }
+
+    private RuleBasedMealPlanDocument buildRuleBasedPlanDocument(MealPlan mealPlan,
+                                                                 List<MealPlanEntryDTO> entryDTOs,
+                                                                 DailyMacrosDTO dailyTargets) {
+        if (mealPlan == null) {
+            return null;
+        }
+        RuleBasedMealPlanDocument document = new RuleBasedMealPlanDocument();
+        if (dailyTargets != null) {
+            document.setDailyCalories(dailyTargets.getCalories());
+        }
+        document.setMacros(dailyTargets);
+
+        if (entryDTOs != null && !entryDTOs.isEmpty()) {
+            List<RuleBasedMealPlanDocument.MealItem> meals = entryDTOs.stream()
+                    .map(dto -> {
+                        RuleBasedMealPlanDocument.MealItem item = new RuleBasedMealPlanDocument.MealItem();
+                        item.setDate(dto.getDate());
+                        item.setMealType(dto.getMealType());
+                        item.setName(dto.getName());
+                        item.setCalories(dto.getCalories());
+                        item.setProtein(dto.getProtein());
+                        item.setCarbs(dto.getCarbs());
+                        item.setFats(dto.getFats());
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+            document.setMeals(meals);
+        }
+
+        List<GroceryItem> groceryItems = buildGroceryListFromEntries(mealPlan.getEntries());
+        List<String> shoppingList = groceryItems.stream()
+                .map(item -> {
+                    String qty = item.getQuantityText();
+                    if (qty == null || qty.isBlank()) {
+                        return item.getName();
+                    }
+                    return item.getName() + " - " + qty;
+                })
+                .collect(Collectors.toList());
+        document.setShoppingList(shoppingList);
+        return document;
     }
     
     /**
@@ -1415,62 +1076,56 @@ public class MealPlanService {
             return new ArrayList<>();
         }
         
-        // Map to aggregate ingredients by name
+        return buildGroceryListFromEntries(mealPlan.getEntries());
+    }
+
+    private List<GroceryItem> buildGroceryListFromEntries(List<MealPlanEntry> entries) {
+        if (entries == null || entries.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         Map<String, GroceryItem> groceryMap = new HashMap<>();
-        
-        try {
-            // Process each meal entry
-            for (MealPlanEntry entry : mealPlan.getEntries()) {
-                String ingredientsJson = entry.getIngredients();
-                if (ingredientsJson == null || ingredientsJson.trim().isEmpty()) {
-                    continue;
-                }
-                
-                // Parse JSON ingredients
+
+        for (MealPlanEntry entry : entries) {
+            String ingredientsJson = entry.getIngredients();
+            if (ingredientsJson == null || ingredientsJson.trim().isEmpty()) {
+                continue;
+            }
+
+            try {
                 List<Map<String, String>> ingredients = objectMapper.readValue(
-                    ingredientsJson,
-                    new TypeReference<List<Map<String, String>>>() {}
+                        ingredientsJson,
+                        new TypeReference<List<Map<String, String>>>() {}
                 );
-                
-                // Aggregate ingredients
+
                 for (Map<String, String> ingredient : ingredients) {
                     String name = ingredient.get("name");
                     String quantityText = ingredient.get("quantityText");
-                    
+
                     if (name == null || name.trim().isEmpty()) {
                         continue;
                     }
-                    
-                    // Normalize name (case-insensitive)
-                    String normalizedName = name.trim().toLowerCase();
-                    
-                    if (groceryMap.containsKey(normalizedName)) {
-                        // If ingredient already exists, combine quantities
-                        GroceryItem existing = groceryMap.get(normalizedName);
+
+                    String normalizedName = name.trim().toLowerCase(Locale.ROOT);
+                    GroceryItem existing = groceryMap.get(normalizedName);
+                    if (existing != null) {
                         String existingQty = existing.getQuantityText();
                         String newQty = quantityText != null ? quantityText : "";
-                        
-                        // Simple quantity combination (just append if different)
-                        if (!newQty.equals(existingQty) && !newQty.isEmpty()) {
+                        if (!newQty.isEmpty() && !newQty.equals(existingQty)) {
                             existing.setQuantityText(existingQty + " + " + newQty);
                         }
                     } else {
-                        // Create new grocery item
                         GroceryItem item = new GroceryItem(name.trim(), quantityText != null ? quantityText : "");
                         groceryMap.put(normalizedName, item);
                     }
                 }
+            } catch (Exception e) {
+                logger.warn("Failed to parse ingredients for meal entry {}: {}", entry.getId(), e.getMessage());
             }
-        } catch (Exception e) {
-            // If JSON parsing fails, return empty list
-            System.err.println("Error parsing ingredients: " + e.getMessage());
-            return new ArrayList<>();
         }
-        
-        // Convert map to sorted list
+
         List<GroceryItem> groceryList = new ArrayList<>(groceryMap.values());
         groceryList.sort(Comparator.comparing(GroceryItem::getName, String.CASE_INSENSITIVE_ORDER));
-        
         return groceryList;
     }
 }

@@ -3,7 +3,6 @@ package com.aifitness.ai;
 import com.aifitness.dto.*;
 import com.aifitness.entity.User;
 import com.aifitness.service.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -309,25 +308,18 @@ public class AiCoachService {
     private final NutritionService nutritionService;
     private final MealPlanService mealPlanService;
     private final BodyMetricsService bodyMetricsService;
-    private final OpenAiClient openAiClient;
-    private final AiConfig aiConfig;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Autowired
     public AiCoachService(WeeklyProgressService weeklyProgressService,
                          DailyCheckInService dailyCheckInService,
                          NutritionService nutritionService,
                          MealPlanService mealPlanService,
-                         BodyMetricsService bodyMetricsService,
-                         OpenAiClient openAiClient,
-                         AiConfig aiConfig) {
+                         BodyMetricsService bodyMetricsService) {
         this.weeklyProgressService = weeklyProgressService;
         this.dailyCheckInService = dailyCheckInService;
         this.nutritionService = nutritionService;
         this.mealPlanService = mealPlanService;
         this.bodyMetricsService = bodyMetricsService;
-        this.openAiClient = openAiClient;
-        this.aiConfig = aiConfig;
     }
     
     /**
@@ -589,6 +581,9 @@ public class AiCoachService {
             return new ChatResponse(emptyMessage, generateActionsFromChat(null, language));
         }
         
+        logger.info("Rule-based AI mode active (no LLM)");
+        logger.info("Processing chat for userId={}", user.getId());
+
         // STEP 3: Load full AI context and history BEFORE processing
         AiContextResponse aiContext = buildAiContext(user);
         AiHistoryResponse aiHistory = buildAiHistory(user, 20); // Get last 20 history items
@@ -598,16 +593,6 @@ public class AiCoachService {
         
         // Enhance context with AI context data for richer responses
         enhanceContextWithAiData(context, aiContext, aiHistory);
-        
-        // Attempt LLM-powered response first (falls back to rule-based if unavailable)
-        ChatResponse llmResponse = tryAiCoachLlm(user, message, language, aiContext, aiHistory, context);
-        if (llmResponse != null && llmResponse.getAssistantMessage() != null &&
-                !llmResponse.getAssistantMessage().trim().isEmpty()) {
-            if (llmResponse.getActions() == null || llmResponse.getActions().isEmpty()) {
-                llmResponse.setActions(generateActionsFromChat(context, language));
-            }
-            return llmResponse;
-        }
         
         // INTENT ROUTING: Check for specific intents first
         String intentResult = processIntentBasedRouting(user, message, context, language);
@@ -622,122 +607,6 @@ public class AiCoachService {
         List<String> actions = generateActionsFromChat(context, language);
         
         return new ChatResponse(assistantMessage, actions);
-    }
-    
-    /**
-     * Attempts to answer via OpenAI with full user context.
-     */
-    private ChatResponse tryAiCoachLlm(
-            User user,
-            String message,
-            String language,
-            AiContextResponse aiContext,
-            AiHistoryResponse aiHistory,
-            CoachContext context) {
-        
-        if (aiConfig == null || !aiConfig.isApiKeyConfigured()) {
-            return null;
-        }
-        
-        try {
-            String systemPrompt = buildEnhancedSystemPrompt(user, aiContext, aiHistory, language);
-            String userPrompt = buildUserPromptForLlm(user, message, aiContext, aiHistory, context, language);
-            
-            List<Map<String, String>> conversation = new ArrayList<>();
-            conversation.add(Map.of("role", "user", "content", userPrompt));
-            
-            String assistantMessage = openAiClient.generateChatResponse(
-                    systemPrompt,
-                    conversation,
-                    aiConfig.getTemperature(),
-                    Math.min(1500, aiConfig.getMaxTokens()));
-            
-            if (assistantMessage != null && !assistantMessage.trim().isEmpty()) {
-                ChatResponse response = new ChatResponse();
-                response.setAssistantMessage(assistantMessage.trim());
-                return response;
-            }
-        } catch (Exception e) {
-            logger.warn("LLM chat failed, falling back to rule-based logic: {}", e.getMessage());
-        }
-        return null;
-    }
-    
-    /**
-     * Builds the user prompt that is sent to the LLM along with contextual data.
-     */
-    private String buildUserPromptForLlm(
-            User user,
-            String message,
-            AiContextResponse aiContext,
-            AiHistoryResponse aiHistory,
-            CoachContext context,
-            String language) {
-        
-        StringBuilder sb = new StringBuilder();
-        sb.append("End-user question:\n").append(message.trim()).append("\n\n");
-        
-        sb.append("User profile & nutrition context (JSON):\n");
-        sb.append(toSafeJson(aiContext, 2200)).append("\n\n");
-        
-        sb.append("Recent history:\n");
-        sb.append(summarizeHistory(aiHistory)).append("\n\n");
-        
-        sb.append("Latest progress snapshot:\n");
-        String contextSummary = buildSummaryFromContext(user, context);
-        if (contextSummary != null && !contextSummary.isBlank()) {
-            sb.append(contextSummary);
-        } else {
-            sb.append("No recent progress logged.");
-        }
-        sb.append("\n\n");
-        
-        if ("vi".equals(language)) {
-            sb.append("Chỉ dẫn:\n");
-            sb.append("- Phản hồi 100% bằng tiếng Việt chuyên nghiệp.\n");
-            sb.append("- Kết hợp dữ liệu cá nhân ở trên với kiến thức sức khỏe/tập luyện cập nhật từ các nguồn đáng tin cậy trên internet (WHO, ACSM, NIH, PubMed, CDC, v.v.).\n");
-            sb.append("- Nêu rõ lý do, đưa ra bước hành động cụ thể, và nếu dùng kiến thức chung hãy ghi chú ngắn gọn nguồn hoặc năm.\n");
-        } else {
-            sb.append("Instructions:\n");
-            sb.append("- Respond entirely in professional English.\n");
-            sb.append("- Combine the personal context above with up-to-date evidence from reputable internet sources (WHO, ACSM, NIH, PubMed, CDC, etc.).\n");
-            sb.append("- Provide actionable steps and, when referencing general knowledge, mention the organisation or year if possible.\n");
-        }
-        
-        return sb.toString();
-    }
-    
-    private String summarizeHistory(AiHistoryResponse history) {
-        if (history == null || history.getEntries() == null || history.getEntries().isEmpty()) {
-            return "No logged history yet.";
-        }
-        
-        StringBuilder sb = new StringBuilder();
-        history.getEntries().stream()
-                .limit(10)
-                .forEach(entry -> sb.append("- ")
-                        .append(entry.getDate())
-                        .append(" • ")
-                        .append(entry.getType())
-                        .append(" • ")
-                        .append(entry.getSummaryText())
-                        .append("\n"));
-        return sb.toString();
-    }
-    
-    private String toSafeJson(Object value, int maxLength) {
-        if (value == null) {
-            return "{}";
-        }
-        try {
-            String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
-            if (json.length() > maxLength) {
-                return json.substring(0, maxLength) + "...(truncated)";
-            }
-            return json;
-        } catch (Exception e) {
-            return value.toString();
-        }
     }
     
     /**
@@ -776,67 +645,6 @@ public class AiCoachService {
         if (aiHistory.getEntries() != null && !aiHistory.getEntries().isEmpty()) {
             // Use history for trend-based recommendations
         }
-    }
-    
-    /**
-     * Builds enhanced system prompt with context and history.
-     * This will be used when OpenAI integration is added.
-     */
-    private String buildEnhancedSystemPrompt(User user, AiContextResponse context, AiHistoryResponse history, String language) {
-        StringBuilder prompt = new StringBuilder();
-        
-        // Base system prompt
-        prompt.append(getSystemPrompt(language));
-        prompt.append("\n\n");
-        
-        // Add context section
-        prompt.append("=== CONTEXT ===\n");
-        try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            String contextJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(context);
-            // Truncate if too long (keep first 2000 chars)
-            if (contextJson.length() > 2000) {
-                contextJson = contextJson.substring(0, 2000) + "... (truncated)";
-            }
-            prompt.append(contextJson);
-        } catch (Exception e) {
-            // Fallback to text representation
-            prompt.append("User: ").append(user.getName() != null ? user.getName() : "User");
-            if (context.getNutritionTargets() != null) {
-                prompt.append("\nCalories: ").append(context.getNutritionTargets().getCalories());
-                prompt.append("\nProtein: ").append(context.getNutritionTargets().getProtein());
-            }
-        }
-        prompt.append("\n\n");
-        
-        // Add history section
-        prompt.append("=== RECENT HISTORY ===\n");
-        if (history.getEntries() != null && !history.getEntries().isEmpty()) {
-            // Limit to 10 most recent entries to keep prompt manageable
-            int historyLimit = Math.min(10, history.getEntries().size());
-            for (int i = 0; i < historyLimit; i++) {
-                AiHistoryResponse.HistoryEntry entry = history.getEntries().get(i);
-                prompt.append("- [").append(entry.getDate()).append("] ")
-                      .append(entry.getType()).append(": ")
-                      .append(entry.getSummaryText()).append("\n");
-            }
-        } else {
-            prompt.append("No recent history available.\n");
-        }
-        prompt.append("\n");
-        
-        // Add instructions for using context
-        if ("vi".equals(language)) {
-            prompt.append("Sử dụng thông tin trong Context và Recent History để đưa ra câu trả lời cá nhân hóa. ");
-            prompt.append("Tham chiếu dữ liệu cụ thể khi có liên quan. ");
-            prompt.append("Nếu thiếu thông tin, hãy yêu cầu người dùng hoàn thành hồ sơ hoặc cung cấp thêm dữ liệu.");
-        } else {
-            prompt.append("Use the information in Context and Recent History to provide personalized responses. ");
-            prompt.append("Reference specific data when relevant. ");
-            prompt.append("If information is missing, ask the user to complete their profile or provide more data.");
-        }
-        
-        return prompt.toString();
     }
     
     /**
@@ -896,8 +704,16 @@ public class AiCoachService {
                 MealPlanResponseDTO mealPlan = mealPlanService.toDTO(mealPlanEntity);
                 if (mealPlan != null) {
                     Map<String, Object> mealPlanMap = new HashMap<>();
+                    mealPlanMap.put("planId", mealPlan.getId());
                     mealPlanMap.put("weekStart", mealPlan.getWeekStartDate());
                     mealPlanMap.put("hasPlan", true);
+                    if (mealPlan.getPlanDocument() != null) {
+                        RuleBasedMealPlanDocument doc = mealPlan.getPlanDocument();
+                        mealPlanMap.put("dailyCalories", doc.getDailyCalories());
+                        mealPlanMap.put("macros", doc.getMacros());
+                        mealPlanMap.put("meals", doc.getMeals());
+                        mealPlanMap.put("shoppingList", doc.getShoppingList());
+                    }
                     context.setMealPlan(mealPlanMap);
                 }
             }
