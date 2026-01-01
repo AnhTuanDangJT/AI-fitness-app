@@ -79,7 +79,6 @@ public class AiClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setAccept(List.of(MediaType.APPLICATION_JSON));
             headers.setBearerAuth(token);
-            headers.add("X-GitHub-Api-Version", "2023-07-01");
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(GITHUB_MODELS_URL, request, String.class);
