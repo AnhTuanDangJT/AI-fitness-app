@@ -40,6 +40,9 @@ export default {
         xl: '1.5rem',
         '2xl': '1.75rem',
       },
+      width: {
+        '70': '17.5rem', // 280px for sidebar
+      },
       backgroundImage: {
         'ai-card': 'radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.35), transparent 55%), radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.35), transparent 50%)',
         'hero-glow': 'radial-gradient(circle at top, rgba(124,58,237,0.35), transparent 50%)',
@@ -68,5 +71,11 @@ export default {
   },
   plugins: [],
 }
+
+
+
+
+
+
 
 

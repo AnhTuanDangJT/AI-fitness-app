@@ -1,36 +1,37 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Calendar, Plus, ChevronDown, ChevronUp, ShoppingCart, UtensilsCrossed, Loader2 } from 'lucide-react'
 import { mealPlanAPI } from '../services/api'
 import { invalidateGamificationCache } from '../services/gamificationApi'
-import { 
-  MEAL_PLAN_LABELS, 
-  MEAL_PLAN_STATUS, 
-  ERROR_MESSAGES,
-  BUTTON_TEXT 
-} from '../config/constants'
+import { MEAL_PLAN_LABELS, MEAL_PLAN_STATUS, ERROR_MESSAGES } from '../config/constants'
 import GroceryList from '../components/grocery-list/GroceryList'
-import './MealPlan.css'
+import { AppShell } from '../components/layout/AppShell'
+import Button from '../components/ui/Button'
+import { Badge } from '../components/ui/Badge'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import { Tabs, TabsTrigger, TabsContent } from '../components/ui/Tabs'
+import Skeleton from '../components/ui/Skeleton'
+import EmptyState from '../components/ui/EmptyState'
+import clsx from 'clsx'
 
 function MealPlan() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
-  // Explicit status state: "loading" | "empty" | "success" | "error"
-  // This replaces the ambiguous combination of mealPlan/error/loading states
-  const [status, setStatus] = useState('loading') // 'loading' | 'empty' | 'success' | 'error'
-  const [mealPlan, setMealPlan] = useState(null) // Only set when status === 'success'
-  const [error, setError] = useState('') // Only set when status === 'error'
+  const [status, setStatus] = useState('loading')
+  const [mealPlan, setMealPlan] = useState(null)
+  const [error, setError] = useState('')
   const [generating, setGenerating] = useState(false)
   const [expandedDays, setExpandedDays] = useState(new Set())
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [activeTab, setActiveTab] = useState('meal-plan') // 'meal-plan' or 'grocery-list'
+  const [activeTab, setActiveTab] = useState('meal-plan')
 
   useEffect(() => {
     fetchMealPlan()
     
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768)
-      // On desktop, expand all days
       if (window.innerWidth >= 768) {
         const allDays = new Set(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
         setExpandedDays(allDays)
@@ -38,60 +39,37 @@ function MealPlan() {
     }
     
     window.addEventListener('resize', handleResize)
-    handleResize() // Initial check
+    handleResize()
     
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   const fetchMealPlan = async () => {
-    console.log('[MealPlan.jsx] fetchMealPlan() - START')
-    console.log('[MealPlan.jsx] Current status:', status)
-    
     try {
       setStatus('loading')
       setError('')
       setMealPlan(null)
-      console.log('[MealPlan.jsx] Calling mealPlanAPI.getCurrent()...')
       
       const result = await mealPlanAPI.getCurrent()
       
-      console.log('[MealPlan.jsx] API Result received:', {
-        type: result?.type,
-        hasData: !!result?.data,
-        hasError: !!result?.error
-      })
-      
-      // Handle structured response from API
       if (result.type === 'SUCCESS') {
-        // Meal plan found - set success state
-        console.log('[MealPlan.jsx] Meal plan found, setting success state')
         setMealPlan(result.data)
         setStatus('success')
-        // Expand all days by default on desktop
         if (!isMobile) {
           const allDays = new Set(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
           setExpandedDays(allDays)
         }
       } else if (result.type === 'EMPTY') {
-        // No meal plan exists - this is a valid empty state, not an error
-        // HTTP 404 from backend means user hasn't generated a meal plan yet
-        console.log('[MealPlan.jsx] No meal plan found (empty state)')
         setStatus('empty')
       } else if (result.type === 'ERROR') {
-        // Real API/network error occurred
-        console.log('[MealPlan.jsx] Error occurred:', result.error)
         setError(result.error)
         setStatus('error')
       } else {
-        // Unexpected response format
-        console.warn('[MealPlan.jsx] Unexpected result type:', result)
         setError(MEAL_PLAN_STATUS.LOAD_FAILED)
         setStatus('error')
       }
     } catch (err) {
-      // This catch block should rarely execute since API service handles errors
-      // But keep it as a safety net
-      console.error('[MealPlan.jsx] Unexpected exception in fetchMealPlan:', err)
+      console.error('[MealPlan.jsx] Unexpected exception:', err)
       setError(err.message || MEAL_PLAN_STATUS.LOAD_FAILED)
       setStatus('error')
     }
@@ -102,15 +80,12 @@ function MealPlan() {
       `${t('mealPlan.confirmGenerate')}\n\n${t('mealPlan.confirmGenerateMessage')}`
     )
     
-    if (!confirmed) {
-      return
-    }
+    if (!confirmed) return
 
     try {
       setGenerating(true)
       setError('')
       
-      // Calculate next Monday (or today's Monday)
       const today = new Date()
       const dayOfWeek = today.getDay()
       const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7
@@ -120,12 +95,7 @@ function MealPlan() {
       
       const response = await mealPlanAPI.generate(weekStart)
       if (response.success) {
-        // Invalidate gamification cache after successful meal plan generation
-        // This ensures XP updates are reflected in the UI
         invalidateGamificationCache()
-        
-        // After successful generation, refresh the meal plan
-        // This will fetch the newly created meal plan
         await fetchMealPlan()
       } else {
         setError(response.message || MEAL_PLAN_STATUS.GENERATE_FAILED)
@@ -178,7 +148,6 @@ function MealPlan() {
       const startDate = new Date(weekStartDate)
       if (isNaN(startDate.getTime())) return null
       
-      // Calculate end date (6 days after start)
       const endDate = new Date(startDate)
       endDate.setDate(startDate.getDate() + 6)
       
@@ -188,7 +157,6 @@ function MealPlan() {
       return `${startFormatted} – ${endFormatted}`
     } catch (error) {
       console.error('Error formatting week range:', error)
-      // Fallback: show only start date if calculation fails
       return formatDate(weekStartDate)
     }
   }
@@ -199,8 +167,7 @@ function MealPlan() {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '')
-    const translation = t(`mealNames.${normalizedKey}`, { defaultValue: name })
-    return translation
+    return t(`mealNames.${normalizedKey}`, { defaultValue: name })
   }
 
   const getMealTypeLabel = (mealType) => {
@@ -218,6 +185,21 @@ function MealPlan() {
     }
   }
 
+  const getMealTypeColor = (mealType) => {
+    switch (mealType) {
+      case 'BREAKFAST':
+        return 'bg-amber-500/20 text-amber-200 border-amber-500/30'
+      case 'LUNCH':
+        return 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30'
+      case 'DINNER':
+        return 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30'
+      case 'SNACK':
+        return 'bg-purple-500/20 text-purple-200 border-purple-500/30'
+      default:
+        return 'bg-white/10 text-white/90 border-white/20'
+    }
+  }
+
   const groupMealsByDay = (entries) => {
     const grouped = {}
     entries.forEach(entry => {
@@ -231,7 +213,6 @@ function MealPlan() {
       grouped[dayName].meals.push(entry)
     })
     
-    // Sort meals by meal type order
     Object.keys(grouped).forEach(day => {
       grouped[day].meals.sort((a, b) => {
         const order = { BREAKFAST: 1, LUNCH: 2, DINNER: 3, SNACK: 4 }
@@ -242,86 +223,66 @@ function MealPlan() {
     return grouped
   }
 
-  console.log('[MealPlan.jsx] RENDER - Current status:', status)
-
-  const renderBackButton = () => (
-    <div className="page-back-row">
-      <button
-        className="page-back-button"
-        onClick={() => navigate('/dashboard')}
-      >
-        <span>←</span>
-        {t('common.backToDashboard')}
-      </button>
-    </div>
-  )
-
-  // Render based on explicit status state
-  // This replaces ambiguous checks like "if (!mealPlan)" or "if (error && !mealPlan)"
-  
-  // Loading state: Show spinner while fetching
+  // Loading state
   if (status === 'loading') {
-    console.log('[MealPlan.jsx] RENDER - Showing LOADING state')
     return (
-      <div className="meal-plan-page">
-        {renderBackButton()}
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>{t('mealPlan.loading')}</p>
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="mx-auto max-w-7xl space-y-6">
+            <Skeleton className="h-12 w-64" />
+            <Skeleton className="h-32 w-full" />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <Skeleton key={i} className="h-48 w-full" />
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
-  // Empty state: User has no meal plan yet (HTTP 404 from backend)
-  // This is NOT an error - it's a valid first-time user state
+  // Empty state
   if (status === 'empty') {
-    console.log('[MealPlan.jsx] RENDER - Showing EMPTY state (no meal plan exists)')
     return (
-      <div className="meal-plan-page">
-        {renderBackButton()}
-        <div className="no-meal-plan-container">
-          <h2>{t('mealPlan.noMealPlanYet')}</h2>
-          <p>{t('mealPlan.generateFirstPlan')}</p>
-          <button onClick={handleGenerate} className="generate-button" disabled={generating}>
-            {generating ? t('mealPlan.generating') : t('mealPlan.generateNew')}
-          </button>
+      <AppShell>
+        <div className="flex min-h-screen items-center justify-center p-6">
+          <EmptyState
+            title={t('mealPlan.noMealPlanYet')}
+            description={t('mealPlan.generateFirstPlan')}
+            actionLabel={generating ? t('mealPlan.generating') : t('mealPlan.generateNew')}
+            onAction={handleGenerate}
+            icon={<Calendar className="h-12 w-12 text-white/40" />}
+          />
         </div>
-      </div>
+      </AppShell>
     )
   }
 
-  // Error state: Real API/network error occurred
-  // This is separate from empty state - something actually went wrong
+  // Error state
   if (status === 'error') {
-    console.log('[MealPlan.jsx] RENDER - Showing ERROR state:', error)
     return (
-      <div className="meal-plan-page">
-        {renderBackButton()}
-        <div className="error-container">
-          <h2>{t('mealPlan.errorLoading')}</h2>
-          <p>{error}</p>
-          <button onClick={fetchMealPlan} className="generate-button" disabled={generating}>
-            {t('mealPlan.retry')}
-          </button>
+      <AppShell>
+        <div className="flex min-h-screen items-center justify-center p-6">
+          <EmptyState
+            title={t('mealPlan.errorLoading')}
+            description={error}
+            actionLabel={t('mealPlan.retry')}
+            onAction={fetchMealPlan}
+          />
         </div>
-      </div>
+      </AppShell>
     )
   }
 
-  // Success state: Meal plan loaded successfully
-  // Only render meal plan when status is explicitly 'success'
+  // Success state
   if (status !== 'success' || !mealPlan) {
-    // This should never happen, but handle gracefully
-    console.warn('[MealPlan.jsx] Unexpected state: status=' + status + ', mealPlan=' + mealPlan)
     return (
-      <div className="meal-plan-page">
-        {renderBackButton()}
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>{t('common.loading')}</p>
+      <AppShell>
+        <div className="flex min-h-screen items-center justify-center p-6">
+          <Skeleton className="h-32 w-full max-w-md" />
         </div>
-      </div>
+      </AppShell>
     )
   }
 
@@ -337,136 +298,187 @@ function MealPlan() {
   ]
 
   return (
-    <div className="meal-plan-page">
-      {renderBackButton()}
-      <div className="meal-plan-header">
-        <div>
-          <h1>{t('mealPlan.title')}</h1>
-          {mealPlan.weekStartDate && (() => {
-            const weekRange = formatWeekRange(mealPlan.weekStartDate)
-            // Use week range if available, otherwise fallback to start date only
-            const dateDisplay = weekRange || formatDate(mealPlan.weekStartDate)
-            return (
-              <p className="week-info">
-                {t('mealPlan.weekOf', { date: dateDisplay })}
-              </p>
-            )
-          })()}
-        </div>
-        <div className="header-actions">
-          <button 
-            onClick={handleGenerate} 
-            className="generate-button"
-            disabled={generating}
+    <AppShell>
+      <div className="min-h-screen bg-base-900 p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl space-y-6">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
           >
-            {generating ? t('mealPlan.generating') : t('mealPlan.generateNew')}
-          </button>
+            <div>
+              <h1 className="text-3xl font-semibold text-white">{t('mealPlan.title')}</h1>
+              {mealPlan.weekStartDate && (
+                <p className="mt-2 flex items-center gap-2 text-sm text-white/60">
+                  <Calendar className="h-4 w-4" />
+                  {formatWeekRange(mealPlan.weekStartDate) || formatDate(mealPlan.weekStartDate)}
+                </p>
+              )}
+            </div>
+            <Button
+              onClick={handleGenerate}
+              disabled={generating}
+              leftIcon={generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            >
+              {generating ? t('mealPlan.generating') : t('mealPlan.generateNew')}
+            </Button>
+          </motion.div>
+
+          {/* Daily Targets */}
+          {mealPlan.dailyTargets && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('mealPlan.dailyTargets')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      { key: 'calories', label: t('mealPlan.calories'), value: mealPlan.dailyTargets.calories, unit: t('mealPlan.kcal') },
+                      { key: 'protein', label: t('mealPlan.protein'), value: mealPlan.dailyTargets.protein, unit: t('mealPlan.grams') },
+                      { key: 'carbs', label: t('mealPlan.carbs'), value: mealPlan.dailyTargets.carbs, unit: t('mealPlan.grams') },
+                      { key: 'fats', label: t('mealPlan.fats'), value: mealPlan.dailyTargets.fats, unit: t('mealPlan.grams') },
+                    ].map((target) => (
+                      <div
+                        key={target.key}
+                        className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-4"
+                      >
+                        <p className="text-xs uppercase tracking-wider text-white/60">{target.label}</p>
+                        <p className="mt-2 text-2xl font-semibold text-white">
+                          {target.value} <span className="text-sm text-white/60">{target.unit}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="flex gap-2">
+              <TabsTrigger value="meal-plan" activeValue={activeTab} onValueChange={setActiveTab}>
+                <UtensilsCrossed className="mr-2 h-4 w-4" />
+                {t('mealPlan.mealPlanTab')}
+              </TabsTrigger>
+              <TabsTrigger value="grocery-list" activeValue={activeTab} onValueChange={setActiveTab}>
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                {t('mealPlan.groceryListTab')}
+              </TabsTrigger>
+            </div>
+
+            <TabsContent value="meal-plan" activeValue={activeTab}>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {dayOrder.map((dayName, index) => {
+                  const dayData = mealsByDay[dayName]
+                  if (!dayData) return null
+
+                  const isExpanded = expandedDays.has(dayName)
+
+                  return (
+                    <motion.div
+                      key={dayName}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Card className="overflow-hidden">
+                        <button
+                          onClick={() => isMobile && toggleDay(dayName)}
+                          className="w-full"
+                          type="button"
+                        >
+                          <CardHeader className="flex flex-row items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20">
+                                <Calendar className="h-5 w-5 text-accent" />
+                              </div>
+                              <div>
+                                <CardTitle className="text-lg">{dayName}</CardTitle>
+                                <p className="text-xs text-white/60">{formatDate(dayData.date)}</p>
+                              </div>
+                            </div>
+                            {isMobile && (
+                              <motion.div
+                                animate={{ rotate: isExpanded ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <ChevronDown className="h-5 w-5 text-white/60" />
+                              </motion.div>
+                            )}
+                          </CardHeader>
+                        </button>
+
+                        <AnimatePresence>
+                          {(isExpanded || !isMobile) && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <CardContent className="space-y-3">
+                                {dayData.meals.map((meal) => (
+                                  <div
+                                    key={meal.id}
+                                    className="rounded-xl border border-white/10 bg-white/5 p-4 transition hover:border-white/20"
+                                  >
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <Badge
+                                        variant="default"
+                                        size="sm"
+                                        className={getMealTypeColor(meal.mealType)}
+                                      >
+                                        {getMealTypeLabel(meal.mealType)}
+                                      </Badge>
+                                      <span className="text-sm font-semibold text-white">
+                                        {meal.calories} {t('mealPlan.kcal')}
+                                      </span>
+                                    </div>
+                                    <h4 className="mb-3 font-semibold text-white">
+                                      {translateMealName(meal.name)}
+                                    </h4>
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                      <div>
+                                        <span className="text-white/60">{t('mealPlan.protein')}:</span>
+                                        <span className="ml-1 font-semibold text-white">{meal.protein}g</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-white/60">{t('mealPlan.carbs')}:</span>
+                                        <span className="ml-1 font-semibold text-white">{meal.carbs}g</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-white/60">{t('mealPlan.fats')}:</span>
+                                        <span className="ml-1 font-semibold text-white">{meal.fats}g</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </CardContent>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </Card>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="grocery-list" activeValue={activeTab}>
+              <GroceryList mealPlan={mealPlan} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
-
-
-        {/* Tabs */}
-        <div className="meal-plan-tabs">
-          <button
-            className={`tab-button ${activeTab === 'meal-plan' ? 'active' : ''}`}
-            onClick={() => setActiveTab('meal-plan')}
-          >
-            {t('mealPlan.mealPlanTab')}
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'grocery-list' ? 'active' : ''}`}
-            onClick={() => setActiveTab('grocery-list')}
-          >
-            {t('mealPlan.groceryListTab')}
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'meal-plan' && (
-          <>
-            {mealPlan.dailyTargets && (
-              <div className="daily-targets">
-                <h2>{t('mealPlan.dailyTargets')}</h2>
-                <div className="targets-grid">
-                  <div className="target-item">
-                    <span className="target-label">{t('mealPlan.calories')}</span>
-                    <span className="target-value">{mealPlan.dailyTargets.calories} {t('mealPlan.kcal')}</span>
-                  </div>
-                  <div className="target-item">
-                    <span className="target-label">{t('mealPlan.protein')}</span>
-                    <span className="target-value">{mealPlan.dailyTargets.protein} {t('mealPlan.grams')}</span>
-                  </div>
-                  <div className="target-item">
-                    <span className="target-label">{t('mealPlan.carbs')}</span>
-                    <span className="target-value">{mealPlan.dailyTargets.carbs} {t('mealPlan.grams')}</span>
-                  </div>
-                  <div className="target-item">
-                    <span className="target-label">{t('mealPlan.fats')}</span>
-                    <span className="target-value">{mealPlan.dailyTargets.fats} {t('mealPlan.grams')}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="meals-grid">
-              {dayOrder.map(dayName => {
-                const dayData = mealsByDay[dayName]
-                if (!dayData) return null
-
-                const isExpanded = expandedDays.has(dayName)
-
-                return (
-                  <div key={dayName} className="day-card">
-                    <div 
-                      className="day-header"
-                      onClick={() => isMobile && toggleDay(dayName)}
-                    >
-                      <h3>{dayName}</h3>
-                      <span className="day-date">{formatDate(dayData.date)}</span>
-                      {isMobile && (
-                        <span className="expand-icon">{isExpanded ? '-' : '+'}</span>
-                      )}
-                    </div>
-                    
-                    {(isExpanded || !isMobile) && (
-                      <div className="day-meals">
-                        {dayData.meals.map(meal => (
-                          <div key={meal.id} className="meal-item">
-                            <div className="meal-header">
-                              <span className="meal-type">{getMealTypeLabel(meal.mealType)}</span>
-                              <span className="meal-name">{translateMealName(meal.name)}</span>
-                            </div>
-                            <div className="meal-macros">
-                              <span className="macro-item">
-                                {meal.calories} {t('mealPlan.kcal')}
-                              </span>
-                              <span className="macro-item">
-                                {t('mealPlan.protein')}: {meal.protein}{t('mealPlan.grams')}
-                              </span>
-                              <span className="macro-item">
-                                {t('mealPlan.carbs')}: {meal.carbs}{t('mealPlan.grams')}
-                              </span>
-                              <span className="macro-item">
-                                {t('mealPlan.fats')}: {meal.fats}{t('mealPlan.grams')}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-
-        {activeTab === 'grocery-list' && (
-          <GroceryList mealPlan={mealPlan} />
-        )}
-    </div>
+    </AppShell>
   )
 }
 
 export default MealPlan
-

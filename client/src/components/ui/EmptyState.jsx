@@ -9,6 +9,7 @@ function EmptyState({
   onAction,
   secondaryActionLabel,
   onSecondaryAction,
+  icon,
 }) {
   return (
     <motion.div
@@ -16,6 +17,7 @@ function EmptyState({
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/5 px-8 py-10 text-center"
     >
+      {icon && <div className="mb-2">{icon}</div>}
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.35em] text-white/60">Status</p>
         <p className="text-lg font-semibold text-white">{title}</p>

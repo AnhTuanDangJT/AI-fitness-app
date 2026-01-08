@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import AICoachChat from '../components/ai-coach/AICoachChat'
 import api from '../services/api'
+import { AppShell } from '../components/layout/AppShell'
+import Button from '../components/ui/Button'
+import Skeleton from '../components/ui/Skeleton'
 import './AICoach.css'
 
 /**
@@ -55,30 +59,17 @@ function AICoach() {
     }
   }
 
-  const renderBackButton = () => (
-    <div className="page-back-row">
-      <button
-        className="page-back-button"
-        onClick={() => navigate('/dashboard')}
-      >
-        <span>←</span>
-        {t('common.backToDashboard')}
-      </button>
-    </div>
-  )
-
   // Show loading state while getting user info
   if (loading) {
     return (
-      <div className="ai-coach-page">
-        {renderBackButton()}
-        <div className="ai-coach-container">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>{t('common.loading')}</p>
+      <AppShell>
+        <div className="p-6 lg:p-8">
+          <div className="mx-auto max-w-4xl space-y-4">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-96 w-full" />
           </div>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
@@ -98,31 +89,36 @@ function AICoach() {
   }
 
   return (
-    <div className="ai-coach-page">
-      {renderBackButton()}
-      <div className="ai-coach-container">
-        <div className="ai-coach-header">
-          <div className="ai-coach-header-content">
-            <div>
-              <h1>{t('aiCoach.title')}</h1>
-              {/* Personalized header with user data */}
+    <AppShell>
+      <div className="flex min-h-screen flex-col bg-base-900 p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-4xl space-y-6">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex-1">
+              <h1 className="text-3xl font-semibold text-white">{t('aiCoach.title')}</h1>
               {aiContext && (
-                <div className="ai-coach-personalized-header">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {aiContext.user?.name && (
-                    <span className="personalized-name">{aiContext.user.name}</span>
+                    <span className="rounded-full bg-accent/20 px-3 py-1 text-sm font-semibold text-accent">
+                      {aiContext.user.name}
+                    </span>
                   )}
                   {aiContext.user?.goal && (
-                    <span className="personalized-goal">
+                    <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-semibold text-emerald-200">
                       {getGoalDescription(aiContext.user.goal)}
                     </span>
                   )}
                   {aiContext.nutritionTargets?.calories && (
-                    <span className="personalized-calories">
+                    <span className="rounded-full bg-cyan-500/20 px-3 py-1 text-sm font-semibold text-cyan-200">
                       {Math.round(aiContext.nutritionTargets.calories)} {t('dashboard.kcalPerDayShort')}
                     </span>
                   )}
                   {aiContext.gamification?.currentStreakDays > 0 && (
-                    <span className="personalized-streak">
+                    <span className="rounded-full bg-amber-500/20 px-3 py-1 text-sm font-semibold text-amber-200">
                       {t('aiCoach.personalizedStreak', {
                         count: aiContext.gamification.currentStreakDays,
                         unit:
@@ -134,22 +130,25 @@ function AICoach() {
                   )}
                 </div>
               )}
-              {!aiContext && <p>{t('aiCoach.subtitle')}</p>}
+              {!aiContext && <p className="mt-2 text-white/60">{t('aiCoach.subtitle')}</p>}
             </div>
-            <button 
-              className="clear-chat-button"
-              onClick={handleClearChat}
-              title={t('aiCoach.clearChat')}
-            >
+            <Button variant="ghost" onClick={handleClearChat} title={t('aiCoach.clearChat')}>
               {t('aiCoach.clearChat')}
-            </button>
-          </div>
-        </div>
-        <div className="ai-coach-content">
-          <AICoachChat userId={userId} onClearChat={(clearFn) => { clearChatRef.current = clearFn }} />
+            </Button>
+          </motion.div>
+
+          {/* Chat Content */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex-1"
+          >
+            <AICoachChat userId={userId} onClearChat={(clearFn) => { clearChatRef.current = clearFn }} />
+          </motion.div>
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -15,6 +15,7 @@ import FeedbackModal from '../components/FeedbackModal'
 import AchievementsModal from '../components/AchievementsModal'
 import MealPreferencesModal from '../components/MealPreferencesModal'
 import AppNavbar from '@/components/layout/AppNavbar'
+import { AppShell } from '@/components/layout/AppShell'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
@@ -639,8 +640,9 @@ function Dashboard() {
   }
 
   return (
-    <div className="relative z-10 min-h-screen px-4 pb-16 pt-6 lg:px-6">
-      <AppNavbar
+    <AppShell>
+      <div className="relative z-10 min-h-screen px-4 pb-16 pt-6 lg:px-6">
+        <AppNavbar
         language={i18n.language}
         onToggleLanguage={handleLanguageToggle}
         onAlignToggle={cycleHeaderAlignment}
@@ -913,12 +915,13 @@ function Dashboard() {
         </section>
       </main>
 
-      {isFeedbackModalOpen && <FeedbackModal onClose={() => setIsFeedbackModalOpen(false)} />}
-      {isAchievementsModalOpen && gamificationStatus && (
-        <AchievementsModal badges={gamificationStatus.badges || []} onClose={() => setIsAchievementsModalOpen(false)} />
-      )}
-      {isMealPlannerOpen && <MealPreferencesModal onClose={() => setIsMealPlannerOpen(false)} />}
-    </div>
+        {isFeedbackModalOpen && <FeedbackModal onClose={() => setIsFeedbackModalOpen(false)} />}
+        {isAchievementsModalOpen && gamificationStatus && (
+          <AchievementsModal badges={gamificationStatus.badges || []} onClose={() => setIsAchievementsModalOpen(false)} />
+        )}
+        {isMealPlannerOpen && <MealPreferencesModal onClose={() => setIsMealPlannerOpen(false)} />}
+      </div>
+    </AppShell>
   )
 }
 
